@@ -18,7 +18,7 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, {
                 ...options,
-                secure: false,   // Allow over HTTP on local network
+                secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
               })
             )

@@ -15,7 +15,7 @@ export function createClient(): SupabaseClient {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookieOptions: {
-            secure: false,
+            secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
           },
         }
