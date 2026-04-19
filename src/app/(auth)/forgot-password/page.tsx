@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     })
 
     if (error) {
-      setError('Something went wrong. Check the email address and try again.')
+      setError(error.message)
       setLoading(false)
       return
     }
