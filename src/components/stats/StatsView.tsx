@@ -319,7 +319,7 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
 
   // Aggregate SG by distance band across filtered full-tracking rounds
   const bandAgg = useMemo(() => {
-    const BANDS: { label: string; category: 'putting' | 'around_green' | 'approach'; sgSum: number; count: number }[] = [
+    const BANDS: { label: string; category: 'putting' | 'around_green' | 'approach' | 'off_tee'; sgSum: number; count: number }[] = [
       { label: '0–3ft',    category: 'putting',      sgSum: 0, count: 0 },
       { label: '3–5ft',    category: 'putting',      sgSum: 0, count: 0 },
       { label: '5–8ft',    category: 'putting',      sgSum: 0, count: 0 },
