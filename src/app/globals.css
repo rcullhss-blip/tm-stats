@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Brand colours */
+  --color-brand: #CC2222;
+  --color-brand-hover: #B01C1C;
+
+  /* Backgrounds */
+  --color-bg: #0F1117;
+  --color-surface: #1A1D27;
+  --color-surface-raised: #22263A;
+  --color-border: #2E3247;
+
+  /* Text */
+  --color-text: #F0F0F0;
+  --color-muted: #9A9DB0;
+
+  /* SG colours */
+  --color-sg-positive: #22C55E;
+  --color-sg-negative: #EF4444;
+
+  /* Fonts */
+  --font-heading: var(--font-dm-sans), 'DM Sans', sans-serif;
+  --font-body: var(--font-inter), 'Inter', sans-serif;
+  --font-mono: var(--font-dm-mono), 'DM Mono', monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #0F1117;
+  color: #F0F0F0;
+  font-family: var(--font-inter), 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Stats/numbers always use DM Mono */
+.stat, .number, [data-stat] {
+  font-family: var(--font-dm-mono), 'DM Mono', monospace;
+}
+
+/* Minimum tap targets for golf course use */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
 }

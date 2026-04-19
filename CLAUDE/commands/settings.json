@@ -1,0 +1,13 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/hooks/statusline.sh",
+    "padding": 0
+  },
+
+  "model": "claude-sonnet-4-6",
+
+  "autoCompact": true,
+
+  "theme": "dark"
+}
