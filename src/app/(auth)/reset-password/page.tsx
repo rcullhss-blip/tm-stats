@@ -1,36 +1,40 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('')
+export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
-async function handleLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
-    setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.')
+      return
+    }
+    if (password !== confirm) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    const { error } = await supabase.auth.updateUser({ password })
 
     if (error) {
-      if (error.message.toLowerCase().includes('confirm')) {
-        setError('Please confirm your email before logging in.')
-      } else {
-        setError('Incorrect email or password.')
-      }
+      setError('Failed to update password. Try requesting a new reset link.')
       setLoading(false)
       return
     }
 
-    router.push(email.toLowerCase() === 'rcullhss@gmail.com' ? '/admin' : '/dashboard')
+    router.push('/dashboard')
   }
 
   return (
@@ -40,45 +44,45 @@ async function handleLogin(e: React.FormEvent) {
           className="text-2xl font-bold mb-2"
           style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}
         >
-          Welcome back
+          Set new password
         </h1>
         <p className="text-sm" style={{ color: '#9A9DB0' }}>
-          Log in to your TM Stats account
+          Choose a new password for your account.
         </p>
       </div>
 
-      <form onSubmit={handleLogin} noValidate className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
-            style={{
-              backgroundColor: '#1A1D27',
-              border: '1px solid #2E3247',
-              color: '#F0F0F0',
-            }}
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>
-            Password
+            New password
           </label>
           <input
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            autoComplete="current-password"
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
+            autoComplete="new-password"
+            className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+            style={{
+              backgroundColor: '#1A1D27',
+              border: '1px solid #2E3247',
+              color: '#F0F0F0',
+            }}
+            placeholder="••••••••"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>
+            Confirm password
+          </label>
+          <input
+            type="password"
+            value={confirm}
+            onChange={e => setConfirm(e.target.value)}
+            required
+            autoComplete="new-password"
+            className="w-full px-4 py-3 rounded-xl text-sm outline-none"
             style={{
               backgroundColor: '#1A1D27',
               border: '1px solid #2E3247',
@@ -100,22 +104,9 @@ async function handleLogin(e: React.FormEvent) {
           className="w-full py-4 rounded-xl font-semibold text-base transition-opacity disabled:opacity-60"
           style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
         >
-          {loading ? 'Logging in…' : 'Log in'}
+          {loading ? 'Updating…' : 'Set password'}
         </button>
       </form>
-
-      <p className="text-center text-sm mt-4" style={{ color: '#9A9DB0' }}>
-        <Link href="/forgot-password" className="font-medium" style={{ color: '#9A9DB0' }}>
-          Forgot password?
-        </Link>
-      </p>
-
-      <p className="text-center text-sm mt-4" style={{ color: '#9A9DB0' }}>
-        No account?{' '}
-        <Link href="/signup" className="font-medium" style={{ color: '#F0F0F0' }}>
-          Sign up free
-        </Link>
-      </p>
     </div>
   )
 }
