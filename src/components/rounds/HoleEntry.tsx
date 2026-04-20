@@ -97,7 +97,7 @@ function PillToggle({
   disabled = false,
 }: {
   value: boolean | null
-  onChange: (v: boolean) => void
+  onChange: (v: boolean | null) => void
   disabled?: boolean
 }) {
   return (
@@ -107,7 +107,7 @@ function PillToggle({
           key={String(v)}
           type="button"
           disabled={disabled}
-          onClick={() => onChange(v)}
+          onClick={() => onChange(value === v ? null : v)}
           className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
           style={{
             backgroundColor:
@@ -294,7 +294,7 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
                 </p>
                 <PillToggle
                   value={hole.fir}
-                  onChange={fir => updateHole({ fir })}
+                  onChange={(fir) => updateHole({ fir: fir ?? null })}
                 />
               </div>
             )}
@@ -306,7 +306,7 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
               </p>
               <PillToggle
                 value={hole.gir}
-                onChange={gir => updateHole({ gir, upAndDown: gir ? null : hole.upAndDown })}
+                onChange={(gir) => updateHole({ gir: gir ?? null, upAndDown: gir ? null : hole.upAndDown })}
               />
             </div>
 
@@ -329,7 +329,7 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
                 </p>
                 <PillToggle
                   value={hole.upAndDown}
-                  onChange={upAndDown => updateHole({ upAndDown })}
+                  onChange={(upAndDown) => updateHole({ upAndDown: upAndDown ?? null })}
                 />
               </div>
             )}
@@ -345,7 +345,7 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
                 </p>
                 <PillToggle
                   value={hole.sandSave}
-                  onChange={sandSave => updateHole({ sandSave })}
+                  onChange={(sandSave) => updateHole({ sandSave: sandSave ?? null })}
                 />
               </div>
             )}

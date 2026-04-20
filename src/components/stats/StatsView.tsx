@@ -448,14 +448,14 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
             </button>
           ))}
         </div>
-        {/* Type + Holes filters */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        {/* Type filter */}
+        <div className="flex gap-2">
           {TYPE_OPTIONS.map(opt => (
             <button
               key={opt.value}
               type="button"
               onClick={() => setTypeFilter(opt.value)}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium"
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
               style={{
                 backgroundColor: typeFilter === opt.value ? '#22263A' : '#1A1D27',
                 color: typeFilter === opt.value ? '#F0F0F0' : '#9A9DB0',
@@ -465,13 +465,15 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
               {opt.label}
             </button>
           ))}
-          <div className="w-px shrink-0 self-stretch" style={{ backgroundColor: '#2E3247' }} />
+        </div>
+        {/* Holes filter */}
+        <div className="flex gap-2">
           {HOLES_OPTIONS.map(opt => (
             <button
               key={opt.value}
               type="button"
               onClick={() => setHolesFilter(opt.value)}
-              className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium"
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium"
               style={{
                 backgroundColor: holesFilter === opt.value ? '#22263A' : '#1A1D27',
                 color: holesFilter === opt.value ? '#F0F0F0' : '#9A9DB0',
