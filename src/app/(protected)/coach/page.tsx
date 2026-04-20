@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
@@ -15,12 +16,11 @@ export default async function CoachPage() {
   const { data: profile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
   if (profile?.subscription_status !== 'team') return notFound()
 
-  const sbAny = supabase as unknown as { from: (table: string) => unknown }
-  void sbAny
+  const service = createServiceClient()
 
-  // Fetch coach's team
+  // Fetch coach's team (service client bypasses RLS)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: teamsData } = await (supabase as any)
+  const { data: teamsData } = await (service as any)
     .from('teams')
     .select('*')
     .eq('coach_user_id', user.id)
@@ -39,7 +39,7 @@ export default async function CoachPage() {
 
   // Fetch team members
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membersRaw } = await (supabase as any)
+  const { data: membersRaw } = await (service as any)
     .from('team_members')
     .select('user_id, joined_at')
     .eq('team_id', team.id)
@@ -50,14 +50,14 @@ export default async function CoachPage() {
   let players: { id: string; name: string | null; email: string; handicap: number | null; avgScore: number | null; lastRound: string | null }[] = []
   if (memberIds.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profiles } = await (supabase as any)
+    const { data: profiles } = await (service as any)
       .from('users')
       .select('id, name, email, handicap')
       .in('id', memberIds)
 
     // Fetch recent rounds for each player
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: roundsRaw } = await (supabase as any)
+    const { data: roundsRaw } = await (service as any)
       .from('rounds')
       .select('id, user_id, date, score_total, par_total')
       .in('user_id', memberIds)
