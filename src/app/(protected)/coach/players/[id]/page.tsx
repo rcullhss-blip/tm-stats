@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { calculateRoundSG, handicapToSkillLevel, fmtSG, sgColor, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
@@ -15,25 +16,27 @@ export default async function CoachPlayerPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  const service = createServiceClient()
+
   // Verify coach owns a team that this player is on
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: team } = await (supabase as any).from('teams').select('id, name').eq('coach_user_id', user.id).single()
+  const { data: team } = await (service as any).from('teams').select('id, name').eq('coach_user_id', user.id).single()
   if (!team) return notFound()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membership } = await (supabase as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+  const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
   if (!membership) return notFound()
 
   // Fetch player profile
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: player } = await (supabase as any).from('users').select('name, email, handicap, sg_baseline').eq('id', playerId).single()
+  const { data: player } = await (service as any).from('users').select('name, email, handicap, sg_baseline').eq('id', playerId).single()
   if (!player) return notFound()
 
   const skillLevel: SkillLevel = (player.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(player.handicap ?? null)
 
   // Fetch last 10 rounds
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: roundsRaw } = await (supabase as any)
+  const { data: roundsRaw } = await (service as any)
     .from('rounds')
     .select('*')
     .eq('user_id', playerId)
@@ -47,7 +50,7 @@ export default async function CoachPlayerPage({ params }: Props) {
   let allHoles: HoleRow[] = []
   if (roundIds.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: holesRaw } = await (supabase as any).from('holes').select('*').in('round_id', roundIds)
+    const { data: holesRaw } = await (service as any).from('holes').select('*').in('round_id', roundIds)
     allHoles = holesRaw ?? []
   }
 
