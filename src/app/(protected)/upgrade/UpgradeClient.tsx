@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -16,6 +16,8 @@ const FEATURES = [
 
 export default function UpgradeClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const roundLimitHit = searchParams.get('reason') === 'round_limit'
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,6 +54,12 @@ export default function UpgradeClient() {
       <Link href="/dashboard" className="text-sm mb-6 inline-block" style={{ color: '#9A9DB0' }}>
         ← Back
       </Link>
+
+      {roundLimitHit && (
+        <div className="p-3 rounded-xl mb-6 text-sm font-medium" style={{ backgroundColor: '#CC222220', color: '#F0F0F0', border: '1px solid #CC222240' }}>
+          You&apos;ve reached the 5-round free plan limit. Upgrade to Pro to keep tracking.
+        </div>
+      )}
 
       {/* Hero */}
       <div className="text-center mb-8">

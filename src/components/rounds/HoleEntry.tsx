@@ -180,7 +180,7 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
 
   const isLast = current === holeCount - 1
   const scoreToPar = hole.score - hole.par
-  const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Eagle', 'Birdie', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
+  const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Birdie', 'Eagle', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
   const scoreParColor = scoreToPar < 0 ? '#22C55E' : scoreToPar === 0 ? '#F0F0F0' : scoreToPar <= 2 ? '#9A9DB0' : '#EF4444'
 
   return (
