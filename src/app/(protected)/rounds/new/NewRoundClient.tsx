@@ -3,30 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { RoundType, InputMode, HoleRow, ShotEntry } from '@/lib/types'
+import type { HoleRow, ShotEntry, SetupData, HoleData } from '@/lib/types'
 import RoundSetup from '@/components/rounds/RoundSetup'
 import HoleEntry from '@/components/rounds/HoleEntry'
 import RoundSummary from '@/components/rounds/RoundSummary'
-
-export interface SetupData {
-  date: string
-  courseName: string
-  holes: 9 | 18
-  roundType: RoundType
-  inputMode: InputMode
-}
-
-export interface HoleData {
-  holeNumber: number
-  par: 3 | 4 | 5
-  score: number
-  fir: boolean | null    // null on par 3s
-  gir: boolean | null
-  putts: number | null
-  upAndDown: boolean | null
-  sandSave: boolean | null
-  shots?: ShotEntry[]    // Full tracking mode only
-}
 
 export default function NewRoundClient() {
   const router = useRouter()

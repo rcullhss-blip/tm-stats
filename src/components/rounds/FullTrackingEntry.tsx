@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { HoleData } from '@/app/(protected)/rounds/new/page'
+import type { HoleData } from '@/lib/types'
 import type { LieType, ShotEntry } from '@/lib/types'
 
 interface Props {

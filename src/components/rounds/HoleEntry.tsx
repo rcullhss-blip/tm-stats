@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { SetupData, HoleData } from '@/app/(protected)/rounds/new/page'
+import type { SetupData, HoleData } from '@/lib/types'
 import FullTrackingEntry from './FullTrackingEntry'
 import HowToPlayGuide from './HowToPlayGuide'
 

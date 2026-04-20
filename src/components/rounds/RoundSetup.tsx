@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { SetupData } from '@/app/(protected)/rounds/new/page'
+import type { SetupData } from '@/lib/types'
 import type { RoundType, InputMode } from '@/lib/types'
 
 interface Props {

@@ -189,6 +189,26 @@ export interface ShotEntry {
   lieType: LieType
 }
 
+export interface SetupData {
+  date: string
+  courseName: string
+  holes: 9 | 18
+  roundType: RoundType
+  inputMode: InputMode
+}
+
+export interface HoleData {
+  holeNumber: number
+  par: 3 | 4 | 5
+  score: number
+  fir: boolean | null
+  gir: boolean | null
+  putts: number | null
+  upAndDown: boolean | null
+  sandSave: boolean | null
+  shots?: ShotEntry[]
+}
+
 export interface RoundWithHoles extends RoundRow {
   holeData: HoleRow[]
 }
