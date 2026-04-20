@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import LogoutButton from '@/components/profile/LogoutButton'
 import SGBaselinePicker from '@/components/profile/SGBaselinePicker'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
@@ -37,14 +38,16 @@ export default async function ProfilePage() {
     }
   }
 
-  // Team membership
+  // Team memberships (player can be on multiple teams)
+  const service = createServiceClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: teamMembership } = await (supabase as any)
+  const { data: teamMemberships } = await (service as any)
     .from('team_members')
     .select('team_id, teams(name)')
     .eq('user_id', user.id)
-    .single()
-  const currentTeamName = teamMembership?.teams?.name ?? null
+  const teamNames: string[] = (teamMemberships ?? [])
+    .map((m: { teams: { name: string } | null }) => m.teams?.name)
+    .filter(Boolean)
 
   // Golf DNA — SG averages across last 10 full-tracking rounds
   let golfDNA: { strength: string; opportunity: string; strengthVal: string; opportunityVal: string } | null = null
@@ -188,7 +191,7 @@ export default async function ProfilePage() {
       {/* Join a team */}
       {profile?.subscription_status !== 'team' && (
         <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
-          <JoinTeamForm currentTeamName={currentTeamName} />
+          <JoinTeamForm teamNames={teamNames} />
         </div>
       )}
 
