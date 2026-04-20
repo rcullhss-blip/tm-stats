@@ -21,7 +21,7 @@ export default function CoachTeamSetup() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to create team')
-      router.refresh()
+      router.push('/coach')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong')
     } finally {

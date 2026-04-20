@@ -20,11 +20,12 @@ export default async function CoachPage() {
 
   // Fetch coach's team
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: team } = await (supabase as any)
+  const { data: teamsData } = await (supabase as any)
     .from('teams')
     .select('*')
     .eq('coach_user_id', user.id)
-    .single()
+    .limit(1)
+  const team = teamsData?.[0] ?? null
 
   if (!team) {
     return (
