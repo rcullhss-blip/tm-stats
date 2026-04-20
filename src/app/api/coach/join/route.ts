@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -9,9 +10,11 @@ export async function POST(request: Request) {
   const { joinCode } = await request.json()
   if (!joinCode?.trim()) return NextResponse.json({ error: 'Join code required' }, { status: 400 })
 
-  // Look up team by join code
+  const service = createServiceClient()
+
+  // Look up team by join code (service client bypasses RLS)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: team } = await (supabase as any)
+  const { data: team } = await (service as any)
     .from('teams')
     .select('id, name, coach_user_id')
     .eq('join_code', joinCode.trim().toUpperCase())
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
 
   // Check already a member
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any)
+  const { data: existing } = await (service as any)
     .from('team_members')
     .select('id')
     .eq('team_id', team.id)
@@ -37,7 +40,7 @@ export async function POST(request: Request) {
 
   // Join the team
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('team_members').insert({
+  const { error } = await (service as any).from('team_members').insert({
     team_id: team.id,
     user_id: user.id,
   })

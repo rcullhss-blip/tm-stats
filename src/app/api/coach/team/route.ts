@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 
 function generateJoinCode() {
@@ -21,22 +22,24 @@ export async function POST(request: Request) {
   const { name } = await request.json()
   if (!name?.trim()) return NextResponse.json({ error: 'Team name required' }, { status: 400 })
 
+  const service = createServiceClient()
+
   // Check they don't already have a team
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase as any).from('teams').select('id').eq('coach_user_id', user.id).single()
+  const { data: existing } = await (service as any).from('teams').select('id').eq('coach_user_id', user.id).single()
   if (existing) return NextResponse.json({ error: 'You already have a team' }, { status: 400 })
 
   // Generate unique join code
   let joinCode = generateJoinCode()
   for (let attempt = 0; attempt < 5; attempt++) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existing } = await (supabase as any).from('teams').select('id').eq('join_code', joinCode).single()
+    const { data: existing } = await (service as any).from('teams').select('id').eq('join_code', joinCode).single()
     if (!existing) break
     joinCode = generateJoinCode()
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any).from('teams').insert({
+  const { error } = await (service as any).from('teams').insert({
     name: name.trim(),
     coach_user_id: user.id,
     join_code: joinCode,
