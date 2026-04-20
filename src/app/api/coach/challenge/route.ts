@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
@@ -21,13 +22,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
+  const service = createServiceClient()
+
   // Verify coach owns a team that this player is on
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: team } = await (supabase as any).from('teams').select('id').eq('coach_user_id', user.id).single()
+  const { data: team } = await (service as any).from('teams').select('id').eq('coach_user_id', user.id).single()
   if (!team) return NextResponse.json({ error: 'No team found' }, { status: 403 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membership } = await (supabase as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+  const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
   if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
 
   // Generate revised feedback
@@ -53,7 +56,7 @@ Be direct, practical, and specific. Keep the response under 250 words.`,
 
   // Save to DB
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('coach_ai_challenges').insert({
+  await (service as any).from('coach_ai_challenges').insert({
     round_id: roundId,
     player_id: playerId,
     coach_id: user.id,

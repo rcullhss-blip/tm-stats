@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { calculateRoundSG, handicapToSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
@@ -51,14 +52,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  const { data: profile } = await supabase
+  const service = createServiceClient()
+
+  // If playerId is provided, caller is a coach viewing a player's round
+  const playerId = body.playerId as string | undefined
+  const targetUserId = playerId ?? user.id
+
+  // Verify coach has this player in their team if playerId provided
+  if (playerId) {
+    const { data: callerProfile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
+    if (callerProfile?.subscription_status !== 'team') return NextResponse.json({ error: 'Coach account required' }, { status: 403 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: team } = await (service as any).from('teams').select('id').eq('coach_user_id', user.id).single()
+    if (!team) return NextResponse.json({ error: 'No team found' }, { status: 403 })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+    if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
+  }
+
+  // Fetch profile of the target user (player or self)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (service as any)
     .from('users')
     .select('handicap, sg_baseline, feedback_level, coach_persona, subscription_status')
-    .eq('id', user.id)
+    .eq('id', targetUserId)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
-  if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
+  if (!playerId) {
+    const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+    if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
+  }
 
   const skillLevel: SkillLevel = (profile?.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(profile?.handicap ?? null)
   const feedbackLevel = profile?.feedback_level ?? 'intermediate'
@@ -98,9 +121,10 @@ Based on these trends, give overall coaching feedback. Identify the biggest area
     const roundId = body.roundId as string
     if (!roundId) return NextResponse.json({ error: 'Missing roundId' }, { status: 400 })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [{ data: round }, { data: holesRaw }] = await Promise.all([
-      supabase.from('rounds').select('*').eq('id', roundId).eq('user_id', user.id).single(),
-      supabase.from('holes').select('*').eq('round_id', roundId).order('hole_number'),
+      (service as any).from('rounds').select('*').eq('id', roundId).eq('user_id', targetUserId).single(),
+      (service as any).from('holes').select('*').eq('round_id', roundId).order('hole_number'),
     ])
 
     if (!round) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
@@ -158,9 +182,10 @@ TM Stats coaching modes are generalised coaching styles and are not affiliated w
     const roundId = body.roundId as string
     if (!roundId) return NextResponse.json({ error: 'Missing roundId' }, { status: 400 })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [{ data: round }, { data: holesRaw }] = await Promise.all([
-      supabase.from('rounds').select('*').eq('id', roundId).eq('user_id', user.id).single(),
-      supabase.from('holes').select('*').eq('round_id', roundId).order('hole_number'),
+      (service as any).from('rounds').select('*').eq('id', roundId).eq('user_id', targetUserId).single(),
+      (service as any).from('holes').select('*').eq('round_id', roundId).order('hole_number'),
     ])
 
     if (!round) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
@@ -298,9 +323,10 @@ No intro, no labels, no extra text.`
     const roundId = body.roundId as string
     if (!roundId) return NextResponse.json({ error: 'Missing roundId' }, { status: 400 })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [{ data: round }, { data: holesRaw }] = await Promise.all([
-      supabase.from('rounds').select('*').eq('id', roundId).eq('user_id', user.id).single(),
-      supabase.from('holes').select('*').eq('round_id', roundId).order('hole_number'),
+      (service as any).from('rounds').select('*').eq('id', roundId).eq('user_id', targetUserId).single(),
+      (service as any).from('holes').select('*').eq('round_id', roundId).order('hole_number'),
     ])
 
     if (!round) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
