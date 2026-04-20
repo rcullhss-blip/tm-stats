@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { calculateRoundSG, handicapToSkillLevel, fmtSG, sgColor, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import type { HoleRow, ShotEntry } from '@/lib/types'
 import CoachAIChallenge from '@/components/coach/CoachAIChallenge'
+import CoachPlayerNotes from '@/components/coach/CoachPlayerNotes'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -24,8 +25,9 @@ export default async function CoachPlayerPage({ params }: Props) {
   if (!team) return notFound()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+  const { data: membership } = await (service as any).from('team_members').select('id, coach_notes').eq('team_id', team.id).eq('user_id', playerId).single()
   if (!membership) return notFound()
+  const coachNotes: string = membership.coach_notes ?? ''
 
   // Fetch player profile
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -176,20 +178,26 @@ export default async function CoachPlayerPage({ params }: Props) {
         </div>
       )}
 
+      {/* Coach player context */}
+      <CoachPlayerNotes playerId={playerId} initialNotes={coachNotes} />
+
       {/* Recent rounds */}
       <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Recent rounds</h2>
       <div className="space-y-3 mb-6">
-        {rounds.map((r: { id: string; course_name: string; date: string; score_total: number | null; par_total: number | null; holes: number; input_mode: string }) => {
+        {rounds.map((r: { id: string; course_name: string; date: string; score_total: number | null; par_total: number | null; holes: number; input_mode: string; notes: string | null; mood: string | null; conditions: string | null; energy_level: string | null }) => {
           const diff = (r.score_total ?? 0) - (r.par_total ?? 0)
           return (
             <div key={r.id} className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-1">
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#F0F0F0' }}>{r.course_name}</p>
                   <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>
                     {new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
                     {' · '}{r.holes}H
                     {r.input_mode === 'full' && ' · SG'}
+                    {r.mood && ` · ${r.mood}`}
+                    {r.energy_level && ` · ${r.energy_level}`}
+                    {r.conditions && ` · ${r.conditions}`}
                   </p>
                 </div>
                 {r.score_total && r.par_total && (
@@ -198,6 +206,11 @@ export default async function CoachPlayerPage({ params }: Props) {
                   </span>
                 )}
               </div>
+              {r.notes && (
+                <p className="text-xs mt-1 px-2 py-1.5 rounded-lg italic" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
+                  &ldquo;{r.notes}&rdquo;
+                </p>
+              )}
             </div>
           )
         })}

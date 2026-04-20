@@ -59,6 +59,7 @@ export async function POST(request: Request) {
   const targetUserId = playerId ?? user.id
 
   // Verify coach has this player in their team if playerId provided
+  let coachContext = ''
   if (playerId) {
     const { data: callerProfile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
     if (callerProfile?.subscription_status !== 'team') return NextResponse.json({ error: 'Coach account required' }, { status: 403 })
@@ -66,8 +67,9 @@ export async function POST(request: Request) {
     const { data: team } = await (service as any).from('teams').select('id').eq('coach_user_id', user.id).single()
     if (!team) return NextResponse.json({ error: 'No team found' }, { status: 403 })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+    const { data: membership } = await (service as any).from('team_members').select('id, coach_notes').eq('team_id', team.id).eq('user_id', playerId).single()
     if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
+    coachContext = membership.coach_notes ?? ''
   }
 
   // Fetch profile of the target user (player or self)
@@ -385,7 +387,11 @@ ${statsLines}${sgBlock}${notesBlock}${conditionParts.length ? '\n' + conditionPa
 Give them your coaching feedback.`
   }
 
-  const systemPrompt = `${COACH_PROMPTS[coachPersona] ?? COACH_PROMPTS.club_pro}
+  const coachContextBlock = coachContext
+    ? `\n\nCoach's notes on this player (use this context to inform your feedback):\n${coachContext}`
+    : ''
+
+  const systemPrompt = `${COACH_PROMPTS[coachPersona] ?? COACH_PROMPTS.club_pro}${coachContextBlock}
 
 ${FEEDBACK_DEPTH[feedbackLevel] ?? FEEDBACK_DEPTH.intermediate}
 

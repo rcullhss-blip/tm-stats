@@ -30,8 +30,9 @@ export async function POST(request: Request) {
   if (!team) return NextResponse.json({ error: 'No team found' }, { status: 403 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: membership } = await (service as any).from('team_members').select('id').eq('team_id', team.id).eq('user_id', playerId).single()
+  const { data: membership } = await (service as any).from('team_members').select('id, coach_notes').eq('team_id', team.id).eq('user_id', playerId).single()
   if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
+  const profileContext: string = membership.coach_notes ?? ''
 
   // Generate revised feedback
   const client = new OpenAI({ apiKey })
@@ -47,7 +48,7 @@ Be direct, practical, and specific. Keep the response under 250 words.`,
       },
       {
         role: 'user',
-        content: `Original AI feedback:\n${originalFeedback}\n\nCoach context (what the AI doesn't know):\n${coachContext}\n\nPlease produce a revised coaching recommendation that incorporates this additional context.`,
+        content: `Original AI feedback:\n${originalFeedback}\n\n${profileContext ? `Player profile context (coach's overall notes on this player):\n${profileContext}\n\n` : ''}Coach context for this round (what the AI doesn't know):\n${coachContext}\n\nPlease produce a revised coaching recommendation that incorporates this additional context.`,
       },
     ],
   })
