@@ -5,9 +5,10 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { calculateRoundSG, handicapToSkillLevel, fmtSG, sgColor, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
-import type { HoleRow, ShotEntry } from '@/lib/types'
+import type { HoleRow, ShotEntry, RoundRow } from '@/lib/types'
 import CoachAIChallenge from '@/components/coach/CoachAIChallenge'
 import CoachPlayerNotes from '@/components/coach/CoachPlayerNotes'
+import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -36,19 +37,19 @@ export default async function CoachPlayerPage({ params }: Props) {
 
   const skillLevel: SkillLevel = (player.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(player.handicap ?? null)
 
-  // Fetch last 10 rounds
+  // Fetch last 50 rounds for full stats
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: roundsRaw } = await (service as any)
     .from('rounds')
     .select('*')
     .eq('user_id', playerId)
     .order('date', { ascending: false })
-    .limit(10)
+    .limit(50)
 
-  const rounds = roundsRaw ?? []
-  const roundIds = rounds.map((r: { id: string }) => r.id)
+  const roundList: RoundRow[] = roundsRaw ?? []
+  const roundIds = roundList.map(r => r.id)
 
-  // Fetch holes for SG
+  // Fetch holes for all rounds
   let allHoles: HoleRow[] = []
   if (roundIds.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,11 +57,119 @@ export default async function CoachPlayerPage({ params }: Props) {
     allHoles = holesRaw ?? []
   }
 
-  // Compute SG averages
+  const holesMap = new Map<string, HoleRow[]>()
+  for (const h of allHoles) {
+    if (!holesMap.has(h.round_id)) holesMap.set(h.round_id, [])
+    holesMap.get(h.round_id)!.push(h)
+  }
+
+  // Build RoundDataPoint[] for StatsView
+  const statsRounds: RoundDataPoint[] = roundList
+    .filter(r => (holesMap.get(r.id)?.length ?? 0) > 0)
+    .map(r => {
+      const holes = holesMap.get(r.id) ?? []
+      const totalPar = r.par_total ?? holes.reduce((s, h) => s + h.par, 0)
+      const totalScore = r.score_total ?? holes.reduce((s, h) => s + h.score, 0)
+      const firHoles = holes.filter(h => h.par !== 3)
+      const firHit = firHoles.filter(h => h.fir === true).length
+      const girHit = holes.filter(h => h.gir === true).length
+      const putts = holes.reduce((s, h) => s + (h.putts ?? 0), 0)
+      const udAttempts = holes.filter(h => h.gir === false).length
+      const udMade = holes.filter(h => h.up_and_down === true).length
+      const sandAttempts = holes.filter(h => h.sand_save !== null).length
+      const sandSaves = holes.filter(h => h.sand_save === true).length
+
+      const sgResult = r.input_mode === 'full'
+        ? calculateRoundSG(
+            holes.map(h => ({ holeNumber: h.hole_number, par: h.par as 3|4|5, shots: h.shots as ShotEntry[]|null })),
+            skillLevel
+          )
+        : null
+
+      const sgBands: SGBand[] | null = sgResult ? (() => {
+        const bands: SGBand[] = [
+          { label: '0–3ft',    category: 'putting',      minY: 0,      maxY: 1.0,      sgSum: 0, count: 0 },
+          { label: '3–5ft',    category: 'putting',      minY: 1.001,  maxY: 1.666,    sgSum: 0, count: 0 },
+          { label: '5–8ft',    category: 'putting',      minY: 1.667,  maxY: 2.666,    sgSum: 0, count: 0 },
+          { label: '8–12ft',   category: 'putting',      minY: 2.667,  maxY: 3.999,    sgSum: 0, count: 0 },
+          { label: '12–20ft',  category: 'putting',      minY: 4.0,    maxY: 6.666,    sgSum: 0, count: 0 },
+          { label: '20–30ft',  category: 'putting',      minY: 6.667,  maxY: 9.999,    sgSum: 0, count: 0 },
+          { label: '30–40ft',  category: 'putting',      minY: 10.0,   maxY: 13.332,   sgSum: 0, count: 0 },
+          { label: '40ft+',    category: 'putting',      minY: 13.333, maxY: Infinity, sgSum: 0, count: 0 },
+          { label: '0–10y',    category: 'around_green', minY: 0,  maxY: 9.9,      sgSum: 0, count: 0 },
+          { label: '10–20y',   category: 'around_green', minY: 10, maxY: 19.9,     sgSum: 0, count: 0 },
+          { label: '20–30y',   category: 'around_green', minY: 20, maxY: 29.9,     sgSum: 0, count: 0 },
+          { label: '30–50y',   category: 'approach',     minY: 30,  maxY: 49.9,     sgSum: 0, count: 0 },
+          { label: '50–75y',   category: 'approach',     minY: 50,  maxY: 74.9,     sgSum: 0, count: 0 },
+          { label: '75–100y',  category: 'approach',     minY: 75,  maxY: 99.9,     sgSum: 0, count: 0 },
+          { label: '100–125y', category: 'approach',     minY: 100, maxY: 124.9,    sgSum: 0, count: 0 },
+          { label: '125–150y', category: 'approach',     minY: 125, maxY: 149.9,    sgSum: 0, count: 0 },
+          { label: '150–175y', category: 'approach',     minY: 150, maxY: 174.9,    sgSum: 0, count: 0 },
+          { label: '175–200y', category: 'approach',     minY: 175, maxY: 199.9,    sgSum: 0, count: 0 },
+          { label: '175–200y', category: 'off_tee',      minY: 175, maxY: 199.9,    sgSum: 0, count: 0 },
+          { label: '200–225y', category: 'off_tee',      minY: 200, maxY: 224.9,    sgSum: 0, count: 0 },
+          { label: '225–250y', category: 'off_tee',      minY: 225, maxY: 249.9,    sgSum: 0, count: 0 },
+          { label: '250–275y', category: 'off_tee',      minY: 250, maxY: 274.9,    sgSum: 0, count: 0 },
+          { label: '275–300y', category: 'off_tee',      minY: 275, maxY: 299.9,    sgSum: 0, count: 0 },
+          { label: '300y+',    category: 'off_tee',      minY: 300, maxY: Infinity, sgSum: 0, count: 0 },
+        ]
+        for (const holeResult of sgResult.holes) {
+          for (const sgShot of holeResult.shots) {
+            if (sgShot.distBefore === 0) continue
+            const isPutt = sgShot.lie === 'green'
+            const isAroundGreen = !isPutt && sgShot.distBefore < 30
+            const isOffTee = !isPutt && !isAroundGreen && sgShot.lie === 'tee' && holeResult.par !== 3
+            const distForBand = isOffTee ? (sgShot.distBefore - sgShot.distAfter) : sgShot.distBefore
+            const band = bands.find(b => {
+              if (isPutt && b.category !== 'putting') return false
+              if (isAroundGreen && b.category !== 'around_green') return false
+              if (isOffTee && b.category !== 'off_tee') return false
+              if (!isPutt && !isAroundGreen && !isOffTee && b.category !== 'approach') return false
+              return distForBand >= b.minY && distForBand <= b.maxY
+            })
+            if (band) { band.sgSum += sgShot.sg; band.count++ }
+          }
+        }
+        return bands
+      })() : null
+
+      return {
+        id: r.id,
+        date: r.date,
+        courseName: r.course_name,
+        roundType: r.round_type,
+        scoreToPar: totalScore - totalPar,
+        par: totalPar,
+        firPct: firHoles.length > 0 ? (firHit / firHoles.length) * 100 : null,
+        girPct: holes.length > 0 ? (girHit / holes.length) * 100 : 0,
+        puttsPerHole: holes.length > 0 ? putts / holes.length : 0,
+        udPct: udAttempts > 0 ? (udMade / udAttempts) * 100 : null,
+        sandSavePct: sandAttempts > 0 ? (sandSaves / sandAttempts) * 100 : null,
+        sgTotal: sgResult?.sgTotal ?? null,
+        sgOffTee: sgResult?.sgOffTee ?? null,
+        sgApproach: sgResult?.sgApproach ?? null,
+        sgAroundGreen: sgResult?.sgAroundGreen ?? null,
+        sgPutt: sgResult?.sgPutt ?? null,
+        sgBands: sgBands ?? null,
+        eagles: holes.filter(h => h.score <= h.par - 2).length,
+        birdies: holes.filter(h => h.score === h.par - 1).length,
+        pars: holes.filter(h => h.score === h.par).length,
+        bogeys: holes.filter(h => h.score === h.par + 1).length,
+        doubles: holes.filter(h => h.score >= h.par + 2).length,
+        totalHoles: holes.length,
+      }
+    })
+
+  const sgRoundCount = statsRounds.filter(r => r.sgTotal !== null).length
+
+  // Last 10 rounds for the round list and AI challenge
+  const rounds = roundList.slice(0, 10)
+
+  // Compute SG averages from all rounds
   const sgTotals = { offTee: 0, approach: 0, aroundGreen: 0, putt: 0 }
   let sgCount = 0
-  for (const r of rounds.filter((r: { input_mode: string }) => r.input_mode === 'full')) {
-    const holes = allHoles.filter(h => h.round_id === r.id)
+  for (const r of roundList.filter(r => r.input_mode === 'full')) {
+    const holes = holesMap.get(r.id) ?? []
     if (!holes.length) continue
     const sg = calculateRoundSG(
       holes.map(h => ({ holeNumber: h.hole_number, par: h.par as 3|4|5, shots: h.shots as ShotEntry[]|null })),
@@ -76,7 +185,7 @@ export default async function CoachPlayerPage({ params }: Props) {
 
   // Scoring averages — split by 9 and 18 holes
   type ScoredRound = { score_total: number; par_total: number; holes: number }
-  const scoredRounds = rounds.filter((r: { score_total: number | null; par_total: number | null }) => r.score_total != null && r.par_total != null) as ScoredRound[]
+  const scoredRounds = roundList.filter(r => r.score_total != null && r.par_total != null) as ScoredRound[]
   const scored18 = scoredRounds.filter(r => r.holes >= 18)
   const scored9  = scoredRounds.filter(r => r.holes <= 9)
   const avgGross18 = scored18.length > 0 ? scored18.reduce((s, r) => s + r.score_total, 0) / scored18.length : null
@@ -181,13 +290,34 @@ export default async function CoachPlayerPage({ params }: Props) {
       {/* Coach player context */}
       <CoachPlayerNotes playerId={playerId} initialNotes={coachNotes} />
 
-      {/* Recent rounds */}
+      {/* Advanced stats */}
+      {statsRounds.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Advanced stats</h2>
+          <StatsView
+            rounds={statsRounds}
+            skillLevelLabel={SKILL_LEVEL_LABELS[skillLevel]}
+            isPro={true}
+            coachPersona="club_pro"
+            sgRoundCount={sgRoundCount}
+            handicapHistory={[]}
+            handicap={player.handicap ?? null}
+          />
+        </div>
+      )}
+
+      {/* Recent rounds — clickable */}
       <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Recent rounds</h2>
       <div className="space-y-3 mb-6">
-        {rounds.map((r: { id: string; course_name: string; date: string; score_total: number | null; par_total: number | null; holes: number; input_mode: string; notes: string | null; mood: string | null; conditions: string | null; energy_level: string | null }) => {
+        {rounds.map((r: RoundRow) => {
           const diff = (r.score_total ?? 0) - (r.par_total ?? 0)
           return (
-            <div key={r.id} className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+            <Link
+              key={r.id}
+              href={`/coach/players/${playerId}/rounds/${r.id}`}
+              className="block p-3 rounded-xl"
+              style={{ backgroundColor: '#1A1D27' }}
+            >
               <div className="flex items-center justify-between mb-1">
                 <div>
                   <p className="text-sm font-medium" style={{ color: '#F0F0F0' }}>{r.course_name}</p>
@@ -201,7 +331,7 @@ export default async function CoachPlayerPage({ params }: Props) {
                   </p>
                 </div>
                 {r.score_total && r.par_total && (
-                  <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor(diff) }}>
+                  <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: diff < 0 ? '#22C55E' : diff === 0 ? '#F0F0F0' : diff <= 2 ? '#9A9DB0' : '#EF4444' }}>
                     {diff === 0 ? 'E' : diff > 0 ? `+${diff}` : `${diff}`}
                   </span>
                 )}
@@ -211,7 +341,7 @@ export default async function CoachPlayerPage({ params }: Props) {
                   &ldquo;{r.notes}&rdquo;
                 </p>
               )}
-            </div>
+            </Link>
           )
         })}
       </div>
@@ -221,7 +351,7 @@ export default async function CoachPlayerPage({ params }: Props) {
         coachId={user.id}
         playerId={playerId}
         playerName={player.name ?? player.email}
-        rounds={rounds.slice(0, 5).map((r: { id: string; course_name: string; date: string; score_total: number | null; par_total: number | null }) => ({
+        rounds={rounds.slice(0, 5).map((r: RoundRow) => ({
           id: r.id,
           courseName: r.course_name,
           date: r.date,
