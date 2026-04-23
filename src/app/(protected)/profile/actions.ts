@@ -25,7 +25,8 @@ export async function saveProfile(_prevState: unknown, formData: FormData) {
 
   const { error } = await supabase
     .from('users')
-    .update({ name, handicap, feedback_level: feedbackLevel as 'simple' | 'intermediate' | 'advanced', coach_persona: coachPersona, player_context: playerContext })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ name, handicap, feedback_level: feedbackLevel as 'simple' | 'intermediate' | 'advanced', coach_persona: coachPersona, player_context: playerContext } as any)
     .eq('id', user.id)
 
   if (error) return { error: error.message }
