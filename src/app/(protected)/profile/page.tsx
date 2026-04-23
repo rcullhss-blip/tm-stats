@@ -19,7 +19,7 @@ export default async function ProfilePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any)
     .from('users')
-    .select('name, email, handicap, subscription_status, sg_baseline, feedback_level, coach_persona, promo_expires_at')
+    .select('name, email, handicap, subscription_status, sg_baseline, feedback_level, coach_persona, promo_expires_at, player_context')
     .eq('id', user.id)
     .single()
 
@@ -185,6 +185,7 @@ export default async function ProfilePage() {
           handicap={profile?.handicap ?? null}
           feedbackLevel={profile?.feedback_level ?? 'intermediate'}
           coachPersona={profile?.coach_persona ?? 'club_pro'}
+          playerContext={profile?.player_context ?? null}
         />
       </div>
 

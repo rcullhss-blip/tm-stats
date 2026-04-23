@@ -107,7 +107,7 @@ export default function SignupPage() {
               border: '1px solid #2E3247',
               color: '#F0F0F0',
             }}
-            placeholder="Rob Cull"
+            placeholder="Your name"
           />
         </div>
 

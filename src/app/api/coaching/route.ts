@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (service as any)
     .from('users')
-    .select('handicap, sg_baseline, feedback_level, coach_persona, subscription_status')
+    .select('handicap, sg_baseline, feedback_level, coach_persona, subscription_status, player_context')
     .eq('id', targetUserId)
     .single()
 
@@ -387,11 +387,15 @@ ${statsLines}${sgBlock}${notesBlock}${conditionParts.length ? '\n' + conditionPa
 Give them your coaching feedback.`
   }
 
+  const playerContextBlock = profile?.player_context
+    ? `\n\nPlayer's own context about their game (written by the player — use this to personalise your feedback):\n${profile.player_context}`
+    : ''
+
   const coachContextBlock = coachContext
     ? `\n\nCoach's notes on this player (use this context to inform your feedback):\n${coachContext}`
     : ''
 
-  const systemPrompt = `${COACH_PROMPTS[coachPersona] ?? COACH_PROMPTS.club_pro}${coachContextBlock}
+  const systemPrompt = `${COACH_PROMPTS[coachPersona] ?? COACH_PROMPTS.club_pro}${playerContextBlock}${coachContextBlock}
 
 ${FEEDBACK_DEPTH[feedbackLevel] ?? FEEDBACK_DEPTH.intermediate}
 

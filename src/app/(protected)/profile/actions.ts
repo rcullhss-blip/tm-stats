@@ -14,6 +14,7 @@ export async function saveProfile(_prevState: unknown, formData: FormData) {
   const handicap = handicapRaw !== '' ? parseFloat(handicapRaw) : null
   const feedbackLevel = formData.get('feedback_level') as string
   const coachPersona = formData.get('coach_persona') as string
+  const playerContext = (formData.get('player_context') as string)?.trim() || null
 
   // Get current handicap before updating so we can log changes
   const { data: currentProfile } = await supabase
@@ -24,7 +25,7 @@ export async function saveProfile(_prevState: unknown, formData: FormData) {
 
   const { error } = await supabase
     .from('users')
-    .update({ name, handicap, feedback_level: feedbackLevel as 'simple' | 'intermediate' | 'advanced', coach_persona: coachPersona })
+    .update({ name, handicap, feedback_level: feedbackLevel as 'simple' | 'intermediate' | 'advanced', coach_persona: coachPersona, player_context: playerContext })
     .eq('id', user.id)
 
   if (error) return { error: error.message }

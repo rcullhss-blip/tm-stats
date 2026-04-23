@@ -24,9 +24,10 @@ interface Props {
   handicap: number | null
   feedbackLevel: string
   coachPersona: string
+  playerContext: string | null
 }
 
-export default function ProfileEditForm({ name, handicap, feedbackLevel, coachPersona }: Props) {
+export default function ProfileEditForm({ name, handicap, feedbackLevel, coachPersona, playerContext }: Props) {
   const [state, action, pending] = useActionState(saveProfile, null)
 
   return (
@@ -130,6 +131,25 @@ export default function ProfileEditForm({ name, handicap, feedbackLevel, coachPe
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Player context */}
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: '#9A9DB0' }}>Your game context</label>
+        <p className="text-xs mb-2" style={{ color: '#4A4D60' }}>Tell your AI coach about your game — what you&apos;re working on, tendencies, anything relevant. This personalises every coaching response.</p>
+        <textarea
+          name="player_context"
+          defaultValue={playerContext ?? ''}
+          rows={4}
+          placeholder="e.g. I'm working on keeping my trail elbow tucked on the downswing. I tend to get quick when under pressure. Playing off 14, aiming to get to 10 by end of season."
+          className="w-full px-4 py-3 rounded-xl outline-none text-sm"
+          style={{
+            backgroundColor: '#1A1D27',
+            border: '1px solid #2E3247',
+            color: '#F0F0F0',
+            resize: 'vertical',
+          }}
+        />
       </div>
 
       <button
