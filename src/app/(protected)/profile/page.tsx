@@ -179,7 +179,8 @@ export default async function ProfilePage() {
 
       {/* Edit form */}
       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
-        <p className="text-sm font-semibold mb-4" style={{ color: '#F0F0F0' }}>Settings</p>
+        <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Settings</p>
+        <p className="text-xs mb-4" style={{ color: '#4A4D60' }}>Your game context and coaching preferences personalise every AI response.</p>
         <ProfileEditForm
           name={profile?.name ?? null}
           handicap={profile?.handicap ?? null}

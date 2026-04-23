@@ -41,8 +41,8 @@ export default function AboutPage() {
           <div className="flex items-start gap-4">
             <span className="text-2xl mt-0.5">🤖</span>
             <div>
-              <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>AI coaching adapted to your data</p>
-              <p className="text-sm">Seven coaching modes, each with a different perspective and focus. Feedback based on your actual numbers, not generic tips.</p>
+              <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>AI coaching that actually knows your game</p>
+              <p className="text-sm">Seven coaching modes, each with a different perspective. Feedback based on your stats, your tendencies, and what you tell it you&apos;re working on — not generic tips.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">

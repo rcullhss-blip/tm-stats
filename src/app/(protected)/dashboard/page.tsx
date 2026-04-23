@@ -42,9 +42,10 @@ export default async function DashboardPage() {
   if (!user) return null
 
   // Load user profile
-  const { data: profile } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profile } = await (supabase as any)
     .from('users')
-    .select('name, handicap, subscription_status')
+    .select('name, handicap, subscription_status, player_context')
     .eq('id', user.id)
     .single()
 
@@ -181,6 +182,22 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Player context nudge — shown to pro users who haven't filled it in */}
+      {isPro && !profile?.player_context && (
+        <Link
+          href="/profile"
+          className="mb-4 p-4 rounded-xl flex items-start gap-3"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247', display: 'flex' }}
+        >
+          <span className="text-xl mt-0.5">🎯</span>
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#F0F0F0' }}>Personalise your AI coach</p>
+            <p className="text-xs" style={{ color: '#9A9DB0' }}>Tell your coach about your game — what you&apos;re working on, your tendencies, your goals. It makes every coaching response specific to you.</p>
+            <p className="text-xs mt-2 font-medium" style={{ color: '#CC2222' }}>Add your game context in Settings →</p>
+          </div>
+        </Link>
       )}
 
       {/* Pre-Round Plan */}
