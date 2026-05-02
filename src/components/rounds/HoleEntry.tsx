@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { SetupData, HoleData } from '@/lib/types'
 import FullTrackingEntry from './FullTrackingEntry'
 import HowToPlayGuide from './HowToPlayGuide'
@@ -139,6 +139,8 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
   const [holes, setHoles] = useState<HoleData[]>(
     initialHoles ?? Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1))
   )
+  const scorecardRef = useRef<HTMLDivElement>(null)
+  const activeTileRef = useRef<HTMLDivElement>(null)
 
   const hole = holes[current]
 
@@ -185,6 +187,13 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
   const scoreToPar = hole.score - hole.par
   const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Birdie', 'Eagle', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
   const scoreParColor = scoreToPar < 0 ? '#22C55E' : scoreToPar === 0 ? '#F0F0F0' : scoreToPar <= 2 ? '#9A9DB0' : '#EF4444'
+
+  // Scroll scorecard strip to keep active tile in view
+  useEffect(() => {
+    if (activeTileRef.current && scorecardRef.current) {
+      activeTileRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+    }
+  }, [current])
 
   // Running to-par across completed holes
   const completedScore = holes.slice(0, current).reduce((sum, h) => sum + h.score, 0)
@@ -246,7 +255,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             />
           ))}
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <p className="text-xs" style={{ color: '#4A4D60' }}>
             Hole {current + 1} of {holeCount}
           </p>
@@ -259,6 +268,44 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
               {runningLabel}
             </p>
           </div>
+        </div>
+
+        {/* Scrollable scorecard strip */}
+        <div
+          ref={scorecardRef}
+          className="flex gap-1.5 overflow-x-auto pb-1"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+        >
+          {holes.map((h, i) => {
+            const diff = h.score - h.par
+            const isCurrent = i === current
+            const isDone = i < current
+            const scoreColor = !isDone ? '#4A4D60' : diff < 0 ? '#22C55E' : diff === 0 ? '#F0F0F0' : diff === 1 ? '#9A9DB0' : '#EF4444'
+            return (
+              <div
+                key={i}
+                ref={isCurrent ? activeTileRef : null}
+                className="flex-shrink-0 flex flex-col items-center rounded-lg"
+                style={{
+                  width: '36px',
+                  paddingTop: '5px',
+                  paddingBottom: '5px',
+                  backgroundColor: isCurrent ? '#CC222220' : isDone ? '#1A1D27' : 'transparent',
+                  border: isCurrent ? '1px solid #CC2222' : isDone ? '1px solid #2E3247' : '1px solid transparent',
+                }}
+              >
+                <p className="text-xs leading-none mb-1" style={{ fontFamily: 'var(--font-dm-mono)', color: '#4A4D60', fontSize: '9px' }}>
+                  H{i + 1}
+                </p>
+                <p className="text-sm font-bold leading-none" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor }}>
+                  {isDone ? h.score : isCurrent ? '·' : '—'}
+                </p>
+                <p className="text-xs leading-none mt-1" style={{ fontFamily: 'var(--font-dm-mono)', color: '#4A4D60', fontSize: '9px' }}>
+                  {isDone || isCurrent ? `P${h.par}` : ''}
+                </p>
+              </div>
+            )
+          })}
         </div>
       </div>
 
