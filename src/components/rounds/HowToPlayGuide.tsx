@@ -26,16 +26,22 @@ export default function HowToPlayGuide() {
         ?
       </button>
 
-      {/* Modal overlay */}
+      {/* Modal overlay — z-[200] to sit above BottomNav */}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center"
-          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          className="fixed inset-0 flex items-end justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 200 }}
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}
         >
           <div
             className="w-full max-w-lg rounded-t-2xl"
-            style={{ backgroundColor: '#1A1D27', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+            style={{
+              backgroundColor: '#1A1D27',
+              height: '85dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+            }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #2E3247' }}>
@@ -68,8 +74,8 @@ export default function HowToPlayGuide() {
               ))}
             </div>
 
-            {/* Content — min-height:0 is required for flex children to scroll within maxHeight */}
-            <div className="overflow-y-auto px-5 py-4 space-y-4" style={{ flex: '1 1 0', minHeight: 0 }}>
+            {/* Content */}
+            <div className="overflow-y-auto px-5 py-4 space-y-4" style={{ flex: '1 1 0', minHeight: 0, WebkitOverflowScrolling: 'touch' }}>
               {tab === 'quick' ? (
                 <>
                   <p className="text-sm" style={{ color: '#9A9DB0' }}>
