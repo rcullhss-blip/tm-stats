@@ -227,6 +227,38 @@ export default async function ProfilePage() {
         </div>
       )}
 
+      {/* Help & Guide links */}
+      <div className="mt-4 space-y-2">
+        <a
+          href="/player-guide"
+          className="flex items-center justify-between p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
+        >
+          <div className="flex items-center gap-3">
+            <span>📖</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Player guide</p>
+              <p className="text-xs" style={{ color: '#9A9DB0' }}>How to use every feature</p>
+            </div>
+          </div>
+          <span style={{ color: '#9A9DB0' }}>→</span>
+        </a>
+        <a
+          href="/contact"
+          className="flex items-center justify-between p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
+        >
+          <div className="flex items-center gap-3">
+            <span>✉️</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Contact support</p>
+              <p className="text-xs" style={{ color: '#9A9DB0' }}>Get help or send feedback</p>
+            </div>
+          </div>
+          <span style={{ color: '#9A9DB0' }}>→</span>
+        </a>
+      </div>
+
       <LogoutButton />
     </div>
   )

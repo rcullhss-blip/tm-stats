@@ -129,3 +129,21 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
 The admin panel, promo system, and coach team management all require this key.
+
+---
+
+## 8. Mental Game sessions
+
+```sql
+CREATE TABLE IF NOT EXISTS public.mental_sessions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL DEFAULT 'Chat',
+  messages JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.mental_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users manage own mental sessions" ON public.mental_sessions FOR ALL USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS mental_sessions_user_id_idx ON public.mental_sessions(user_id);
+```

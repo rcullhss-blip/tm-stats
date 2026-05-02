@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (service as any)
     .from('users')
-    .select('handicap, sg_baseline, feedback_level, coach_persona, subscription_status, player_context')
+    .select('name, handicap, sg_baseline, feedback_level, coach_persona, subscription_status, player_context')
     .eq('id', targetUserId)
     .single()
 
@@ -380,24 +380,34 @@ No intro, no labels, no extra text.`
       round.conditions ? `Conditions: ${round.conditions}` : null,
     ].filter(Boolean)
 
-    userPrompt = `Here is the round data for a golfer with handicap ${profile?.handicap ?? 'unknown'}:
+    const pName = profile?.name?.split(' ')[0] ?? 'this player'
+    userPrompt = `Here is the round data for ${pName} (handicap ${profile?.handicap ?? 'unknown'}):
 
 ${statsLines}${sgBlock}${notesBlock}${conditionParts.length ? '\n' + conditionParts.join(' | ') : ''}
 
-Give them your coaching feedback.`
+Give ${pName} specific coaching feedback based on these exact numbers.`
   }
 
   const playerContextBlock = profile?.player_context
-    ? `\n\nPlayer's own context about their game (written by the player — use this to personalise your feedback):\n${profile.player_context}`
+    ? `\n\nCRITICAL — Player's own context (written by the player). You MUST reference this in your feedback:\n${profile.player_context}`
     : ''
 
   const coachContextBlock = coachContext
-    ? `\n\nCoach's notes on this player (use this context to inform your feedback):\n${coachContext}`
+    ? `\n\nCoach's notes on this player:\n${coachContext}`
     : ''
+
+  const playerName = profile?.name?.split(' ')[0] ?? 'the player'
 
   const systemPrompt = `${COACH_PROMPTS[coachPersona] ?? COACH_PROMPTS.club_pro}${playerContextBlock}${coachContextBlock}
 
 ${FEEDBACK_DEPTH[feedbackLevel] ?? FEEDBACK_DEPTH.intermediate}
+
+CRITICAL RULES — you must follow these exactly:
+- Address ${playerName} by name at least once
+- Every observation MUST cite a specific number from the data (e.g. "4 from 14 fairways", "averaging 33 putts", "+2.1 SG putting" — not vague phrases like "you're struggling with")
+- If player_context is provided, explicitly reference something from it
+- Never give generic golf advice that could apply to anyone — every sentence must relate to THIS player's specific numbers
+- No filler phrases like "it's clear that" or "looking at your round"
 
 Format your response in plain text. Use short paragraphs for the analysis. For drills, use this exact format on new lines:
 DRILL 1: [Drill name] — [1-2 sentence instruction]

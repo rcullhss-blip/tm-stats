@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 interface NavItem {
   href: string
@@ -114,6 +115,13 @@ interface Props {
 
 export default function BottomNav({ isCoach = false, isAdmin = false }: Props) {
   const pathname = usePathname()
+  const [pendingHref, setPendingHref] = useState<string | null>(null)
+
+  // Clear pending state when route actually changes
+  useEffect(() => {
+    setPendingHref(null)
+  }, [pathname])
+
   let items = isCoach
     ? [...BASE_ITEMS.slice(0, 4), COACH_ITEM, BASE_ITEMS[4]]
     : BASE_ITEMS
@@ -131,20 +139,29 @@ export default function BottomNav({ isCoach = false, isAdmin = false }: Props) {
     >
       {items.map(({ href, label, icon }) => {
         const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+        const pending = pendingHref === href
+        const highlighted = active || pending
         return (
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center justify-center gap-1 flex-1 py-1"
+            onClick={() => { if (!active) setPendingHref(href) }}
+            className="flex flex-col items-center justify-center gap-1 flex-1 py-1 relative"
             style={{ minHeight: '52px' }}
           >
-            {icon(active)}
+            {icon(highlighted)}
             <span
               className="text-xs"
-              style={{ color: active ? '#CC2222' : '#9A9DB0', fontFamily: 'var(--font-inter)' }}
+              style={{ color: highlighted ? '#CC2222' : '#9A9DB0', fontFamily: 'var(--font-inter)' }}
             >
               {label}
             </span>
+            {pending && (
+              <span
+                className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                style={{ backgroundColor: '#CC2222' }}
+              />
+            )}
           </Link>
         )
       })}

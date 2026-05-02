@@ -13,6 +13,7 @@ export default function NewRoundClient() {
   const [step, setStep] = useState<'setup' | 'holes' | 'summary'>('setup')
   const [setup, setSetup] = useState<SetupData | null>(null)
   const [holeData, setHoleData] = useState<HoleData[]>([])
+  const [editingFromSummary, setEditingFromSummary] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -96,11 +97,17 @@ export default function NewRoundClient() {
     return (
       <HoleEntry
         setup={setup}
-        onBack={() => setStep('setup')}
+        onBack={() => {
+          setEditingFromSummary(false)
+          setStep('setup')
+        }}
         onComplete={(holes) => {
           setHoleData(holes)
+          setEditingFromSummary(false)
           setStep('summary')
         }}
+        initialHoles={editingFromSummary && holeData.length > 0 ? holeData : undefined}
+        editingFromSummary={editingFromSummary}
       />
     )
   }
@@ -112,7 +119,10 @@ export default function NewRoundClient() {
         holes={holeData}
         saving={saving}
         error={error}
-        onBack={() => setStep('holes')}
+        onBack={() => {
+          setEditingFromSummary(true)
+          setStep('holes')
+        }}
         onSave={handleSave}
       />
     )

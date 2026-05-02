@@ -7,6 +7,7 @@ import type { ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel } from '@/lib/sg-engine'
 import PreRoundPlanWidget from '@/components/dashboard/PreRoundPlanWidget'
 import PatternFinderWidget from '@/components/dashboard/PatternFinderWidget'
+import DashboardGuide from '@/components/dashboard/DashboardGuide'
 
 function scoreToPar(score: number | null, par: number | null): string {
   if (!score || !par) return '—'
@@ -145,6 +146,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      <DashboardGuide />
       {/* Greeting */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
@@ -280,10 +282,18 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/rounds/new"
-            className="inline-block px-6 py-4 rounded-xl font-semibold"
+            className="inline-block px-6 py-4 rounded-xl font-semibold mb-3"
             style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
           >
             + Log a round
+          </Link>
+          <br />
+          <Link
+            href="/player-guide"
+            className="inline-block px-5 py-3 rounded-xl text-sm font-medium"
+            style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
+          >
+            📖 Player guide
           </Link>
         </div>
       )}
@@ -295,9 +305,14 @@ export default async function DashboardPage() {
             <h2 className="text-base font-semibold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
               Recent rounds
             </h2>
-            <Link href="/rounds" className="text-sm" style={{ color: '#9A9DB0' }}>
-              See all
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/player-guide" className="text-sm" style={{ color: '#9A9DB0' }}>
+                📖 Guide
+              </Link>
+              <Link href="/rounds" className="text-sm" style={{ color: '#9A9DB0' }}>
+                See all
+              </Link>
+            </div>
           </div>
 
           <div className="space-y-3">

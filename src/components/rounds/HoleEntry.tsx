@@ -9,6 +9,9 @@ interface Props {
   setup: SetupData
   onBack: () => void
   onComplete: (holes: HoleData[]) => void
+  initialHoles?: HoleData[]
+  initialHole?: number
+  editingFromSummary?: boolean
 }
 
 function defaultHole(holeNumber: number): HoleData {
@@ -130,11 +133,11 @@ function PillToggle({
   )
 }
 
-export default function HoleEntry({ setup, onBack, onComplete }: Props) {
+export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, editingFromSummary = false }: Props) {
   const holeCount = setup.holes
-  const [current, setCurrent] = useState(0)
+  const [current, setCurrent] = useState(initialHole)
   const [holes, setHoles] = useState<HoleData[]>(
-    Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1))
+    initialHoles ?? Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1))
   )
 
   const hole = holes[current]
@@ -183,8 +186,28 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
   const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Birdie', 'Eagle', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
   const scoreParColor = scoreToPar < 0 ? '#22C55E' : scoreToPar === 0 ? '#F0F0F0' : scoreToPar <= 2 ? '#9A9DB0' : '#EF4444'
 
+  // Running to-par across completed holes
+  const completedScore = holes.slice(0, current).reduce((sum, h) => sum + h.score, 0)
+  const completedPar = holes.slice(0, current).reduce((sum, h) => sum + h.par, 0)
+  const runningToPar = completedScore - completedPar
+  const runningLabel = current === 0 ? 'E' : runningToPar === 0 ? 'E' : runningToPar > 0 ? `+${runningToPar}` : `${runningToPar}`
+  const runningColor = runningToPar < 0 ? '#22C55E' : runningToPar === 0 ? '#9A9DB0' : runningToPar <= 3 ? '#9A9DB0' : '#EF4444'
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      {/* Editing banner */}
+      {editingFromSummary && (
+        <div
+          className="mb-4 px-4 py-3 rounded-xl flex items-center gap-2"
+          style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}
+        >
+          <span style={{ color: '#F59E0B', fontSize: '16px' }}>✏️</span>
+          <p className="text-xs font-medium" style={{ color: '#F59E0B' }}>
+            Editing round — use Back/Next to find the hole to fix, then tap through to the summary when done.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -206,21 +229,37 @@ export default function HoleEntry({ setup, onBack, onComplete }: Props) {
         <HowToPlayGuide />
       </div>
 
-      {/* Progress */}
-      <div className="flex gap-1 mb-6">
-        {Array.from({ length: holeCount }, (_, i) => (
-          <div
-            key={i}
-            className="flex-1 h-1 rounded-full"
-            style={{
-              backgroundColor:
-                i < current ? '#CC2222' :
-                i === current ? '#CC2222' :
-                '#2E3247',
-              opacity: i === current ? 1 : i < current ? 0.6 : 1,
-            }}
-          />
-        ))}
+      {/* Progress + running to-par */}
+      <div className="mb-6">
+        <div className="flex gap-1 mb-2">
+          {Array.from({ length: holeCount }, (_, i) => (
+            <div
+              key={i}
+              className="flex-1 h-1 rounded-full"
+              style={{
+                backgroundColor:
+                  i < current ? '#CC2222' :
+                  i === current ? '#CC2222' :
+                  '#2E3247',
+                opacity: i === current ? 1 : i < current ? 0.6 : 1,
+              }}
+            />
+          ))}
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs" style={{ color: '#4A4D60' }}>
+            Hole {current + 1} of {holeCount}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs" style={{ color: '#4A4D60' }}>Running total:</p>
+            <p
+              className="text-sm font-bold"
+              style={{ fontFamily: 'var(--font-dm-mono)', color: runningColor }}
+            >
+              {runningLabel}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Hole header */}

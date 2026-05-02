@@ -86,6 +86,10 @@ function deriveShotStats(shots: ShotEntry[], par: 3 | 4 | 5): Omit<HoleData, 'ho
 function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   if (shots.length === 0) return 'tee'
   const prev = shots[shots.length - 1].lieType
+  if (prev === 'penalty') {
+    const lastReal = [...shots].reverse().find(s => s.lieType !== 'penalty')
+    return (lastReal?.lieType === 'tee') ? 'tee' : 'fairway'
+  }
   if (par === 3 && shots.length === 1) return 'green'
   if (prev === 'tee') return 'fairway'
   if (prev === 'fairway' || prev === 'rough' || prev === 'bunker' || prev === 'fringe') return 'green'
@@ -104,21 +108,26 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   const [pendingDist, setPendingDist] = useState('')
   const [error, setError] = useState('')
 
+  const isPenalty = pendingLie === 'penalty'
   const onGreen = pendingLie === 'green' || pendingLie === 'fringe'
   const distUnit = pendingLie === 'green' ? 'feet' : 'yards'
   const distPlaceholder = pendingLie === 'green' ? 'e.g. 12' : 'e.g. 145'
   const distMax = pendingLie === 'green' ? 200 : 600
 
   function addShot() {
-    const raw = parseInt(pendingDist)
-    if (isNaN(raw) || raw <= 0) {
-      setError(`Enter the distance in ${distUnit}`)
-      return
+    let distYards: number
+    if (pendingLie === 'penalty') {
+      // Penalty: no distance entered — inherit position from last real shot
+      distYards = shots.length > 0 ? shots[shots.length - 1].distanceToPin : 0
+    } else {
+      const raw = parseInt(pendingDist)
+      if (isNaN(raw) || raw <= 0) {
+        setError(`Enter the distance in ${distUnit}`)
+        return
+      }
+      distYards = pendingLie === 'green' ? feetToYards(raw) : raw
     }
     setError('')
-
-    // Convert feet → yards for green shots; store everything in yards
-    const distYards = pendingLie === 'green' ? feetToYards(raw) : raw
 
     const newShot: ShotEntry = {
       shotNumber: shots.length + 1,
@@ -138,12 +147,16 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     const updated = shots.slice(0, -1)
     setShots(updated)
     setPendingLie(prev.lieType)
-    // Restore the displayed value in its original unit
-    setPendingDist(
-      prev.lieType === 'green'
-        ? String(yardsToFeet(prev.distanceToPin))
-        : String(prev.distanceToPin)
-    )
+    // Penalty shots have no user-entered distance — restore blank
+    if (prev.lieType === 'penalty') {
+      setPendingDist('')
+    } else {
+      setPendingDist(
+        prev.lieType === 'green'
+          ? String(yardsToFeet(prev.distanceToPin))
+          : String(prev.distanceToPin)
+      )
+    }
   }
 
   function finalise(finalShots: ShotEntry[]) {
@@ -152,7 +165,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
 
   const lieColor = (lie: LieType, selected: boolean) => {
     const map: Record<LieType, string> = {
-      tee: '#9A9DB0', fairway: '#22C55E', rough: '#4ade80',
+      tee: '#22C55E', fairway: '#22C55E', rough: '#4ade80',
       bunker: '#F59E0B', fringe: '#86efac', green: '#22C55E', penalty: '#EF4444',
     }
     const c = map[lie]
@@ -214,7 +227,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                     </span>
                   </div>
                   <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
-                    {displayDist(s.distanceToPin, s.lieType)}
+                    {s.lieType === 'penalty' ? '—' : displayDist(s.distanceToPin, s.lieType)}
                   </span>
                 </div>
               )
@@ -247,28 +260,35 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           })}
         </div>
 
-        {/* Distance */}
-        <div className="mb-3">
-          <label className="block text-xs mb-2" style={{ color: '#9A9DB0' }}>
-            Distance to pin ({distUnit})
-          </label>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={pendingDist}
-            onChange={e => setPendingDist(e.target.value)}
-            placeholder={distPlaceholder}
-            min={0}
-            max={distMax}
-            className="w-full px-4 py-3 rounded-xl text-lg outline-none"
-            style={{
-              backgroundColor: '#1A1D27',
-              border: '1px solid #2E3247',
-              color: '#F0F0F0',
-              fontFamily: 'var(--font-dm-mono)',
-            }}
-          />
-        </div>
+        {/* Distance — hidden for penalty shots */}
+        {isPenalty ? (
+          <div className="mb-3 p-3 rounded-xl" style={{ backgroundColor: '#EF444415', border: '1px solid #EF444440' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>Penalty stroke</p>
+            <p className="text-xs" style={{ color: '#9A9DB0' }}>Counts as 1 shot. No yardage needed — your next shot carries on from where you were.</p>
+          </div>
+        ) : (
+          <div className="mb-3">
+            <label className="block text-xs mb-2" style={{ color: '#9A9DB0' }}>
+              Distance to pin ({distUnit})
+            </label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={pendingDist}
+              onChange={e => setPendingDist(e.target.value)}
+              placeholder={distPlaceholder}
+              min={0}
+              max={distMax}
+              className="w-full px-4 py-3 rounded-xl text-lg outline-none"
+              style={{
+                backgroundColor: '#1A1D27',
+                border: '1px solid #2E3247',
+                color: '#F0F0F0',
+                fontFamily: 'var(--font-dm-mono)',
+              }}
+            />
+          </div>
+        )}
 
         {error && <p className="text-xs mb-3" style={{ color: '#EF4444' }}>{error}</p>}
 
