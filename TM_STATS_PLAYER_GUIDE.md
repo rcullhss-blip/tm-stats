@@ -1,7 +1,7 @@
 # TM Stats — Player Guide
 ### Track to Improve
 
-**Version:** 1.0
+**Version:** 1.2
 
 ---
 
@@ -112,6 +112,10 @@ The **Dashboard** (home icon, bottom navigation) is your quick summary:
 - Your recent rounds
 - Prompts to upgrade when you are near your 5-round limit
 
+A red **GUIDE** tab sticks out from the right edge of the screen. Tap it at any time to open a full guide to Full Tracking and Quick Stats modes, including a worked example with a penalty shot.
+
+The Player Guide is also accessible from **Profile → Player guide** as a dedicated in-app page covering every feature on the platform.
+
 ---
 
 ## Viewing a Round in Detail
@@ -152,7 +156,7 @@ When setting up a new round, select **Full Tracking** as the input mode instead 
 
 For each shot on each hole, record:
 - **Distance to pin** — in yards (roughly is fine — within 5 yards is accurate enough)
-- **Lie type** — select from: tee, fairway, rough, bunker, recovery, green
+- **Lie type** — select from: tee, fairway, rough, bunker, recovery, green, penalty
 
 That's it. The system handles everything else automatically.
 
@@ -164,6 +168,16 @@ That's it. The system handles everything else automatically.
 - Whether you made a sand save from a bunker
 
 You never manually enter yes/no for any of these — the system works it out from your shot data.
+
+### Penalty shots
+
+If you take a penalty drop, select **Penalty** as the lie type. No yardage entry is required — the system knows a penalty counts as 1 stroke and automatically carries the previous distance forward to your next shot. After a penalty from the tee, the next shot suggestion reverts to "Tee" so you can re-tee. A red info card confirms the penalty has been recorded.
+
+### Live to-par tracker and scorecard strip
+
+While you are entering a round (both Quick and Full Tracking modes), a running to-par total is shown below the progress bar and updates after each hole is completed. It displays in colour-coded text — "+2", "−1", "E" and so on.
+
+Below that, a horizontal scrollable row of tiles shows every hole. Completed holes show their score colour-coded by result (green = birdie or better, white = par, grey = bogey, red = double bogey or worse) with the par beneath (e.g. "P4"). The active hole has a red border and the strip auto-scrolls to keep the current hole centred. Use this to quickly spot any entry errors without leaving the round.
 
 ### Tips for full tracking on the course
 
@@ -245,6 +259,23 @@ Tap any baseline to select it. Tap the same one again to reset to automatic.
 ## AI Coaching
 
 Pro plan users receive personalised AI coaching feedback on every round and across their overall stats.
+
+### Your Game Context — the most important setting
+
+In **Profile → Settings**, there is a field called **Your game context**. This is a free-text box where you describe your game to the AI coach in your own words.
+
+Write anything that is relevant to your game right now:
+- What you are working on technically — *"I'm trying to keep my trail elbow tucked on the downswing"*
+- Your tendencies under pressure — *"I get quick when I have a birdie putt to win a hole"*
+- Goals for the season — *"I want to get from a 14 to a 10 by end of season"*
+- Known weaknesses — *"My scoring from 125–150 yards is poor — I tend to go at the flag instead of the fat part of the green"*
+- Physical factors — *"I have a niggling left knee which affects my long iron swing"*
+
+**This context is included in every AI coaching response you receive.** The difference between a generic coaching note and one that references your specific tendencies and technical work is significant. Players who fill this in get substantially better feedback.
+
+You can update it any time — edit it to reflect wherever your game is right now.
+
+---
 
 ### Choosing your coach persona
 
@@ -409,14 +440,23 @@ Use this alongside your SG data to see whether your improvement in specific area
 
 ## Mental Game (/mental)
 
-Available to Pro plan users. A free-form space to talk through the mental side of your game with an AI golf mentor.
-
-Unlike the structured coaching features, the Mental Game page is conversational. You type whatever is on your mind — a recurring issue, a specific fear, a pattern of performance under pressure — and receive a calm, experienced response focused on what to do on the course.
+Available to Pro plan users. A conversational space to talk through the mental side of your game with an AI golf mentor.
 
 **This is not therapy.** It is practical golf mentoring: perspective, simple cues, and next steps on the course.
 
-**How to use it well:**  
+### Session history
+
+The Mental Game page keeps a full history of your conversations. When you open it you will see a list of past sessions, each labelled with the first message you sent and a relative date (e.g. "3 days ago"). From here you can:
+
+- **Start a new chat** — opens a fresh conversation with no prior context carried over
+- **Resume a session** — tap any past session to reopen it; the full conversation history is sent back to the AI so it remembers everything you discussed
+- **Delete a session** — removes it permanently from your history
+
+### How to use it well
+
 Be specific and honest. "I get nervous" is hard to help with. "I three-putt every time I have a birdie putt in a competition round because I decelerate through the ball" gives the system something concrete to work with.
+
+Returning to the same session over time lets the AI build a richer picture of your mental patterns — rather than starting from scratch each time.
 
 ---
 
@@ -429,6 +469,8 @@ If you are part of a coach's squad on TM Stats, your coach can see your stats, y
 - **Log rounds consistently.** One round a month isn't enough data for meaningful coaching. Even if your coach doesn't mention specific rounds in your lesson, the data builds a picture over time.
 
 - **Use full tracking mode.** Quick entry gives scores. Full tracking gives your coach the Strokes Gained breakdown they need to give you specific, targeted coaching rather than general advice.
+
+- **Fill in your game context.** Go to Profile → Settings → Your game context. Write a few sentences about what you are working on, your tendencies, your goals. This feeds into every coaching response your AI coach generates — and your coach can see it too when reviewing your rounds.
 
 - **Add notes to your rounds.** The notes field is visible to your coach. If something specific happened in a round — a mental wobble, an injury niggle, an intentional drill you were running — write it down. Your coach will see it.
 
@@ -462,5 +504,5 @@ Your handicap setting affects your SG baseline and all coaching context. Keep it
 
 ---
 
-*TM Stats Player Guide — Version 1.0*  
+*TM Stats Player Guide — Version 1.2*  
 *© TM Stats Ltd. All rights reserved.*

@@ -1,7 +1,7 @@
 # TM Stats — Coach's Guide
 ### Everything you need to get the most out of TM Stats for your players
 
-**Version:** 1.0  
+**Version:** 1.2  
 **For:** Golf coaches and academy instructors on the TM Stats Team plan
 
 ---
@@ -73,6 +73,8 @@ The system immediately generates your unique **8-character join code** (e.g., `M
 
 **Important:** Players join voluntarily. You cannot add a player without their action — this protects player data privacy. Players can also leave a team at any time from their Profile settings.
 
+**Encourage players to fill in their game context.** Once a player has joined, ask them to go to **Profile → Settings → Your game context** and write a short description of their game — what they are working on, their tendencies, their goals. This context is included in every AI coaching response they receive, and it is visible to you when reviewing their rounds. Players who fill this in get significantly better-calibrated AI feedback.
+
 **Do players need to be on Pro?** No. Players can be on the Free plan and still be part of your squad. They can log rounds and you can view their stats. However, Free plan players are limited to 5 rounds. If they want unlimited round history, they will need to upgrade. TM Stats can provide promo codes for coaches to distribute — contact info@tmstatsgolf.com.
 
 ---
@@ -113,6 +115,9 @@ A 12-handicap player shows:
 - SG: Putting +0.1 (roughly benchmark level)
 
 This player's primary coaching priority is clear: approach play.
+
+### Player Game Context
+If the player has filled in their game context (Profile → Settings → Your game context), you will see it on their profile page. This is the player's own description of where their game is — what they are working on, tendencies, goals. It feeds into every AI coaching response they receive. It is useful to read before using the AI Challenge, as it tells you what the player has already told the AI about themselves.
 
 ### Recent Rounds
 A list of the player's recent rounds with date, course, score relative to par, and SG total. Tap any round to see the full round detail — all hole data, shot-by-shot breakdown, SG per category, scoring distribution, and the AI feedback the player received.
@@ -180,7 +185,7 @@ SG: Around Green is the category most sensitive to short game technique. Bunker 
 The AI Challenge is the most powerful coaching tool on the platform. It is the feature that makes TM Stats uniquely valuable for professional coaches.
 
 ### What it Does
-The platform generates AI coaching feedback for every player's round. That feedback is based entirely on the statistical data — it doesn't know what you know about the player.
+The platform generates AI coaching feedback for every player's round. That feedback is based on the statistical data plus any game context the player has written about themselves (their tendencies, what they are working on, their goals). However, it still doesn't know what you know about the player from your time on the range and course with them.
 
 The AI Challenge lets you **add your knowledge** to the analysis. You tell the AI what the stats can't show. The AI then re-analyses the round incorporating your context and produces revised feedback that reflects both the data *and* your coaching insight.
 
@@ -302,6 +307,12 @@ Yes. The original AI feedback is displayed in full on the AI Challenge panel bef
 **What if a player hasn't logged any full-tracking rounds?**  
 You can still view their basic stats (scores, FIR, GIR, putts) from quick-entry rounds. SG data is only available for full-tracking rounds. Encourage your players to use Full Tracking mode — it takes an extra 2–3 minutes per round and significantly increases the depth of analysis available to both of you.
 
+**Does Full Tracking handle penalty shots?**  
+Yes. Players select "Penalty" as the lie type when they take a penalty drop. No yardage entry is needed — the system counts it as 1 stroke and carries the previous distance forward automatically. After a penalty from the tee, the next shot suggestion reverts to "Tee" so the player can re-tee. Encourage players who take penalties to use this rather than just adding a stroke manually — it keeps the shot sequence accurate.
+
+**Is there an in-app guide for players who are new to Full Tracking?**  
+Yes. A red GUIDE tab is visible on the Dashboard at all times — tapping it opens a full explanation of Full Tracking and Quick Stats modes, including a worked example with a penalty shot. Players can also access a full Player Guide page from their Profile settings.
+
 **Can I remove a player from my squad?**  
 Currently players manage their own team membership. A player can leave your team from their Profile settings. Contact info@tmstatsgolf.com if you need a player removed for any reason.
 
@@ -328,5 +339,5 @@ We are always looking to improve the coaching tools based on feedback from worki
 
 ---
 
-*TM Stats Coach's Guide — Version 1.0*  
+*TM Stats Coach's Guide — Version 1.2*  
 *© TM Stats Ltd. All rights reserved.*

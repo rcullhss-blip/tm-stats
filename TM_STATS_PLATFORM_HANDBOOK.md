@@ -1,12 +1,7 @@
-Make me a pitchdeck doc so I can market and send this out, create a doc and put it in tmstats file
-
-Create me a coaches guide so when I give it to coaches they can havea guide on how to sue the system and put it in tmstats file
-
-Create me a player guide simple, intermediate, and advance all in one doc and put it in tmstats file
 # TM Stats — Platform Handbook
 ### Product & Functionality Reference Document
 
-**Version:** 1.0  
+**Version:** 1.2  
 **Prepared by:** TM Stats Ltd  
 **Classification:** Confidential — Business Use Only
 
@@ -157,7 +152,7 @@ The simplest and fastest input method. For each hole the user enters:
 
 Shot-by-shot entry for complete analytical depth. For each shot on each hole, the user records:
 - **Distance to pin** (in yards)
-- **Lie type** (tee, fairway, rough, bunker, recovery, green, other)
+- **Lie type** (tee, fairway, rough, bunker, recovery, green, penalty, other)
 
 The system **auto-calculates** all derived statistics from this data:
 - FIR — automatically true if the first shot from the tee lands in the fairway (par 4/5)
@@ -169,6 +164,21 @@ The system **auto-calculates** all derived statistics from this data:
 **What it produces:** Everything from Quick Entry, plus full **Strokes Gained** across all 4 categories.
 
 **Typical use case:** A low-handicap golfer who wants to know exactly where they are losing and gaining shots relative to their benchmark.
+
+**Penalty shot handling**  
+When the user selects "Penalty" as the lie type, no yardage input is required. A red info card confirms the penalty counts as 1 stroke and that play continues from the previous position. The system auto-inherits the distance from the prior shot. After a penalty from the tee, the next shot suggestion reverts to "Tee" so the player can re-tee correctly.
+
+**Tee button highlighting**  
+The "Tee" lie type button highlights green when selected, consistent with all other lie types.
+
+**Live to-par tracker**  
+During hole entry (both Quick and Full Tracking modes), a running to-par total is displayed below the progress bar and updates after each completed hole. Displays as colour-coded text: "+2", "−1", "E", etc.
+
+**Scrollable scorecard strip**  
+Below the to-par tracker, a horizontal scrollable row of tiles shows every hole in the round. Completed holes display the score (colour-coded: green = birdie or better, white = par, grey = bogey, red = double bogey or worse) and par (e.g. "P4"). The active hole has a red border. The strip auto-scrolls to keep the current hole centred. Allows the player to spot entry errors without navigating away from the current hole.
+
+**Back from summary preserves data**  
+Navigating back from the round summary screen to edit a hole no longer clears entered hole data. All scores are preserved. An amber "Editing round" banner is shown so the player is aware they are in edit mode rather than starting a new round.
 
 ### 5.4 Round Conditions
 
@@ -272,6 +282,9 @@ Scans the user's recent rounds for a notable trend and surfaces one insight.
 
 ### 7.8 Free Tier Warning
 Free plan users who have used 4 or 5 of their 5 allowed rounds see a persistent banner directing them to upgrade.
+
+### 7.9 Guide Button
+A red **GUIDE** tab is pinned to the right edge of the Dashboard screen at all times. Tapping it opens a bottom sheet modal covering how to use Full Tracking (Strokes Gained) mode and Quick Stats mode, including a worked example with a penalty shot, and tips. The modal uses `z-index: 200` to sit above the bottom navigation bar, and uses `height: 85dvh` for correct display on mobile devices.
 
 ---
 
@@ -440,7 +453,20 @@ Users also select their preferred technical level:
 | **Intermediate** | Stats context, 2–3 observations, 2–3 named drills with instructions |
 | **Advanced** | Root cause analysis, patterns, 3 drills with full instructions and rationale |
 
-### 10.3 AI Coaching Modes
+### 10.3 Player Game Context
+
+Users can write a free-text description of their game in **Profile → Settings → Your game context**. This field accepts any text the player wants the AI to know about them — current technical work, tendencies, goals, physical factors, competitive context.
+
+This context is injected into the system prompt for every AI coaching response the player receives. It personalises all coaching outputs to the player's specific situation rather than responding to the statistical data alone.
+
+**Example input:**  
+*"I'm working on keeping my trail elbow tucked on the downswing. I tend to get quick when under pressure on short putts. I'm aiming to get from a 14 to a 10 handicap by the end of the season."*
+
+**Effect:** Every round coaching response, practice plan, and round review will reference these factors where relevant — e.g., acknowledging the technical change, noting patterns around short putting pressure, framing feedback in terms of the 10-handicap goal.
+
+Players who fill this in receive materially better-calibrated coaching feedback. If a player is on a coach's squad, the coach can also see this context when reviewing their player's profile and rounds.
+
+### 10.4 AI Coaching Modes
 
 **Mode 1: Round Coaching**
 Triggered from the Round Detail page. Analyses the specific round's data (score, SG, FIR, GIR, putts, conditions, notes) and produces personalised coaching feedback with named practice drills.
@@ -472,13 +498,13 @@ Scans the last 10 rounds for a notable trend or pattern. Returns one sentence fr
 **Mode 7: Bad Round Recovery**
 Triggers automatically when a round is poor (8+ over par relative to handicap, or 3+ double bogeys). Four lines of calm, forward-focused perspective. Tone: experienced mentor, never clinical.
 
-### 10.4 Legal Disclaimer
+### 10.5 Legal Disclaimer
 All AI coaching outputs display the following footer in small print:  
 *"TM Stats coaching modes are generalised coaching styles and are not affiliated with or representative of any individual coach."*
 
 This appears on every AI output, in every mode, without exception.
 
-### 10.5 Pro Gate
+### 10.6 Pro Gate
 All AI coaching features are gated behind the Pro subscription. Free plan users see prompts to upgrade in place of coaching content. The gate is enforced both at the UI level and at the API level — the endpoint returns a 403 for non-Pro users regardless of how it is called.
 
 ---
@@ -487,16 +513,28 @@ All AI coaching features are gated behind the Pro subscription. Free plan users 
 
 A dedicated page (`/mental`) for the psychological side of the game. Available to Pro plan users only.
 
-### 11.1 How it Works
-The user types a free-form message about a mental challenge they are experiencing — nerves, a recurring miss under pressure, frustration with a particular hole type, consistency issues in competition. There is no structured form — it is conversational.
+### 11.1 Session-Based Architecture
 
-**Example inputs:**
-- *"I keep three-putting when I have a birdie putt — I think I get nervous and decelerate."*
-- *"I played my best round ever in practice but shot 12 over in the club medal the next day."*
-- *"I can't hit a driver on the first tee if there are people watching."*
+The Mental Game feature uses a persistent session model. Each conversation is stored as a session in the `mental_sessions` table. When the user opens `/mental`, they see a list of all their past sessions, each identified by the first message they sent and a relative timestamp (e.g. "3 days ago").
 
-### 11.2 The Response
+**User actions available:**
+- **New chat** — starts a fresh session with no prior context. Previous sessions are preserved in the list.
+- **Resume session** — tapping a past session reopens it in full. The complete conversation history for that session is sent to the AI on each subsequent message, so the AI has full context of everything discussed.
+- **Delete session** — permanently removes the session and its message history.
+
+### 11.2 API Endpoints
+
+| Method | Behaviour |
+|---|---|
+| `GET /api/mental` | Returns a list of all sessions for the authenticated user (id, title, created_at, updated_at) |
+| `GET /api/mental?session_id=<id>` | Returns a specific session including full messages array |
+| `POST /api/mental` | Sends a message. If `session_id` is provided, appends to that session; if not, creates a new session. Returns the AI response and the session id. |
+| `DELETE /api/mental?session_id=<id>` | Permanently deletes the specified session |
+
+### 11.3 AI Response Behaviour
 The AI responds as a calm, experienced golf mentor — not a sports psychologist or therapist. The tone is warm, grounded, and practical. Responses are 2–4 short paragraphs, focused on perspective and simple on-course cues.
+
+When resuming a session, the full prior conversation is included in the AI prompt, allowing continuity across multiple conversations about the same issue.
 
 The system explicitly avoids:
 - Clinical language or therapy framing
@@ -522,6 +560,7 @@ Displays the user's name, email address, and current plan status (Free / Pro / C
 Users can update:
 - **Display name**
 - **Handicap index** — used for SG baseline selection and coaching context
+- **Your game context** — free-text field. Player describes their game: technical work in progress, tendencies, goals, physical factors. Injected into every AI coaching prompt. Visible to coach if on a team.
 - **Feedback level** — Simple / Intermediate / Advanced (affects AI coaching depth)
 - **Coach persona** — one of the 7 coaching styles (affects all AI coaching outputs)
 
@@ -548,6 +587,12 @@ Always balanced — one strength highlighted, one opportunity. Framed positively
 
 ### 12.7 Promo Code Redemption
 Free plan users see a field to enter a promo code. Valid codes activate Pro access for a defined period (e.g., 3 months). Access reverts to Free automatically when the promo expires — no manual action required.
+
+### 12.8 Player Guide Link
+A link card at the bottom of the Profile page labelled **"Player guide"** navigates to `/player-guide` — the full in-app Player Guide covering all platform features.
+
+### 12.9 Contact Support Link
+A link card at the bottom of the Profile page labelled **"Contact support"** navigates to `/contact` — the platform contact form.
 
 ---
 
@@ -726,6 +771,7 @@ The following pages are accessible without authentication and form the marketing
 | Contact | `/contact` | Contact form — messages sent to info@tmstatsgolf.com via Resend |
 | Privacy Policy | `/privacy` | Full GDPR-compliant privacy policy |
 | Terms of Service | `/terms` | Platform terms and conditions |
+| Player Guide | `/player-guide` | In-app guide page covering all platform features. Protected (requires login). Accessible from Dashboard (GUIDE button) and Profile → Player guide. |
 
 ### Contact Form
 The contact form is functional and connected to Resend for email delivery. Messages are sent to `info@tmstatsgolf.com`. The form validates input client-side and confirms submission to the user.
@@ -741,7 +787,7 @@ A cookie consent banner is displayed on first visit to the public site. Required
 
 **users**  
 Stores the primary user profile. One row per registered user.  
-Fields: `id`, `email`, `name`, `handicap`, `subscription_status`, `feedback_level`, `coach_persona`, `sg_baseline`, `promo_expires_at`, `created_at`
+Fields: `id`, `email`, `name`, `handicap`, `subscription_status`, `feedback_level`, `coach_persona`, `sg_baseline`, `player_context`, `promo_expires_at`, `created_at`
 
 **rounds**  
 Stores one row per logged round.  
@@ -774,6 +820,10 @@ Fields: `id`, `code_id`, `user_id`, `redeemed_at`, `expires_at`
 **handicap_history**  
 Log of handicap changes for trend charting.  
 Fields: `id`, `user_id`, `handicap`, `date`, `created_at`
+
+**mental_sessions**  
+Stores persistent Mental Game conversation sessions.  
+Fields: `id`, `user_id`, `title` (first message, used as session label), `messages` (JSONB — full conversation history as ordered array of role/content pairs), `created_at`, `updated_at`
 
 ### Row Level Security
 All tables have Supabase Row Level Security (RLS) policies enforced. Users can only read and write their own data. Coaches can read data for players on their team. Admin operations require the service role key and are performed server-side only.
