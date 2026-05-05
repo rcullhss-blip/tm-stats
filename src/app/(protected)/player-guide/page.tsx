@@ -9,6 +9,8 @@ const sections = [
     bullets: [
       'Quick Stats: enter par, score, FIR, GIR, and putts per hole',
       'Full Tracking: enter each shot with lie type and distance to pin',
+      'Full Tracking also asks for lie quality (Good / Awkward / Severe) on fairway, rough, bunker, and fringe shots — this makes your Strokes Gained numbers more accurate by giving extra credit for shots played from difficult lies',
+      'Made a mistake mid-round? Tap any completed hole in the scorecard strip to jump back to it — tap Next when done and you return straight to where you were',
       'Both modes build your scoring history and trend charts',
     ],
   },
