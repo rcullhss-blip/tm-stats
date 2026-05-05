@@ -136,11 +136,16 @@ function PillToggle({
 export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, editingFromSummary = false }: Props) {
   const holeCount = setup.holes
   const [current, setCurrent] = useState(initialHole)
+  const [highestReached, setHighestReached] = useState(
+    editingFromSummary ? holeCount - 1 : initialHole
+  )
   const [holes, setHoles] = useState<HoleData[]>(
     initialHoles ?? Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1))
   )
   const scorecardRef = useRef<HTMLDivElement>(null)
   const activeTileRef = useRef<HTMLDivElement>(null)
+
+  const editingMidRound = current < highestReached
 
   const hole = holes[current]
 
@@ -168,8 +173,13 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
   }
 
   function handleNext() {
-    if (current < holeCount - 1) {
-      setCurrent(c => c + 1)
+    if (current < highestReached) {
+      // Editing a previous hole — jump back to the frontier
+      setCurrent(highestReached)
+    } else if (current < holeCount - 1) {
+      const next = current + 1
+      setCurrent(next)
+      setHighestReached(next)
     } else {
       onComplete(holes)
     }
@@ -212,7 +222,18 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
         >
           <span style={{ color: '#F59E0B', fontSize: '16px' }}>✏️</span>
           <p className="text-xs font-medium" style={{ color: '#F59E0B' }}>
-            Editing round — use Back/Next to find the hole to fix, then tap through to the summary when done.
+            Editing round — tap any hole in the strip above to jump to it, then tap through to the summary when done.
+          </p>
+        </div>
+      )}
+      {editingMidRound && !editingFromSummary && (
+        <div
+          className="mb-4 px-4 py-3 rounded-xl flex items-center gap-2"
+          style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}
+        >
+          <span style={{ color: '#F59E0B', fontSize: '16px' }}>✏️</span>
+          <p className="text-xs font-medium" style={{ color: '#F59E0B' }}>
+            Editing Hole {current + 1} — tap Next when done to return to Hole {highestReached + 1}.
           </p>
         </div>
       )}
@@ -279,31 +300,34 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           {holes.map((h, i) => {
             const diff = h.score - h.par
             const isCurrent = i === current
-            const isDone = i < current
-            const scoreColor = !isDone ? '#4A4D60' : diff < 0 ? '#22C55E' : diff === 0 ? '#F0F0F0' : diff === 1 ? '#9A9DB0' : '#EF4444'
+            const hasData = i <= highestReached
+            const isReachable = hasData && !isCurrent
+            const scoreColor = !hasData ? '#4A4D60' : diff < 0 ? '#22C55E' : diff === 0 ? '#F0F0F0' : diff === 1 ? '#9A9DB0' : '#EF4444'
+            const Tag = isReachable ? 'button' : 'div'
             return (
-              <div
+              <Tag
                 key={i}
-                ref={isCurrent ? activeTileRef : null}
+                ref={isCurrent ? (activeTileRef as React.RefObject<HTMLDivElement & HTMLButtonElement>) : null}
+                {...(isReachable ? { type: 'button' as const, onClick: () => setCurrent(i) } : {})}
                 className="flex-shrink-0 flex flex-col items-center rounded-lg"
                 style={{
                   width: '36px',
                   paddingTop: '5px',
                   paddingBottom: '5px',
-                  backgroundColor: isCurrent ? '#CC222220' : isDone ? '#1A1D27' : 'transparent',
-                  border: isCurrent ? '1px solid #CC2222' : isDone ? '1px solid #2E3247' : '1px solid transparent',
+                  backgroundColor: isCurrent ? '#CC222220' : hasData ? '#1A1D27' : 'transparent',
+                  border: isCurrent ? '1px solid #CC2222' : hasData ? '1px solid #2E3247' : '1px solid transparent',
                 }}
               >
                 <p className="text-xs leading-none mb-1" style={{ fontFamily: 'var(--font-dm-mono)', color: '#4A4D60', fontSize: '9px' }}>
                   H{i + 1}
                 </p>
                 <p className="text-sm font-bold leading-none" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor }}>
-                  {isDone ? h.score : isCurrent ? '·' : '—'}
+                  {hasData ? h.score : isCurrent ? '·' : '—'}
                 </p>
                 <p className="text-xs leading-none mt-1" style={{ fontFamily: 'var(--font-dm-mono)', color: '#4A4D60', fontSize: '9px' }}>
-                  {isDone || isCurrent ? `P${h.par}` : ''}
+                  {(hasData || isCurrent) ? `P${h.par}` : ''}
                 </p>
-              </div>
+              </Tag>
             )
           })}
         </div>
@@ -451,8 +475,13 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
                 i === current ? { ...h, ...data } : h
               )
               setHoles(updatedHoles)
-              if (current < holeCount - 1) {
-                setCurrent(c => c + 1)
+              if (current < highestReached) {
+                // Editing a previous hole — jump back to frontier
+                setCurrent(highestReached)
+              } else if (current < holeCount - 1) {
+                const next = current + 1
+                setCurrent(next)
+                setHighestReached(next)
               } else {
                 onComplete(updatedHoles)
               }
@@ -470,7 +499,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             className="w-full py-4 rounded-xl font-semibold text-base"
             style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}
           >
-            {isLast ? 'Review round →' : `Next: Hole ${current + 2} →`}
+            {editingMidRound ? `Back to Hole ${highestReached + 1} →` : isLast ? 'Review round →' : `Next: Hole ${current + 2} →`}
           </button>
         </div>
       )}

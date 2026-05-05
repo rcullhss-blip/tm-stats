@@ -183,10 +183,13 @@ export type ConditionTag = 'sunny' | 'windy' | 'rainy' | 'cold' | 'hot'
 
 export type LieType = 'tee' | 'fairway' | 'rough' | 'bunker' | 'fringe' | 'green' | 'penalty'
 
+export type LieQuality = 'good' | 'awkward' | 'severe'
+
 export interface ShotEntry {
   shotNumber: number
   distanceToPin: number
   lieType: LieType
+  lieQuality?: LieQuality
 }
 
 export interface SetupData {

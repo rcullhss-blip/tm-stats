@@ -4,7 +4,7 @@
  * Baseline = expected strokes to hole out for the chosen skill level
  */
 
-import type { LieType, ShotEntry } from './types'
+import type { LieType, LieQuality, ShotEntry } from './types'
 
 // ─── Skill levels ─────────────────────────────────────────────────────────────
 
@@ -169,14 +169,24 @@ function scratchExpected(distYards: number, lie: LieType): number {
   }
 }
 
-export function expectedStrokes(distYards: number, lie: LieType, level: SkillLevel = 'scratch'): number {
+const LIE_QUALITY_OFFSET: Record<LieQuality, number> = {
+  good: 0,
+  awkward: 0.2,
+  severe: 0.5,
+}
+
+export function expectedStrokes(
+  distYards: number,
+  lie: LieType,
+  level: SkillLevel = 'scratch',
+  quality: LieQuality = 'good',
+): number {
   if (distYards <= 0) return 0
   const scratch = scratchExpected(distYards, lie)
-  if (level === 'scratch') return scratch
-  const { putting, approach } = SKILL_SCALES[level]
-  const scale = lie === 'green' ? putting : approach
-  // Scale the difficulty above "1 shot" — the hole-out stroke is always 1
-  return 1 + (scratch - 1) * scale
+  const base = level === 'scratch'
+    ? scratch
+    : 1 + (scratch - 1) * (lie === 'green' ? SKILL_SCALES[level].putting : SKILL_SCALES[level].approach)
+  return base + LIE_QUALITY_OFFSET[quality]
 }
 
 // ─── SG per shot ──────────────────────────────────────────────────────────────
@@ -250,8 +260,8 @@ export function calculateHoleSG(
 
     const next = shots[i + 1] ?? null
 
-    const expectedBefore = expectedStrokes(shot.distanceToPin, shot.lieType, level)
-    const expectedAfter = next ? expectedStrokes(next.distanceToPin, next.lieType, level) : 0
+    const expectedBefore = expectedStrokes(shot.distanceToPin, shot.lieType, level, shot.lieQuality ?? 'good')
+    const expectedAfter = next ? expectedStrokes(next.distanceToPin, next.lieType, level, next.lieQuality ?? 'good') : 0
     const sg = expectedBefore - expectedAfter - 1
 
     sgShots.push({

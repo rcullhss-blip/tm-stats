@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { HoleData } from '@/lib/types'
-import type { LieType, ShotEntry } from '@/lib/types'
+import type { LieType, LieQuality, ShotEntry } from '@/lib/types'
 
 interface Props {
   holeNumber: number
@@ -21,6 +21,14 @@ const LIE_OPTIONS: { value: LieType; label: string }[] = [
   { value: 'green', label: 'Green' },
   { value: 'penalty', label: 'Penalty' },
 ]
+
+const QUALITY_OPTIONS: { value: LieQuality; label: string; color: string }[] = [
+  { value: 'good',    label: 'Good',    color: '#22C55E' },
+  { value: 'awkward', label: 'Awkward', color: '#F59E0B' },
+  { value: 'severe',  label: 'Severe',  color: '#EF4444' },
+]
+
+const LIES_WITH_QUALITY: LieType[] = ['fairway', 'rough', 'bunker', 'fringe']
 
 // Distances stored internally in yards. Green shots entered in feet → convert on input/display.
 function feetToYards(feet: number): number {
@@ -105,6 +113,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     }
     return 'tee'
   })
+  const [pendingQuality, setPendingQuality] = useState<LieQuality>('good')
   const [pendingDist, setPendingDist] = useState('')
   const [error, setError] = useState('')
 
@@ -133,11 +142,12 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       shotNumber: shots.length + 1,
       distanceToPin: distYards,
       lieType: pendingLie,
+      ...(LIES_WITH_QUALITY.includes(pendingLie) && pendingQuality !== 'good' ? { lieQuality: pendingQuality } : {}),
     }
     const newShots = [...shots, newShot]
     setShots(newShots)
     setPendingDist('')
-
+    setPendingQuality('good')
     setPendingLie(nextLieSuggestion(newShots, par))
   }
 
@@ -147,6 +157,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     const updated = shots.slice(0, -1)
     setShots(updated)
     setPendingLie(prev.lieType)
+    setPendingQuality(prev.lieQuality ?? 'good')
     // Penalty shots have no user-entered distance — restore blank
     if (prev.lieType === 'penalty') {
       setPendingDist('')
@@ -215,7 +226,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                   className="flex items-center justify-between px-4 py-3"
                   style={{ borderBottom: i < shots.length - 1 ? '1px solid #2E3247' : 'none' }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0', width: '20px' }}>
                       {s.shotNumber}
                     </span>
@@ -225,6 +236,17 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                     >
                       {s.lieType}
                     </span>
+                    {s.lieQuality && s.lieQuality !== 'good' && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium capitalize"
+                        style={{
+                          backgroundColor: s.lieQuality === 'severe' ? '#EF444420' : '#F59E0B20',
+                          color: s.lieQuality === 'severe' ? '#EF4444' : '#F59E0B',
+                        }}
+                      >
+                        {s.lieQuality}
+                      </span>
+                    )}
                   </div>
                   <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
                     {s.lieType === 'penalty' ? '—' : displayDist(s.distanceToPin, s.lieType)}
@@ -250,7 +272,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
               <button
                 key={value}
                 type="button"
-                onClick={() => { setPendingLie(value); setPendingDist('') }}
+                onClick={() => { setPendingLie(value); setPendingDist(''); setPendingQuality('good') }}
                 className="px-3 py-2 rounded-lg text-sm font-medium"
                 style={{ backgroundColor: bg, color: text, border: `1px solid ${border}`, minHeight: '40px' }}
               >
@@ -259,6 +281,34 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
             )
           })}
         </div>
+
+        {/* Lie quality — only for lies where quality matters */}
+        {LIES_WITH_QUALITY.includes(pendingLie) && (
+          <div className="mb-4">
+            <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>Lie quality</p>
+            <div className="flex gap-2">
+              {QUALITY_OPTIONS.map(({ value, label, color }) => {
+                const selected = pendingQuality === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPendingQuality(value)}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium"
+                    style={{
+                      backgroundColor: selected ? `${color}20` : '#1A1D27',
+                      color: selected ? color : '#9A9DB0',
+                      border: `1px solid ${selected ? `${color}60` : '#2E3247'}`,
+                      minHeight: '40px',
+                    }}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Distance — hidden for penalty shots */}
         {isPenalty ? (
