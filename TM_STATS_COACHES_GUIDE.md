@@ -1,7 +1,7 @@
 # TM Stats — Coach's Guide
 ### Everything you need to get the most out of TM Stats for your players
 
-**Version:** 1.2  
+**Version:** 1.3  
 **For:** Golf coaches and academy instructors on the TM Stats Team plan
 
 ---
@@ -310,6 +310,12 @@ You can still view their basic stats (scores, FIR, GIR, putts) from quick-entry 
 **Does Full Tracking handle penalty shots?**  
 Yes. Players select "Penalty" as the lie type when they take a penalty drop. No yardage entry is needed — the system counts it as 1 stroke and carries the previous distance forward automatically. After a penalty from the tee, the next shot suggestion reverts to "Tee" so the player can re-tee. Encourage players who take penalties to use this rather than just adding a stroke manually — it keeps the shot sequence accurate.
 
+**Can players fix a mistake mid-round without starting over?**  
+Yes. During hole entry, the scorecard strip at the top of the screen shows every hole as a tile. Tapping any completed hole tile jumps directly back to it for editing. An amber banner confirms edit mode. Tapping Next after the correction returns straight to the hole they were on — they do not have to tap through every intermediate hole. No data entered after the corrected hole is lost.
+
+**What is the lie quality selector in Full Tracking?**  
+When a player records a shot from the fairway, rough, bunker, or fringe, a "Lie quality" row appears with three options: Good, Awkward, or Severe. Good is the default and the most common. Awkward covers uneven stances, divots, or unusual positions. Severe covers deep rough, buried bunker lies, or anything where extraction is the primary goal. The selection adjusts the Strokes Gained calculation: Awkward adds 0.2 strokes to the expected difficulty, Severe adds 0.5 strokes. This means a player who executes well from a severe lie receives proportionally more SG credit than the same shot from a clean lie. Encourage players to use this accurately — it makes the SG data more meaningful for coaching, particularly for players who frequently find difficult lies.
+
 **Is there an in-app guide for players who are new to Full Tracking?**  
 Yes. A red GUIDE tab is visible on the Dashboard at all times — tapping it opens a full explanation of Full Tracking and Quick Stats modes, including a worked example with a penalty shot. Players can also access a full Player Guide page from their Profile settings.
 
@@ -339,5 +345,5 @@ We are always looking to improve the coaching tools based on feedback from worki
 
 ---
 
-*TM Stats Coach's Guide — Version 1.2*  
+*TM Stats Coach's Guide — Version 1.3*  
 *© TM Stats Ltd. All rights reserved.*

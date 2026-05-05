@@ -1,7 +1,7 @@
 # TM Stats — Platform Handbook
 ### Product & Functionality Reference Document
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Prepared by:** TM Stats Ltd  
 **Classification:** Confidential — Business Use Only
 
@@ -152,7 +152,8 @@ The simplest and fastest input method. For each hole the user enters:
 
 Shot-by-shot entry for complete analytical depth. For each shot on each hole, the user records:
 - **Distance to pin** (in yards)
-- **Lie type** (tee, fairway, rough, bunker, recovery, green, penalty, other)
+- **Lie type** (tee, fairway, rough, bunker, fringe, green, penalty)
+- **Lie quality** *(conditional)* — Good / Awkward / Severe — shown only when lie type is fairway, rough, bunker, or fringe
 
 The system **auto-calculates** all derived statistics from this data:
 - FIR — automatically true if the first shot from the tee lands in the fairway (par 4/5)
@@ -175,10 +176,16 @@ The "Tee" lie type button highlights green when selected, consistent with all ot
 During hole entry (both Quick and Full Tracking modes), a running to-par total is displayed below the progress bar and updates after each completed hole. Displays as colour-coded text: "+2", "−1", "E", etc.
 
 **Scrollable scorecard strip**  
-Below the to-par tracker, a horizontal scrollable row of tiles shows every hole in the round. Completed holes display the score (colour-coded: green = birdie or better, white = par, grey = bogey, red = double bogey or worse) and par (e.g. "P4"). The active hole has a red border. The strip auto-scrolls to keep the current hole centred. Allows the player to spot entry errors without navigating away from the current hole.
+Below the to-par tracker, a horizontal scrollable row of tiles shows every hole in the round. Completed holes display the score (colour-coded: green = birdie or better, white = par, grey = bogey, red = double bogey or worse) and par (e.g. "P4"). The active hole has a red border. The strip auto-scrolls to keep the current hole centred.
+
+**Mid-round error correction (TMB-001)**  
+Completed hole tiles in the scorecard strip are interactive buttons. Tapping any completed tile navigates directly to that hole for editing. The component tracks a `highestReached` index — when the user taps Next after editing a previous hole, they are returned to the frontier (the hole they were on when they jumped back) rather than advancing sequentially. An amber editing banner is shown confirming edit mode and the destination on Next. No data entered after the edited hole is lost. Works in both Quick and Full Tracking modes.
 
 **Back from summary preserves data**  
-Navigating back from the round summary screen to edit a hole no longer clears entered hole data. All scores are preserved. An amber "Editing round" banner is shown so the player is aware they are in edit mode rather than starting a new round.
+Navigating back from the round summary screen to edit a hole no longer clears entered hole data. All scores are preserved. An amber "Editing round" banner is shown so the player is aware they are in edit mode. The scorecard strip tiles are also tappable in this mode.
+
+**Lie quality modifier (TMB-001)**  
+When the pending lie type is fairway, rough, bunker, or fringe, a "Lie quality" selector appears with three options: Good (default, +0 offset), Awkward (+0.2 strokes), Severe (+0.5 strokes). The selector is hidden for tee, green, and penalty shots. Quality defaults to Good on each new shot and resets when lie type changes. On undo, the quality of the removed shot is restored. The `lieQuality` field is stored per shot in the `shots` JSONB column — no schema change required. Shots with quality Awkward or Severe display a colour-coded badge in the shot history list (amber for Awkward, red for Severe).
 
 ### 5.4 Round Conditions
 
@@ -237,7 +244,24 @@ The platform uses 7 calibrated amateur baselines:
 
 The baseline is automatically set from the user's handicap. Users can manually override it in Profile settings if they want to benchmark against a different level.
 
-### 6.4 SG Interpretation
+### 6.4 Lie Quality Modifier (TMB-001)
+
+When a shot is recorded with a lie quality of Awkward or Severe, the expected strokes for that position are adjusted upward before the SG formula is applied:
+
+| Lie quality | Expected strokes adjustment |
+|---|---|
+| Good | +0.00 (no change) |
+| Awkward | +0.20 |
+| Severe | +0.50 |
+
+The adjustment is applied to both `expectedBefore` (for the shot being played from that lie) and `expectedAfter` (for the previous shot, which landed the ball in that lie). This means:
+- Playing well from a severe lie earns proportionally more SG credit
+- Landing in a severe lie costs proportionally more SG credit on the preceding shot
+- The modifier is applied after skill-level scaling
+
+**Implementation:** The `lieQuality` field on `ShotEntry` defaults to `'good'` (undefined). The `expectedStrokes()` function accepts an optional `quality: LieQuality` parameter and adds the offset to the computed base value.
+
+### 6.5 SG Interpretation
 
 The platform displays SG data in a consistent format throughout:
 - **Green values (positive)** — player outperforming benchmark in that category

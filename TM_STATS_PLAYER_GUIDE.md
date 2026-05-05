@@ -1,7 +1,7 @@
 # TM Stats — Player Guide
 ### Track to Improve
 
-**Version:** 1.2
+**Version:** 1.3
 
 ---
 
@@ -156,9 +156,12 @@ When setting up a new round, select **Full Tracking** as the input mode instead 
 
 For each shot on each hole, record:
 - **Distance to pin** — in yards (roughly is fine — within 5 yards is accurate enough)
-- **Lie type** — select from: tee, fairway, rough, bunker, recovery, green, penalty
+- **Lie type** — select from: tee, fairway, rough, bunker, fringe, green, penalty
+- **Lie quality** *(optional, for fairway/rough/bunker/fringe)* — Good, Awkward, or Severe
 
 That's it. The system handles everything else automatically.
+
+**Lie quality explained:** When you are in the fairway, rough, bunker, or fringe, a second row of buttons appears asking about the quality of your lie. Most of the time this will be **Good** — you can leave it and move on. Use **Awkward** for an uneven stance, a divot, or a plugged ball in the bunker. Use **Severe** for a ball in a buried lie, thick deep rough, or anywhere your main concern is just moving the ball. The lie quality adjusts the Strokes Gained calculation to give you accurate credit for difficult shots — a great result from a severe lie is worth more SG credit than the same result from a clean fairway lie.
 
 **What gets auto-calculated for you:**
 - Whether you hit the fairway (FIR)
@@ -177,7 +180,9 @@ If you take a penalty drop, select **Penalty** as the lie type. No yardage entry
 
 While you are entering a round (both Quick and Full Tracking modes), a running to-par total is shown below the progress bar and updates after each hole is completed. It displays in colour-coded text — "+2", "−1", "E" and so on.
 
-Below that, a horizontal scrollable row of tiles shows every hole. Completed holes show their score colour-coded by result (green = birdie or better, white = par, grey = bogey, red = double bogey or worse) with the par beneath (e.g. "P4"). The active hole has a red border and the strip auto-scrolls to keep the current hole centred. Use this to quickly spot any entry errors without leaving the round.
+Below that, a horizontal scrollable row of tiles shows every hole. Completed holes show their score colour-coded by result (green = birdie or better, white = par, grey = bogey, red = double bogey or worse) with the par beneath (e.g. "P4"). The active hole has a red border and the strip auto-scrolls to keep the current hole centred.
+
+**Fixing a mistake mid-round:** Tap any completed hole tile to jump straight back to it. An amber banner will appear confirming you are editing that hole. Make your correction, then tap **Next** — this takes you straight back to the hole you were on, not hole by hole through every one in between. You will not lose any data entered after the hole you edited.
 
 ### Tips for full tracking on the course
 
@@ -504,5 +509,5 @@ Your handicap setting affects your SG baseline and all coaching context. Keep it
 
 ---
 
-*TM Stats Player Guide — Version 1.2*  
+*TM Stats Player Guide — Version 1.3*  
 *© TM Stats Ltd. All rights reserved.*
