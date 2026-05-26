@@ -81,17 +81,6 @@ export default async function CoachPlayerRoundPage({ params }: PageProps) {
   }))
   const sg = round.input_mode === 'full' ? calculateRoundSG(holesForSG, skillLevel) : null
 
-  // Existing AI challenge for this round
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existingChallenge } = await (service as any)
-    .from('coach_ai_challenges')
-    .select('revised_ai_feedback, created_at')
-    .eq('round_id', roundId)
-    .eq('player_id', playerId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
   const playerName = player.name ?? player.email
 
   return (
@@ -203,10 +192,15 @@ export default async function CoachPlayerRoundPage({ params }: PageProps) {
 
       {/* AI Challenge */}
       <CoachAIChallenge
-        roundId={roundId}
+        coachId={user.id}
         playerId={playerId}
         playerName={playerName}
-        existingChallenge={existingChallenge ?? null}
+        rounds={[{
+          id: roundId,
+          courseName: round.course_name,
+          date: round.date,
+          scoreToPar: totalDiff,
+        }]}
       />
     </div>
   )
