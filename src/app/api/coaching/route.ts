@@ -274,21 +274,142 @@ No introduction. No extra commentary.`
 
   // ── Pattern finder ────────────────────────────────────────────────────────
   } else if (body.mode === 'patterns') {
-    const rounds = body.rounds as Array<{ date: string; scoreToPar: number; roundType: string }>
-    if (!rounds?.length) return NextResponse.json({ error: 'No round data' }, { status: 400 })
+    // Fetch last 10 rounds for this player
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: roundsRaw } = await (service as any)
+      .from('rounds')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .order('date', { ascending: false })
+      .limit(10)
 
-    const roundSummary = rounds.map(r =>
-      `${r.date}: ${r.scoreToPar > 0 ? '+' : ''}${r.scoreToPar} (${r.roundType})`
-    ).join('\n')
+    if (!roundsRaw?.length) return NextResponse.json({ error: 'No rounds found' }, { status: 400 })
 
-    const patternPrompt = `Here are a golfer's recent rounds (handicap ${profile?.handicap ?? 'unknown'}):\n${roundSummary}\n\nIdentify ONE clear pattern or insight from this data. Output a single sentence starting with "TM Stats has spotted a pattern:" — always positive or neutral framing, never negative. Examples of tone: "Your scoring improves in practice rounds", "Your last 4 rounds show consistent par-or-better front 9 performance", "You've shot under your handicap in 3 of your last 5 rounds."`
+    const allRounds = roundsRaw as Array<{
+      id: string; date: string; score_total: number | null; par_total: number | null;
+      round_type: string; input_mode: string
+    }>
+    const scoredRounds = allRounds.filter(r => r.score_total != null && r.par_total != null)
+    if (scoredRounds.length < 3) return NextResponse.json({ error: 'Need at least 3 scored rounds' }, { status: 400 })
+
+    // Round type performance
+    const practiceRounds = scoredRounds.filter(r => r.round_type === 'practice')
+    const compRounds = scoredRounds.filter(r => r.round_type === 'competition' || r.round_type === 'tournament')
+    const practiceAvg = practiceRounds.length >= 2
+      ? practiceRounds.reduce((s, r) => s + (r.score_total! - r.par_total!), 0) / practiceRounds.length
+      : null
+    const compAvg = compRounds.length >= 2
+      ? compRounds.reduce((s, r) => s + (r.score_total! - r.par_total!), 0) / compRounds.length
+      : null
+
+    // Scoring trend: last 3 vs previous 3
+    const last3 = scoredRounds.slice(0, 3)
+    const prev3 = scoredRounds.slice(3, 6)
+    const last3Avg = last3.length >= 3
+      ? last3.reduce((s, r) => s + (r.score_total! - r.par_total!), 0) / last3.length
+      : null
+    const prev3Avg = prev3.length >= 3
+      ? prev3.reduce((s, r) => s + (r.score_total! - r.par_total!), 0) / prev3.length
+      : null
+
+    // SG averages and aggregates from full-tracking rounds
+    const fullRounds = allRounds.filter(r => r.input_mode === 'full')
+    let sgAvgs: { offTee: number; approach: number; aroundGreen: number; putt: number } | null = null
+    let firPct: number | null = null
+    let girPct: number | null = null
+    let puttsPerHole: number | null = null
+    let udPct: number | null = null
+
+    if (fullRounds.length >= 2) {
+      const roundIds = fullRounds.map(r => r.id)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: holesRaw } = await (service as any).from('holes').select('*').in('round_id', roundIds)
+
+      if (holesRaw?.length) {
+        const holeList = holesRaw as HoleRow[]
+
+        const fairwayHoles = holeList.filter(h => h.par !== 3)
+        const firHit = fairwayHoles.filter(h => h.fir === true).length
+        firPct = fairwayHoles.length > 0 ? Math.round(firHit / fairwayHoles.length * 100) : null
+
+        const girHit = holeList.filter(h => h.gir === true).length
+        girPct = Math.round(girHit / holeList.length * 100)
+
+        const puttTotal = holeList.reduce((s, h) => s + (h.putts ?? 0), 0)
+        const puttHoles = holeList.filter(h => h.putts != null).length
+        puttsPerHole = puttHoles > 0 ? Math.round(puttTotal / puttHoles * 10) / 10 : null
+
+        const udMade = holeList.filter(h => h.up_and_down === true).length
+        const udAttempts = holeList.filter(h => h.gir === false && h.up_and_down !== null).length
+        udPct = udAttempts >= 4 ? Math.round(udMade / udAttempts * 100) : null
+
+        const sgTotals = { offTee: 0, approach: 0, aroundGreen: 0, putt: 0, count: 0 }
+        for (const round of fullRounds) {
+          const holes = holeList.filter(h => h.round_id === round.id)
+          if (!holes.length) continue
+          const sg = calculateRoundSG(
+            holes.map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null })),
+            skillLevel
+          )
+          if (!sg) continue
+          sgTotals.offTee += sg.sgOffTee
+          sgTotals.approach += sg.sgApproach
+          sgTotals.aroundGreen += sg.sgAroundGreen
+          sgTotals.putt += sg.sgPutt
+          sgTotals.count++
+        }
+        if (sgTotals.count > 0) {
+          sgAvgs = {
+            offTee: sgTotals.offTee / sgTotals.count,
+            approach: sgTotals.approach / sgTotals.count,
+            aroundGreen: sgTotals.aroundGreen / sgTotals.count,
+            putt: sgTotals.putt / sgTotals.count,
+          }
+        }
+      }
+    }
+
+    const scoreDiffs = scoredRounds.map(r => r.score_total! - r.par_total!)
+    const dataLines = [
+      `Handicap: ${profile?.handicap ?? 'unknown'}`,
+      `Rounds analysed: ${scoredRounds.length}`,
+      `Score range: ${Math.min(...scoreDiffs) > 0 ? '+' : ''}${Math.min(...scoreDiffs)} to +${Math.max(...scoreDiffs)}`,
+      last3Avg !== null && prev3Avg !== null
+        ? `Scoring trend: last 3 rounds avg ${last3Avg > 0 ? '+' : ''}${last3Avg.toFixed(1)}, previous 3 avg ${prev3Avg > 0 ? '+' : ''}${prev3Avg.toFixed(1)}`
+        : null,
+      practiceAvg !== null && compAvg !== null
+        ? `Practice avg: ${practiceAvg > 0 ? '+' : ''}${practiceAvg.toFixed(1)} vs competition avg: ${compAvg > 0 ? '+' : ''}${compAvg.toFixed(1)}`
+        : null,
+      practiceAvg !== null && compAvg === null
+        ? `Only practice rounds logged (${practiceRounds.length} rounds, avg ${practiceAvg > 0 ? '+' : ''}${practiceAvg.toFixed(1)})`
+        : null,
+      firPct !== null ? `Fairways hit: ${firPct}%` : null,
+      girPct !== null ? `GIR: ${girPct}%` : null,
+      puttsPerHole !== null ? `Putts per hole: ${puttsPerHole}` : null,
+      udPct !== null ? `Up & down: ${udPct}%` : null,
+      sgAvgs
+        ? `SG averages (${fullRounds.length} full-tracking rounds) — Off tee: ${sgAvgs.offTee.toFixed(2)}, Approach: ${sgAvgs.approach.toFixed(2)}, Around green: ${sgAvgs.aroundGreen.toFixed(2)}, Putting: ${sgAvgs.putt.toFixed(2)}`
+        : null,
+    ].filter(Boolean).join('\n')
+
+    const patternPrompt = `Analyse the following stats for ${profile?.name ?? 'a golfer'}:
+
+${dataLines}
+
+Identify exactly 3 specific, data-driven insights from this player's stats. Each insight must cite a specific number. Output exactly this format:
+
+PATTERN 1: [one sentence — a factual pattern or trend, with a number]
+PATTERN 2: [one sentence — a different pattern, with a number]
+PATTERN 3: [one sentence — the single most impactful finding for their improvement, with a number]
+
+Rules: every sentence must include at least one specific number. Relate to THIS player's data only. Pattern 3 should be the most actionable insight. No intro, no extra text.`
 
     const client = new OpenAI({ apiKey })
     const completion = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      max_tokens: 80,
+      max_tokens: 220,
       messages: [
-        { role: 'system', content: 'Output one sentence only. No introduction. Always positive or neutral.' },
+        { role: 'system', content: 'You are a data-driven golf analyst. Output exactly 3 PATTERN lines, each one sentence with a specific number. No intro, no commentary.' },
         { role: 'user', content: patternPrompt },
       ],
     })

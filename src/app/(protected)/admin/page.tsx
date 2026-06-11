@@ -82,18 +82,31 @@ export default async function AdminPage() {
       {/* Create coach */}
       <AdminCreateCoach />
 
-      {/* Promo codes link */}
-      <Link
-        href="/admin/promos"
-        className="block p-4 rounded-xl mb-6"
-        style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Promo codes</span>
-          <span style={{ color: '#9A9DB0' }}>→</span>
-        </div>
-        <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Generate and manage access codes</p>
-      </Link>
+      {/* Quick links */}
+      <div className="space-y-2 mb-6">
+        <Link
+          href="/admin/promos"
+          className="block p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Promo codes</span>
+            <span style={{ color: '#9A9DB0' }}>→</span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Generate and manage access codes</p>
+        </Link>
+        <Link
+          href="/admin/marketing"
+          className="block p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Marketing Hub</span>
+            <span style={{ color: '#9A9DB0' }}>→</span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Outreach, blog, newsletter, Instagram, scraper</p>
+        </Link>
+      </div>
 
       {/* User list */}
       <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Users</h2>

@@ -127,14 +127,7 @@ export default async function DashboardPage() {
   }
   const oneShotFixText = trainingFocus ? oneShotFix[trainingFocus.category] ?? null : null
 
-  // Data for Pattern Finder
-  const patternsData = (rounds ?? [])
-    .filter(r => r.score_total != null && r.par_total != null)
-    .map(r => ({
-      date: r.date,
-      scoreToPar: r.score_total! - r.par_total!,
-      roundType: r.round_type,
-    }))
+  const patternRoundCount = (rounds ?? []).filter(r => r.score_total != null && r.par_total != null).length
 
   // Stats for Pre-Round Plan
   const preRoundStats = {
@@ -212,7 +205,7 @@ export default async function DashboardPage() {
       />
 
       {/* Pattern Finder */}
-      <PatternFinderWidget rounds={patternsData} isPro={isPro} />
+      <PatternFinderWidget roundCount={patternRoundCount} isPro={isPro} />
 
       {/* Summary cards */}
       {roundCount > 0 && (

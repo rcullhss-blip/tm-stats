@@ -10,6 +10,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Image src="/logo-outline.svg" alt="TM Stats" width={120} height={36} style={{ height: '36px', width: 'auto' }} />
         </Link>
         <div className="flex items-center gap-3">
+          <Link href="/blog" className="text-sm font-medium px-4 py-2 rounded-lg" style={{ color: '#9A9DB0' }}>
+            Blog
+          </Link>
           <Link href="/login" className="text-sm font-medium px-4 py-2 rounded-lg" style={{ color: '#9A9DB0' }}>
             Log in
           </Link>

@@ -56,3 +56,40 @@ button, a, [role="button"] {
 html {
   scroll-behavior: smooth;
 }
+
+/* Marketing hub CSS variables (used by inline styles in /admin/marketing pages) */
+:root {
+  --black: #0d0d0d;
+  --surface: #141414;
+  --surface2: #1c1c1c;
+  --surface3: #242424;
+  --border: rgba(255,255,255,0.07);
+  --text: #f0f0f0;
+  --text-2: #a0a0a0;
+  --text-3: #606060;
+  --red: #C22431;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+}
+
+/* Blog post body styles */
+.blog-content h1, .blog-content h2, .blog-content h3 {
+  color: #F0F0F0;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+}
+.blog-content h2 { font-size: 1.25rem; }
+.blog-content h3 { font-size: 1.05rem; }
+.blog-content p { margin-bottom: 1.25rem; line-height: 1.75; }
+.blog-content ul, .blog-content ol { padding-left: 1.5rem; margin-bottom: 1.25rem; }
+.blog-content li { margin-bottom: 0.5rem; line-height: 1.7; }
+.blog-content strong { color: #F0F0F0; font-weight: 600; }
+.blog-content a { color: #CC2222; text-decoration: underline; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -147,3 +147,26 @@ ALTER TABLE public.mental_sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users manage own mental sessions" ON public.mental_sessions FOR ALL USING (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS mental_sessions_user_id_idx ON public.mental_sessions(user_id);
 ```
+
+---
+
+## 9. Blog posts (public SEO pages)
+
+```sql
+CREATE TABLE IF NOT EXISTS public.blog_posts (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  excerpt TEXT,
+  meta_title TEXT,
+  meta_desc TEXT,
+  keyword TEXT,
+  published_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
+-- Anyone can read published posts (public blog)
+CREATE POLICY "Public read blog posts" ON public.blog_posts FOR SELECT USING (true);
+-- Only service role can insert/update (admin publishes via API)
+```
