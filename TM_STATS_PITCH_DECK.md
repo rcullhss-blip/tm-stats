@@ -76,6 +76,8 @@ An AI coach (in one of 7 coaching styles chosen by the player) delivers specific
 - Quick mode for casual logging
 - Full tracking mode for complete Strokes Gained analysis
 - Shot-by-shot data with lie type and distance
+- Course memory: pars pre-filled from your last round at that course
+- Rounds auto-save on the device — a dead battery never loses a round
 - Conditions, mood, energy — full context capture
 
 **Strokes Gained Engine**
@@ -83,13 +85,19 @@ An AI coach (in one of 7 coaching styles chosen by the player) delivers specific
 - 7 calibrated baselines from scratch to beginner
 - Auto-calculated FIR, GIR, putts, up & down, sand save
 
+**Mental Process Tracking — unique to TM Stats**
+- Optional per-shot Yes/No: "Did you fully commit to your pre-shot process?"
+- Measures commitment, not outcome — the first consumer baseline for the mental game
+- Process % per round, long game vs putting split, process trend over time
+- The platform correlates process % with scoring: "when you commit, you save X shots"
+
 **AI Coaching Suite**
 - Round coaching with named practice drills
 - Round review (Weakness / Fix / Coaching mode recommendation)
 - 45-minute structured practice planner
 - Overall stats coaching across all recent rounds
 - Pre-round course management plan
-- Pattern finder
+- Pattern finder — now includes mental process correlation
 - Bad round recovery
 - Mental game advisor
 
@@ -97,13 +105,19 @@ An AI coach (in one of 7 coaching styles chosen by the player) delivers specific
 - Performance trends over time
 - Benchmark comparison (vs your handicap band)
 - Score impact simulator ("improving your approach by 0.5 SG = 2.5 shots per round")
-- Personal bests
+- Personal bests, milestones and streaks (lowest 18, bogey-free runs, career birdies)
+- Compare any two rounds side by side
 - Handicap trend tracker
+
+**Practice & Sharing**
+- Practice log: golfers record sessions against the drills their AI coach sets
+- Shareable round snapshot (Pro): one tap from round to Instagram story — branded, organic growth built in
 
 **Coach & Team Platform**
 - Coaches manage squads, view player stats
 - AI Challenge: coaches add context to AI feedback, creating blended recommendations
 - Players see coach-enhanced feedback on their rounds
+- Weekly coach digest email: every player's rounds, averages and best scores, automatically
 
 ---
 
@@ -152,13 +166,14 @@ A golfer who takes 2 lessons per month spends £1,200/year on instruction. TM St
 ### Freemium SaaS with three clear revenue streams.
 
 **Free Plan — Acquisition**
-- 5 rounds, basic stats
+- 5 rounds, full basic stats
+- **One free Strokes Gained round** — the golfer sees their own SG numbers once, then it locks
+- Competitors charge for SG everywhere; tasting it on your own data is the conversion engine
 - Clear upgrade prompts throughout
-- Designed to demonstrate value quickly and convert
 
 **Pro Plan — Core Revenue**
 - £4.99/month or £50/year
-- Unlimited rounds, full SG, all AI coaching, all features
+- Unlimited rounds, full SG on every round, SG trends, all AI coaching, shareable round snapshots
 - Target conversion: 15–20% of active free users
 
 **Coach/Team Plan — B2B Revenue**

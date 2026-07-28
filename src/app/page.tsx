@@ -73,18 +73,39 @@ export default function LandingPage() {
           {/* Features */}
           <div className="space-y-3 mb-12">
             {[
-              { icon: '📊', title: 'Strokes Gained', desc: 'The same analytics used on tour — see which shots actually cost you' },
-              { icon: '🤖', title: 'AI Coaching', desc: 'Data-driven feedback in 7 different coaching styles, based on your round' },
-              { icon: '📱', title: 'Built for the course', desc: 'Mobile-first, fast entry, works in any conditions — no hardware needed' },
-            ].map(({ icon, title, desc }) => (
+              { title: 'Strokes Gained', desc: 'The same analytics used on tour — see which shots actually cost you' },
+              { title: 'AI Coaching', desc: 'Data-driven feedback in 7 different coaching styles, based on your round' },
+              { title: 'Built for the course', desc: 'Mobile-first, fast entry, works in any conditions — no hardware needed' },
+            ].map(({ title, desc }) => (
               <div key={title} className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
-                <span className="text-2xl mt-0.5">{icon}</span>
                 <div>
                   <p className="font-semibold text-sm mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>{title}</p>
                   <p className="text-sm" style={{ color: '#9A9DB0' }}>{desc}</p>
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Stats benchmarks */}
+          <div className="mb-12 p-5 rounded-2xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222240' }}>
+            <p className="text-xs uppercase tracking-widest font-semibold mb-3 text-center" style={{ color: '#CC2222' }}>
+              Free benchmarks
+            </p>
+            <h2 className="text-xl font-bold text-center mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+              What&apos;s a good number for your handicap?
+            </h2>
+            <p className="text-sm text-center mb-4" style={{ color: '#9A9DB0' }}>
+              GIR%, fairways hit, putts per round, scrambling, sand saves — see what golfers at your level actually record, from scratch to 25+.
+            </p>
+            <div className="text-center">
+              <Link
+                href="/golf-stats"
+                className="inline-block px-6 py-3 rounded-xl text-sm font-semibold"
+                style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #CC2222' }}
+              >
+                See the benchmarks — no signup needed
+              </Link>
+            </div>
           </div>
 
           {/* Pricing */}
@@ -98,9 +119,9 @@ export default function LandingPage() {
                 <p className="text-2xl font-bold mb-4" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>£0</p>
                 <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
                   <li>✓ 5 rounds</li>
-                  <li>✓ Basic stats</li>
-                  <li style={{ color: '#4A4D60' }}>✗ Strokes Gained</li>
-                  <li style={{ color: '#4A4D60' }}>✗ AI coaching</li>
+                  <li>✓ Full stats</li>
+                  <li>✓ Strokes Gained — 1 free round</li>
+                  <li style={{ color: '#4A4D60' }}>✗ AI coaching &amp; trends</li>
                 </ul>
               </div>
               <div className="p-5 rounded-2xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC2222' }}>
@@ -110,9 +131,9 @@ export default function LandingPage() {
                 </p>
                 <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
                   <li>✓ Unlimited rounds</li>
-                  <li>✓ Full Strokes Gained</li>
-                  <li>✓ AI coaching</li>
-                  <li>✓ All coaching modes</li>
+                  <li>✓ Full Strokes Gained, every round</li>
+                  <li>✓ AI coaching — 7 styles</li>
+                  <li>✓ Mental game coach</li>
                 </ul>
               </div>
             </div>

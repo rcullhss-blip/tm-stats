@@ -179,7 +179,7 @@ export default function DashboardGuide() {
                       {[
                         'If you hit it out of bounds or in a hazard — tap Penalty. No distance needed, it just counts as one shot.',
                         'You can undo the last shot at any time if you made a mistake.',
-                        'Chip-in from off the green? Enter the chip shot, then tap ⛳ Hole Out (chip-in).',
+                        'Chip-in from off the green? Enter the chip shot, then tap Hole Out (chip-in).',
                       ].map((tip, i) => (
                         <li key={i} className="text-xs flex gap-2" style={{ color: '#9A9DB0' }}>
                           <span style={{ color: '#22C55E', flexShrink: 0 }}>•</span>

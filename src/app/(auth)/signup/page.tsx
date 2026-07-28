@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+
+const REF_KEY = 'tmstats_ref'
 
 export default function SignupPage() {
   const [name, setName] = useState('')
@@ -11,13 +13,23 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [handicap, setHandicap] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
+  // Capture a referral code from the share link (?ref=REF-XXXXXX)
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref')
+      if (ref) localStorage.setItem(REF_KEY, ref.toUpperCase())
+    } catch {}
+  }, [])
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setNotice('')
     setLoading(true)
 
     try {
@@ -28,11 +40,13 @@ export default function SignupPage() {
       return
     }
 
+    // Name + handicap go in the auth metadata so they survive the
+    // email-confirmation flow (the profile row is created on first sign-in).
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name },
+        data: { name, handicap: handicap ? parseFloat(handicap) : null },
       },
     })
 
@@ -44,7 +58,7 @@ export default function SignupPage() {
 
     // If email confirmation required
     if (!data.session) {
-      setError('Check your email for a confirmation link, then log in.')
+      setNotice('Almost there — check your email for a confirmation link, then log in.')
       setLoading(false)
       return
     }
@@ -67,6 +81,19 @@ export default function SignupPage() {
       setLoading(false)
       return
     }
+
+    // Auto-redeem a captured referral code — friend gets their free month immediately
+    try {
+      const ref = localStorage.getItem(REF_KEY)
+      if (ref) {
+        await fetch('/api/promo/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: ref }),
+        })
+        localStorage.removeItem(REF_KEY)
+      }
+    } catch {}
 
     window.location.href = '/dashboard'
 
@@ -157,13 +184,13 @@ export default function SignupPage() {
             <span className="font-normal" style={{ color: '#9A9DB0' }}>(optional)</span>
           </label>
           <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
-            Used to set your Strokes Gained baseline
+            Used to set your Strokes Gained baseline. Plus handicap? Enter it with a minus — e.g. -2 for +2.
           </p>
           <input
             type="number"
             value={handicap}
             onChange={e => setHandicap(e.target.value)}
-            min={0}
+            min={-10}
             max={54}
             step={0.1}
             className="w-full px-4 py-3 rounded-xl text-sm outline-none"
@@ -180,6 +207,12 @@ export default function SignupPage() {
         {error && (
           <div className="w-full p-4 rounded-xl text-sm font-medium text-center" style={{ backgroundColor: '#EF444420', border: '2px solid #EF4444', color: '#EF4444' }}>
             {error}
+          </div>
+        )}
+
+        {notice && (
+          <div className="w-full p-4 rounded-xl text-sm font-medium text-center" style={{ backgroundColor: '#22C55E20', border: '2px solid #22C55E', color: '#22C55E' }}>
+            {notice}
           </div>
         )}
 

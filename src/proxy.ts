@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, {
             ...options,
-            secure: false,   // Allow cookies over HTTP (local network dev)
+            secure: process.env.NODE_ENV === 'production',   // Secure flag in prod (HTTPS); off in local dev so HTTP/IP phone testing still works
             sameSite: 'lax',
           })
         )

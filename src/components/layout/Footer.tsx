@@ -1,12 +1,18 @@
 import Link from 'next/link'
+import NewsletterSignup from './NewsletterSignup'
 
 export default function Footer() {
   return (
     <footer style={{ backgroundColor: '#0F1117', borderTop: '1px solid #2E3247' }}>
       <div className="max-w-lg mx-auto px-6 py-8">
+        {/* Newsletter capture */}
+        <NewsletterSignup />
+
         {/* Links */}
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-4 text-sm">
           <Link href="/about" style={{ color: '#9A9DB0' }}>About</Link>
+          <Link href="/golf-stats" style={{ color: '#9A9DB0' }}>Stats Benchmarks</Link>
+          <Link href="/blog" style={{ color: '#9A9DB0' }}>Blog</Link>
           <Link href="/contact" style={{ color: '#9A9DB0' }}>Contact</Link>
           <Link href="/privacy" style={{ color: '#9A9DB0' }}>Privacy Policy</Link>
           <Link href="/terms" style={{ color: '#9A9DB0' }}>Terms & Conditions</Link>

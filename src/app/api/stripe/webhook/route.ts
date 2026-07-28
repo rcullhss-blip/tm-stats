@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getStripe } from '@/lib/stripe'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import type Stripe from 'stripe'
 
 // Stripe requires the raw body for signature verification
@@ -11,7 +11,9 @@ async function updateSubscription(
   status: 'pro' | 'free',
   customerId?: string,
 ) {
-  const supabase = await createClient()
+  // Service-role client: a Stripe webhook has no logged-in user, so the
+  // cookie-based client would be blocked by row-level security.
+  const supabase = createServiceClient()
   if (customerId) {
     await supabase.from('users').update({ subscription_status: status, stripe_customer_id: customerId }).eq('id', supabaseUserId)
   } else {

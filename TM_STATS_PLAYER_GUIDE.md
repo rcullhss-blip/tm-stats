@@ -128,9 +128,27 @@ Tap any round from the Rounds list to see everything about that round:
 
 ---
 
+## Never Lose a Round
+
+Your round saves to your phone automatically as you enter it, hole by hole and shot by shot. If your phone locks, the browser reloads, or you lose signal on the 14th — nothing is lost. Open "Log a round" again and you'll see **"Unfinished round — Resume"**. Tap it and carry on exactly where you were.
+
+---
+
+## Course Memory
+
+Once you've logged a round at a course, it appears as a one-tap button at the top of round setup. Select it and:
+- The course name and hole count fill in automatically
+- **Every par is pre-filled** from your last round there
+
+You just adjust if the course has changed — full tracking entry gets dramatically faster at your home course.
+
+---
+
 ## Free Plan Limits
 
-The free plan includes **5 rounds**. When you reach that limit:
+The free plan includes **5 rounds** and **one free Strokes Gained round** — your first Full Tracking round shows the complete SG breakdown so you can see it working on your own game. After that, SG locks and is a Pro feature (your shot data is still saved, and unlocks again the moment you upgrade).
+
+When you reach the 5-round limit:
 - You will see a prompt to upgrade to Pro
 - Existing rounds remain — you can still view and read your stats
 - You just cannot add new rounds until you upgrade
@@ -184,11 +202,25 @@ Below that, a horizontal scrollable row of tiles shows every hole. Completed hol
 
 **Fixing a mistake mid-round:** Tap any completed hole tile to jump straight back to it. An amber banner will appear confirming you are editing that hole. Make your correction, then tap **Next** — this takes you straight back to the hole you were on, not hole by hole through every one in between. You will not lose any data entered after the hole you edited.
 
+### Mental process tracking (optional)
+
+At round setup, Full Tracking offers an optional toggle: **Track your process**.
+
+When it's on, every shot asks one extra question: **"Did you fully commit to your process on this shot?" — Yes or No.**
+
+This is about commitment, not the result:
+- You went through your full pre-shot routine, picked a clear target, and committed to the swing without distraction → **Yes**, even if the shot was terrible
+- You rushed it, doubted the club, got distracted mid-routine, or bailed on the swing → **No**, even if the ball ended up fine
+
+At the end of the round you get a **Process %** — the first real baseline for your mental game. The round page breaks it down (long game vs putting, and the holes where it slipped), the Stats page shows your process trend over time, and your AI coach sees the numbers — so when the issue is commitment rather than technique, the coaching says so.
+
+This is a high-end tool. If it feels like too much to think about, leave it off — the rest of Full Tracking works exactly the same.
+
 ### Tips for full tracking on the course
 
 - **Enter shots as you walk, not all at once.** After each shot, take 5 seconds to log distance and lie.
 - **Pace off yardages or use your rangefinder.** Exact distances give exact Strokes Gained numbers.
-- **Don't overthink lie types.** Fairway or rough is usually obvious. Use "recovery" for any shot where your main goal is just getting back to a playable position.
+- **Don't overthink lie types.** Fairway or rough is usually obvious. Use lie quality "Severe" for any shot where your main goal is just getting back to a playable position.
 - **On the green, every shot is "green" lie type.** Including short putts.
 
 ---
@@ -462,6 +494,49 @@ The Mental Game page keeps a full history of your conversations. When you open i
 Be specific and honest. "I get nervous" is hard to help with. "I three-putt every time I have a birdie putt in a competition round because I decelerate through the ball" gives the system something concrete to work with.
 
 Returning to the same session over time lets the AI build a richer picture of your mental patterns — rather than starting from scratch each time.
+
+---
+
+## Practice Log (/practice)
+
+Your AI coach gives you drills after every round — the practice log is where you prove you did them.
+
+From the dashboard, tap **🏌️ Practice**. Log each session with:
+- Date and minutes
+- What you worked on: Driving, Approach, Short game, Putting, or Mental
+- Notes (which drill, how it felt)
+
+The page shows your sessions this month and total time practised. Logging practice next to your round stats is how you see the work paying off — practise short game for three weeks, then watch the around-green SG trend.
+
+---
+
+## Compare Two Rounds (Rounds → ⇄ Compare)
+
+Put any two rounds side by side: score, fairways, greens, putts per hole, up & downs, mental process %, and (Pro) the full Strokes Gained breakdown. A green dot marks which round wins each stat.
+
+Great uses:
+- Same course, a month apart — what actually changed?
+- Your best round vs your worst — where does the damage really come from?
+- A practice round vs a competition round — does your game change under pressure?
+
+---
+
+## Share Your Round (Pro)
+
+After any round, tap **📸 Share** at the top of the round page. You get a branded snapshot card — score, key stats, Strokes Gained, mental process — sized for an Instagram story.
+
+Tap **Share to Instagram story & more** and your phone's share sheet opens; pick Instagram (or WhatsApp, Messages, anywhere) and the image drops straight in. On a computer, the image downloads instead.
+
+---
+
+## Milestones & Streaks (Stats Page)
+
+Once you have 3+ rounds, the Stats page tracks your all-time milestones automatically:
+- Longest bogey-free streak (holes in a row)
+- Lowest 18-hole score
+- Fewest putts in 18 holes
+- Best GIR round
+- Most birdies in one round, and career birdies
 
 ---
 

@@ -32,21 +32,18 @@ export default function AboutPage() {
 
         <div className="space-y-4">
           <div className="flex items-start gap-4">
-            <span className="text-2xl mt-0.5">📊</span>
             <div>
               <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>Strokes Gained — the only stat that matters</p>
               <p className="text-sm">The same methodology used on the PGA Tour, now available for club golfers. Know exactly which part of your game is costing you shots.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <span className="text-2xl mt-0.5">🤖</span>
             <div>
               <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>AI coaching that actually knows your game</p>
               <p className="text-sm">Seven coaching modes, each with a different perspective. Feedback based on your stats, your tendencies, and what you tell it you&apos;re working on — not generic tips.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <span className="text-2xl mt-0.5">📱</span>
             <div>
               <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>Built for the course, not the office</p>
               <p className="text-sm">Mobile-first, fast to enter, works in any conditions. Designed around how golfers actually play.</p>

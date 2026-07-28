@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { EMAIL_FROM } from '@/lib/email-from'
 import { Resend } from 'resend'
 
 export async function POST(request: Request) {
@@ -13,8 +14,8 @@ export async function POST(request: Request) {
   const resend = new Resend(apiKey)
 
   const { error } = await resend.emails.send({
-    from: 'TM Stats <noreply@tmstatsgolf.com>',
-    to: ['rob.tmstats@gmail.com'],
+    from: EMAIL_FROM,
+    to: [process.env.CONTACT_FORM_TO || 'info@tmstatsgolf.com'],
     replyTo: email,
     subject: `Contact form: ${name || email}`,
     text: `From: ${name || 'Unknown'} <${email}>\n\n${message}`,

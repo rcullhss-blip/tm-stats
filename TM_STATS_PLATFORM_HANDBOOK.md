@@ -73,16 +73,18 @@ The platform operates a freemium model with three account types.
 
 ### Free Plan
 - Up to **5 rounds** stored (hard limit enforced)
-- Basic scoring stats (averages, scoring breakdown)
-- No Strokes Gained data
-- No AI coaching
-- No advanced analytics
+- Full basic stats (averages, scoring breakdown, FIR/GIR/putts, milestones)
+- **One free Strokes Gained round** — the user's first Full Tracking round shows the complete SG breakdown; subsequent rounds show a locked SG panel with an upgrade prompt. Shot data is always stored, so SG unlocks retroactively on upgrade.
+- Mental process tracking available (full tracking entry)
+- No SG trends or aggregates, no AI coaching
 
 ### Pro Plan
 - **Unlimited rounds**
-- Full **Strokes Gained** analysis across all 4 categories
+- Full **Strokes Gained** analysis across all 4 categories, on every round
+- SG trends, SG by distance band, benchmark comparison
 - Full **AI coaching suite** (all 7 modes, all 7 coach personas)
 - Advanced statistics and trend analysis
+- **Shareable round snapshot** — Instagram-story image generation
 - Mental Game feature
 - Golf DNA profile
 - Pre-round planning, pattern finder, training focus
@@ -94,6 +96,7 @@ The platform operates a freemium model with three account types.
 - **Coach dashboard** with squad management
 - **Player oversight** — view any squad member's stats, SG data, and round history
 - **AI Challenge** feature — coach can override and enhance AI feedback
+- **Weekly digest email** — automatic Monday summary of every squad member's rounds (only sent when there is activity)
 - Assigned via admin (not self-serve)
 
 ---
@@ -101,10 +104,10 @@ The platform operates a freemium model with three account types.
 ## 4. Authentication & Accounts
 
 ### Sign Up
-New users register with an email address and password. Upon submission, Supabase Auth creates a user record and sends a **confirmation email** to the registered address. The user must confirm their email before they can log in. This prevents spam accounts and ensures contact details are valid.
+New users register with a name, email address, password, and optional handicap index (plus handicaps entered as negative values, e.g. −2 for +2). Name and handicap are stored in the auth metadata so they survive the email-confirmation flow; the user profile row is created automatically on first login if it does not already exist. Upon submission, Supabase Auth creates a user record and sends a **confirmation email** to the registered address. The user must confirm their email before they can log in.
 
 **Example flow:**  
-User visits `/signup` → enters name, email, password → receives confirmation email → clicks confirm link → redirected to login → enters credentials → lands on Dashboard.
+User visits `/signup` → enters name, email, password, handicap → receives confirmation email → clicks confirm link → redirected to login → enters credentials → profile created with name + handicap → lands on Dashboard.
 
 ### Login
 Existing users log in via email and password at `/login`. Upon successful authentication, the session is established via a Supabase-managed JWT stored in a secure cookie. The session is automatically refreshed on page navigation via a server-side proxy.
@@ -129,11 +132,16 @@ Before entering hole data, the user configures the round:
 
 | Field | Options | Notes |
 |---|---|---|
-| Course name | Free text | e.g., "Royal Birkdale" |
+| Course name | Free text or one-tap recent course | e.g., "Royal Birkdale" |
 | Date | Date picker | Defaults to today |
 | Holes | 9 or 18 | Affects scoring and SG calculations |
 | Round type | Practice / Competition / Tournament | Used in pattern analysis |
 | Input mode | Quick Entry / Full Tracking | Determines data depth |
+| Mental process tracking | On / Off (optional) | Full Tracking only — see 5.6 |
+
+**Course memory:** The user's last 5 distinct courses are shown as one-tap chips above the course field. Selecting a previously played course sets the name and hole count, and **pre-fills every hole's par** from the most recent round at that course.
+
+**Draft persistence (resume round):** The in-progress round is saved to the device (localStorage) after every change — completed holes and the current hole's individual shots. If the browser reloads, the phone dies, or the player navigates away, returning to "Log a round" shows a **Resume round** prompt with the course name and progress, plus a "Discard and start fresh" option. The draft is cleared on successful save. If a save fails (no signal), the data remains on the device for retry.
 
 ### 5.2 Quick Entry Mode
 
@@ -142,7 +150,9 @@ The simplest and fastest input method. For each hole the user enters:
 - **Score** (number of strokes)
 - **Fairway in Regulation** (yes/no — par 4s and 5s only; not shown on par 3s)
 - **Green in Regulation** (yes/no)
-- **Putts** (number)
+- **Putts** (number — defaults to 2, the most common value, and saves what is displayed)
+- **Up & down** (yes/no — shown only when GIR is missed)
+- **Greenside bunker** (yes/no — shown after the up & down answer; sand save is derived as bunker + up & down made, so failed bunker attempts are recorded accurately)
 
 **What it produces:** Scoring stats, FIR%, GIR%, putts data. No Strokes Gained (SG requires shot-by-shot data).
 
@@ -159,8 +169,8 @@ The system **auto-calculates** all derived statistics from this data:
 - FIR — automatically true if the first shot from the tee lands in the fairway (par 4/5)
 - GIR — automatically true if the player reaches the green in regulation (par minus 2 strokes)
 - Putts — automatically counted from shots taken on the putting surface
-- Up & Down — automatically true if the player fails GIR but holes out in 2 from off the green
-- Sand Save — automatically true if the player was in a greenside bunker and made up & down
+- Up & Down — automatically true if the player fails GIR but holes out in ≤2 strokes from the first off-green position after the GIR chance passed (chip-ins count; duffed-chip sequences do not)
+- Sand Save — automatically true if the player played from a **greenside** bunker (within 50 yards of the pin) and made up & down; fairway bunkers do not count
 
 **What it produces:** Everything from Quick Entry, plus full **Strokes Gained** across all 4 categories.
 
@@ -200,6 +210,21 @@ These fields feed into AI coaching prompts for richer, more contextually accurat
 ### 5.5 Hole-Level Notes
 
 In Full Tracking mode, individual holes support a short **hole note** field. Players can annotate specific holes — e.g., "pulled the drive left, course knowledge issue" — which gives the AI coaching system additional context.
+
+### 5.6 Mental Process Tracking
+
+An optional per-shot mental game metric, enabled via a toggle at round setup (Full Tracking only).
+
+When enabled, every shot entry includes one extra question: **"Did you fully commit to your process on this shot?"** — Yes or No. The answer is required before the shot can be added (penalty strokes skip it). The measure is commitment, not outcome: a poor shot with a fully committed routine is a Yes; a good shot the player bailed on is a No.
+
+**Storage:** A `process: boolean` field on each shot inside the existing `shots` JSONB column — no schema change.
+
+**Outputs:**
+- **Round summary:** Process % (colour-coded: ≥80% green, 60–79% amber, <60% red) with shots committed / total
+- **Round detail:** Process breakdown card — overall %, long game vs putting split, and a "Where it slipped" list of holes with 2+ uncommitted shots alongside the scores on those holes
+- **Stats page:** Process % trend chart across rounds, with a 75% reference line, plus a correlation insight when the data supports it ("when your process is 75%+ you average +4 vs par; below that, +9 — committing fully is worth ~5 shots a round")
+- **AI coaching:** Process numbers are included in the round coaching prompt (with an instruction to address the mental side, not just technique, when process % is low) and in the Pattern Finder data (per-round process % paired with score, so the AI can surface the correlation)
+- **Compare rounds & share snapshot:** Process % appears in both
 
 ---
 
@@ -332,7 +357,13 @@ Free-text search across round entries by course name. Allows a user to quickly f
 ### 8.4 View Toggle
 Users can switch between List View and Journal View from the Rounds page — their preference is preserved within the session.
 
-### 8.5 Round Detail Page
+### 8.5 Compare Rounds (`/rounds/compare`)
+A side-by-side comparison of any two rounds, accessed via the **⇄ Compare** button on the Rounds page (shown once the user has 2+ rounds). The user picks Round A and Round B from dropdowns (defaulting to the two most recent). The view shows:
+- Score, vs par, fairways %, GIR %, putts per hole, up & down %, and mental process % — with a green dot marking the better round per stat
+- Full Strokes Gained comparison across all categories *(Pro, full-tracking rounds)*
+- A warning when comparing a 9-hole and an 18-hole round (percentages compare fairly; totals don't)
+
+### 8.6 Round Detail Page
 
 Each round has a dedicated detail page accessible from the Rounds list or Dashboard recent rounds. It contains:
 
@@ -352,9 +383,17 @@ Each round has a dedicated detail page accessible from the Rounds list or Dashbo
 - Up & Down %
 - Sand Save %
 
-**Strokes Gained Breakdown** *(Full tracking rounds only)*
+**Strokes Gained Breakdown** *(Full tracking rounds — Pro, or the free user's first full-tracking round)*
 - Displayed as a four-category bar chart showing SG: Off Tee, Approach, Around Green, Putting
 - Each category colour-coded positive (green) or negative (red)
+- Free users see the full breakdown on their **first** full-tracking round with a "Free Strokes Gained preview" banner; on later full-tracking rounds the panel is replaced by a locked card ("You've used your free Strokes Gained round") with an upgrade CTA. Shot data is always stored, so SG unlocks retroactively on upgrade.
+
+**Mental Process Breakdown** *(rounds with process tracking)*
+- Process % with commitment counts, long game vs putting split, and a "Where it slipped" list of holes with 2+ uncommitted shots
+
+**Share Snapshot** *(Pro only)*
+- A **📸 Share** button in the round header opens `/rounds/[id]/share` — a branded snapshot card (score, key stats, SG breakdown, process %) in Instagram-story proportions
+- One tap generates a 1080×1920 PNG on-device and opens the phone's native share sheet (Instagram Stories, WhatsApp, etc.); on desktop the image downloads instead
 
 **Advanced SG by Distance Band** *(Full tracking, Pro only — collapsible)*
 - SG broken down by distance ranges: 0–30 yards, 30–75 yards, 75–125 yards, 125–175 yards, 175+ yards
@@ -378,6 +417,13 @@ Each round has a dedicated detail page accessible from the Rounds list or Dashbo
 
 **Coach Feedback** *(Team plan players only)*
 - If the player's coach has submitted an AI Challenge for this round (see Section 13), the revised coaching feedback appears here with a "From your coach" label
+
+### 8.7 Practice Log (`/practice`)
+
+A standalone page (linked from the Dashboard via **🏌️ Practice**) where players log practice sessions against the drills their AI coach sets:
+- Fields: date, focus area (Driving / Approach / Short game / Putting / Mental), minutes, free-text notes
+- Summary cards: sessions this month and total time practised
+- Sessions can be deleted; data is stored in the `practice_sessions` table (RLS — users manage their own rows; see SQL_MIGRATIONS.md §10)
 
 ---
 
@@ -444,6 +490,20 @@ A chart showing how the user's declared handicap has changed over time. Automati
 
 ### 9.12 AI Coaching — Overall *(Pro only)*
 Generates coaching feedback based on the aggregate stats for the filtered period rather than a single round. Identifies the biggest area for improvement across all recent data.
+
+### 9.13 Mental Process Trend
+For players using mental process tracking, a line chart of process % per round (with a 75% reference line). When the data supports it, a correlation insight appears beneath the chart: average score vs par in rounds with 75%+ process vs rounds below, and the approximate shots-per-round value of full commitment. Available to all plans (process tracking is part of round entry, not SG).
+
+### 9.14 Milestones & Streaks
+Shown once the player has 3+ rounds. All-time records computed from hole-level data:
+- Longest bogey-free streak (consecutive holes at par or better, across rounds)
+- Lowest 18-hole gross score
+- Fewest putts in 18 holes
+- Best GIR round
+- Most birdies-or-better in one round
+- Career birdies total
+
+**Note on SG gating:** All SG aggregates on the Stats page (SG averages, SG trend, SG by distance band) are Pro-only. Free users' rounds are computed without SG here; their single free SG round is visible on that round's detail page only.
 
 ---
 
@@ -674,6 +734,14 @@ The AI might identify putting as the biggest weakness in a round. But the coach 
 
 ### 13.6 Data Privacy
 Players join teams voluntarily by entering a join code. Only players who have opted in are visible to a coach. Players may leave a team at any time via their Profile settings.
+
+### 13.7 Weekly Coach Digest Email
+Every Monday at 07:00 (Vercel cron → `/api/cron/coach-weekly`, authenticated via `CRON_SECRET`), each coach whose squad logged rounds in the previous 7 days receives an email via Resend containing:
+- Per active player: rounds logged, average and best score vs par, and the courses/scores
+- A list of squad members who logged nothing that week
+- A link to the coach dashboard
+
+Coaches with no squad activity receive nothing — the digest never sends empty.
 
 ---
 

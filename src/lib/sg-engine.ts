@@ -8,36 +8,68 @@ import type { LieType, LieQuality, ShotEntry } from './types'
 
 // ─── Skill levels ─────────────────────────────────────────────────────────────
 
-export type SkillLevel = 'tour' | 'scratch' | 'low' | 'mid' | 'high' | 'beginner'
+export type SkillLevel =
+  | 'tour' | 'scratch' | 'h1_4' | 'h5_9' | 'h10_14' | 'h15_19' | 'h20_28' | 'h29'
 
 export const SKILL_LEVEL_LABELS: Record<SkillLevel, string> = {
-  tour:     'PGA Tour',
-  scratch:  'Scratch (0 HCP)',
-  low:      'Low amateur (1–9)',
-  mid:      'Mid amateur (10–18)',
-  high:     'High handicap (19–28)',
-  beginner: 'Beginner (29+)',
+  tour:    'PGA Tour',
+  scratch: 'Scratch (0)',
+  h1_4:    'Handicap 1–4',
+  h5_9:    'Handicap 5–9',
+  h10_14:  'Handicap 10–14',
+  h15_19:  'Handicap 15–19',
+  h20_28:  'Handicap 20–28',
+  h29:     'Handicap 29+',
 }
 
-// Scale factors applied to scratch expected strokes.
-// Formula: adjusted = 1 + (scratch - 1) * scale
-// Putting scales less than approach — gaps narrow on the green.
-// 'tour' scales below 1.0 — PGA Tour players expect fewer strokes than scratch.
-const SKILL_SCALES: Record<SkillLevel, { putting: number; approach: number }> = {
-  tour:     { putting: 0.90, approach: 0.82 },
-  scratch:  { putting: 1.00, approach: 1.00 },
-  low:      { putting: 1.06, approach: 1.18 },
-  mid:      { putting: 1.12, approach: 1.38 },
-  high:     { putting: 1.18, approach: 1.60 },
-  beginner: { putting: 1.25, approach: 1.85 },
+// Baseline keys stored before the band refresh → map to the nearest new band so
+// existing users who manually picked a baseline don't break.
+const LEGACY_LEVEL_MAP: Record<string, SkillLevel> = {
+  low: 'h5_9', mid: 'h10_14', high: 'h20_28', beginner: 'h29',
+}
+
+/** Coerce any stored/raw baseline value to a valid SkillLevel (or null for auto). */
+export function normalizeSkillLevel(raw: string | null | undefined): SkillLevel | null {
+  if (!raw) return null
+  if (raw in SKILL_LEVEL_LABELS) return raw as SkillLevel
+  return LEGACY_LEVEL_MAP[raw] ?? null
+}
+
+// Per-level skill adjustment (replaces the old `1 + (scratch-1)*scale` formula,
+// which exploded on long shots — e.g. it claimed a 1-handicap needed 5.2 strokes
+// from 394y and turned a +4 round into +14 strokes gained).
+//
+// New model:  expected = scratchExpected + ALPHA[level] * difficultyShape
+//   • difficultyShape ∈ [0,1] scales with how hard the shot is (≈0 for tap-ins,
+//     1 for long full shots) → the adjustment is BOUNDED and can never balloon.
+//   • ALPHA is calibrated so an average round for each band lands at a realistic
+//     score (scratch ≈ +4, 5–9 ≈ +9, 10–14 ≈ +13, 20–28 ≈ +25 over par). Tour is
+//     negative — they expect fewer strokes than scratch.
+const LEVEL_ALPHA: Record<SkillLevel, number> = {
+  tour:   -0.345,
+  scratch: 0,
+  h1_4:    0.115,
+  h5_9:    0.288,
+  h10_14:  0.518,
+  h15_19:  0.805,
+  h20_28:  1.208,
+  h29:     1.668,
+}
+
+// 0 for a 1-stroke position (tap-in), ramping to 1 by ~4 expected strokes
+// (a long full shot). Clamped at both ends so the adjustment stays bounded.
+function difficultyShape(scratchStrokes: number): number {
+  return Math.min(Math.max(scratchStrokes - 1, 0) / 3, 1)
 }
 
 export function handicapToSkillLevel(handicap: number | null): SkillLevel {
   if (handicap === null || handicap <= 0) return 'scratch'
-  if (handicap <= 9)  return 'low'
-  if (handicap <= 18) return 'mid'
-  if (handicap <= 28) return 'high'
-  return 'beginner'
+  if (handicap <= 4)  return 'h1_4'
+  if (handicap <= 9)  return 'h5_9'
+  if (handicap <= 14) return 'h10_14'
+  if (handicap <= 19) return 'h15_19'
+  if (handicap <= 28) return 'h20_28'
+  return 'h29'
 }
 
 // ─── Baseline data ────────────────────────────────────────────────────────────
@@ -87,6 +119,26 @@ const FAIRWAY_BASELINE: [number, number][] = [
   [350, 4.38],
   [400, 4.57],
   [450, 4.75],
+]
+
+// Tee shots — perfect lie and you can tee it up, so easier than the same distance
+// from the fairway. Sits ~0.15–0.25 below FAIRWAY across the driving range.
+// Calibrated so a scratch round's tee-shot expectations sum to ~+4 over par.
+const TEE_BASELINE: [number, number][] = [
+  [100, 3.14],
+  [130, 3.20],
+  [150, 3.40],
+  [175, 3.55],
+  [200, 3.66],
+  [225, 3.76],
+  [250, 3.84],
+  [275, 3.92],
+  [300, 3.99],
+  [350, 4.15],
+  [400, 4.32],
+  [450, 4.49],
+  [500, 4.62],
+  [550, 4.74],
 ]
 
 const ROUGH_BASELINE: [number, number][] = [
@@ -161,7 +213,7 @@ function scratchExpected(distYards: number, lie: LieType): number {
     case 'green':   return interpolate(GREEN_BASELINE, distYards)
     case 'fringe':  return interpolate(FRINGE_BASELINE, distYards)
     case 'fairway': return interpolate(FAIRWAY_BASELINE, distYards)
-    case 'tee':     return interpolate(FAIRWAY_BASELINE, distYards)
+    case 'tee':     return interpolate(TEE_BASELINE, distYards)
     case 'rough':   return interpolate(ROUGH_BASELINE, distYards)
     case 'bunker':  return interpolate(BUNKER_BASELINE, distYards)
     case 'penalty': return interpolate(PENALTY_BASELINE, distYards)
@@ -182,10 +234,9 @@ export function expectedStrokes(
   quality: LieQuality = 'good',
 ): number {
   if (distYards <= 0) return 0
+  const lvl = normalizeSkillLevel(level) ?? 'scratch'
   const scratch = scratchExpected(distYards, lie)
-  const base = level === 'scratch'
-    ? scratch
-    : 1 + (scratch - 1) * (lie === 'green' ? SKILL_SCALES[level].putting : SKILL_SCALES[level].approach)
+  const base = scratch + LEVEL_ALPHA[lvl] * difficultyShape(scratch)
   return base + LIE_QUALITY_OFFSET[quality]
 }
 

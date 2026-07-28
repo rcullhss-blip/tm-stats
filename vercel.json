@@ -3,6 +3,34 @@
     {
       "path": "/api/cron/keepalive",
       "schedule": "0 8 */3 * *"
+    },
+    {
+      "path": "/api/cron/coach-weekly",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/lifecycle",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/auto-blog",
+      "schedule": "0 6 * * 2,5"
+    },
+    {
+      "path": "/api/cron/scrape",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/outreach",
+      "schedule": "30 9 * * 1-5"
+    },
+    {
+      "path": "/api/cron/social-draft",
+      "schedule": "0 7 * * 1,4"
+    },
+    {
+      "path": "/api/cron/weekly-report",
+      "schedule": "0 9 * * 5"
     }
   ]
 }

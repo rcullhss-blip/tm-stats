@@ -50,17 +50,23 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  // Load last 10 rounds
-  const { data: rounds } = await supabase
-    .from('rounds')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('date', { ascending: false })
-    .limit(10)
+  // Load last 10 rounds for display + the true total count (the list is capped at 10)
+  const [{ data: rounds }, { count: totalRounds }] = await Promise.all([
+    supabase
+      .from('rounds')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(10),
+    supabase
+      .from('rounds')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+  ])
 
   const name = profile?.name?.split(' ')[0] || 'Golfer'
   const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
-  const roundCount = rounds?.length ?? 0
+  const roundCount = totalRounds ?? rounds?.length ?? 0
 
   // Quick stats from last 5 rounds
   const recentRounds = (rounds ?? []).slice(0, 5)
@@ -143,7 +149,7 @@ export default async function DashboardPage() {
       {/* Greeting */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
-          Hey {name} 👋
+          Hey {name}
         </h1>
         <p className="text-sm" style={{ color: '#9A9DB0' }}>
           {roundCount === 0
@@ -186,7 +192,6 @@ export default async function DashboardPage() {
           className="mb-4 p-4 rounded-xl flex items-start gap-3"
           style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247', display: 'flex' }}
         >
-          <span className="text-xl mt-0.5">🎯</span>
           <div>
             <p className="text-sm font-semibold mb-0.5" style={{ color: '#F0F0F0' }}>Personalise your AI coach</p>
             <p className="text-xs" style={{ color: '#9A9DB0' }}>Tell your coach about your game — what you&apos;re working on, your tendencies, your goals. It makes every coaching response specific to you.</p>
@@ -243,13 +248,12 @@ export default async function DashboardPage() {
           style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
         >
           <div className="flex items-start gap-3">
-            <span className="text-xl">📊</span>
             <div>
               <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>
-                Unlock Strokes Gained
+                Unlock Strokes Gained on every round
               </p>
               <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
-                See exactly where you&apos;re losing shots vs scratch — approach, putting, off the tee, around the green.
+                See exactly where you lose shots — off the tee, approach, around the green, putting — plus AI coaching and unlimited rounds. Other apps charge far more for SG.
               </p>
               <Link
                 href="/upgrade"
@@ -266,7 +270,6 @@ export default async function DashboardPage() {
       {/* Empty state */}
       {roundCount === 0 && (
         <div className="text-center py-12">
-          <div className="text-5xl mb-4">⛳</div>
           <h2 className="text-lg font-semibold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
             Log your first round
           </h2>
@@ -286,7 +289,7 @@ export default async function DashboardPage() {
             className="inline-block px-5 py-3 rounded-xl text-sm font-medium"
             style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
           >
-            📖 Player guide
+            Player guide
           </Link>
         </div>
       )}
@@ -299,8 +302,11 @@ export default async function DashboardPage() {
               Recent rounds
             </h2>
             <div className="flex items-center gap-3">
+              <Link href="/practice" className="text-sm" style={{ color: '#9A9DB0' }}>
+                Practice
+              </Link>
               <Link href="/player-guide" className="text-sm" style={{ color: '#9A9DB0' }}>
-                📖 Guide
+                Guide
               </Link>
               <Link href="/rounds" className="text-sm" style={{ color: '#9A9DB0' }}>
                 See all
@@ -356,6 +362,23 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Stats benchmarks link */}
+      {roundCount > 0 && (
+        <Link
+          href="/golf-stats"
+          className="mt-6 p-4 rounded-xl flex items-center justify-between gap-3"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247', display: 'flex' }}
+        >
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#F0F0F0' }}>Stats benchmarks</p>
+            <p className="text-xs" style={{ color: '#9A9DB0' }}>
+              What&apos;s a good GIR%, putts per round or scramble rate for your handicap? Compare yourself to your level.
+            </p>
+          </div>
+          <span style={{ color: '#9A9DB0' }}>→</span>
+        </Link>
       )}
 
       {/* Free tier limit warning */}

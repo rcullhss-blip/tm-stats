@@ -190,6 +190,9 @@ export interface ShotEntry {
   distanceToPin: number
   lieType: LieType
   lieQuality?: LieQuality
+  // Mental process tracking (optional, chosen at round setup): true = golfer fully
+  // committed to their pre-shot process on this shot, regardless of the result.
+  process?: boolean
 }
 
 export interface SetupData {
@@ -198,6 +201,8 @@ export interface SetupData {
   holes: 9 | 18
   roundType: RoundType
   inputMode: InputMode
+  parsPrefill?: (3 | 4 | 5)[]
+  trackProcess?: boolean
 }
 
 export interface HoleData {
@@ -209,6 +214,8 @@ export interface HoleData {
   putts: number | null
   upAndDown: boolean | null
   sandSave: boolean | null
+  // UI-only: quick mode "were you in a greenside bunker?" answer — sandSave is derived from this + upAndDown. Not saved to DB.
+  bunker?: boolean | null
   shots?: ShotEntry[]
 }
 

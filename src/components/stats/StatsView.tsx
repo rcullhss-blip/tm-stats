@@ -36,12 +36,24 @@ export interface RoundDataPoint {
   sgAroundGreen: number | null
   sgPutt: number | null
   sgBands: SGBand[] | null
+  processPct: number | null
   eagles: number
   birdies: number
   pars: number
   bogeys: number
   doubles: number
   totalHoles: number
+}
+
+export interface Milestones {
+  bestToPar: number | null
+  bestGross18: number | null
+  fewestPutts18: number | null
+  bestGirPct: number | null
+  mostBirdies: number | null
+  totalBirdies: number
+  longestBogeyFreeRun: number
+  totalRounds: number
 }
 
 export interface StatsViewProps {
@@ -52,6 +64,7 @@ export interface StatsViewProps {
   sgRoundCount: number
   handicapHistory: { date: string; handicap: number }[]
   handicap: number | null
+  milestones: Milestones
 }
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
@@ -187,7 +200,6 @@ function AICoachingSection({ isPro, coachPersona, statsPayload }: { isPro: boole
     return (
       <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222230' }}>
         <div className="flex items-start gap-3">
-          <span className="text-xl">🎙️</span>
           <div>
             <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>AI Coaching — Pro feature</p>
             <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
@@ -258,7 +270,7 @@ function AICoachingSection({ isPro, coachPersona, statsPayload }: { isPro: boole
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona, sgRoundCount, handicapHistory, handicap }: StatsViewProps) {
+export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona, sgRoundCount, handicapHistory, handicap, milestones }: StatsViewProps) {
   const [range, setRange] = useState<RangeFilter>('last10')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [holesFilter, setHolesFilter] = useState<HolesFilter>('all')
@@ -368,11 +380,24 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
       sgApproach: r.sgApproach,
       sgAroundGreen: r.sgAroundGreen,
       sgPutt: r.sgPutt,
+      process: r.processPct !== null ? Math.round(r.processPct) : null,
     })),
     [filtered]
   )
 
   const sgTrendPoints = trendData.filter(d => d.sgOffTee !== null).length
+  const processTrendPoints = trendData.filter(d => d.process !== null).length
+
+  // Process ↔ scoring link: average score when committed (75%+) vs not
+  const processLink = useMemo(() => {
+    const withProcess = filtered.filter(r => r.processPct !== null)
+    const committed = withProcess.filter(r => (r.processPct as number) >= 75)
+    const uncommitted = withProcess.filter(r => (r.processPct as number) < 75)
+    if (committed.length < 2 || uncommitted.length < 2) return null
+    const avgC = committed.reduce((s, r) => s + r.scoreToPar, 0) / committed.length
+    const avgU = uncommitted.reduce((s, r) => s + r.scoreToPar, 0) / uncommitted.length
+    return { avgCommitted: avgC, avgUncommitted: avgU, diff: avgU - avgC }
+  }, [filtered])
 
   // Personal records — all-time across unfiltered rounds
   const personalRecords = useMemo(() => {
@@ -418,7 +443,6 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
   if (rounds.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="text-5xl mb-4">📊</div>
         <h2 className="text-lg font-semibold mb-2" style={{ color: '#F0F0F0' }}>No data yet</h2>
         <p className="text-sm" style={{ color: '#9A9DB0' }}>Log a few rounds and your stats will appear here.</p>
       </div>
@@ -792,7 +816,6 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                 <h2 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9A9DB0' }}>Score impact</h2>
                 <div className="p-4 rounded-xl space-y-3" style={{ backgroundColor: '#1A1D27' }}>
                   <div className="flex items-start gap-3">
-                    <span className="text-base mt-0.5">⛳</span>
                     <div>
                       <p className="text-sm" style={{ color: '#F0F0F0' }}>
                         Hit <span style={{ color: '#22C55E', fontFamily: 'var(--font-dm-mono)' }}>1 more GIR</span> per round
@@ -802,7 +825,6 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                   </div>
                   {puttSaving && (
                     <div className="flex items-start gap-3" style={{ paddingTop: '12px', borderTop: '1px solid #2E3247' }}>
-                      <span className="text-base mt-0.5">🏌️</span>
                       <div>
                         <p className="text-sm" style={{ color: '#F0F0F0' }}>
                           Eliminate <span style={{ color: '#22C55E', fontFamily: 'var(--font-dm-mono)' }}>1 three-putt</span> per round
@@ -813,7 +835,6 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                   )}
                   {agg.avgFir !== null && agg.avgFir < 50 && (
                     <div className="flex items-start gap-3" style={{ paddingTop: '12px', borderTop: '1px solid #2E3247' }}>
-                      <span className="text-base mt-0.5">🎯</span>
                       <div>
                         <p className="text-sm" style={{ color: '#F0F0F0' }}>
                           Hit <span style={{ color: '#22C55E', fontFamily: 'var(--font-dm-mono)' }}>2 more fairways</span> per round
@@ -905,6 +926,41 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                     <Line type="monotone" dataKey="putts" stroke="#9A9DB0" strokeWidth={2} dot={{ fill: '#9A9DB0', r: 3, strokeWidth: 0 }} />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* ── Mental process trend ──────────────────────────────────────── */}
+          {processTrendPoints >= 2 && (
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Mental process trend</h2>
+              <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+                <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+                  % of shots where you fully committed to your pre-shot process.
+                </p>
+                <ResponsiveContainer width="100%" height={130}>
+                  <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2E3247" />
+                    <XAxis dataKey="label" tick={{ fill: '#9A9DB0', fontSize: 10 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: '#9A9DB0', fontSize: 10 }} tickLine={false} axisLine={false} domain={[0, 100]} />
+                    <Tooltip content={<ChartTooltip unit="" />} />
+                    <ReferenceLine y={75} stroke="#22C55E40" strokeDasharray="4 4" />
+                    <Line type="monotone" dataKey="process" stroke="#A855F7" strokeWidth={2} dot={{ fill: '#A855F7', r: 3, strokeWidth: 0 }} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+                {processLink && (
+                  <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2E3247' }}>
+                    <p className="text-xs leading-relaxed" style={{ color: '#F0F0F0' }}>
+                      When your process is <span style={{ color: '#22C55E' }}>75%+</span> you average{' '}
+                      <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#22C55E' }}>{fmt(processLink.avgCommitted)}</span> vs par.
+                      Below that it&apos;s{' '}
+                      <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#EF4444' }}>{fmt(processLink.avgUncommitted)}</span>
+                      {processLink.diff > 0.5 && (
+                        <> — committing fully is worth roughly <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{processLink.diff.toFixed(1)}</span> shots a round.</>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1053,6 +1109,57 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                       {personalRecords.bestSgPutt > 0 ? '+' : ''}{personalRecords.bestSgPutt.toFixed(2)}
                     </p>
                     <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>SG putting</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Milestones & streaks ──────────────────────────────────────── */}
+          {milestones.totalRounds >= 3 && (
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9A9DB0' }}>Milestones &amp; streaks</h2>
+              <div className="grid grid-cols-2 gap-2">
+                {milestones.longestBogeyFreeRun > 0 && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222220' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Bogey-free streak</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F59E0B' }}>{milestones.longestBogeyFreeRun}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>holes in a row</p>
+                  </div>
+                )}
+                {milestones.bestGross18 !== null && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222220' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Lowest 18 holes</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#22C55E' }}>{milestones.bestGross18}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>gross score</p>
+                  </div>
+                )}
+                {milestones.fewestPutts18 !== null && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Fewest putts</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{milestones.fewestPutts18}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>in 18 holes</p>
+                  </div>
+                )}
+                {milestones.bestGirPct !== null && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Best GIR round</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{milestones.bestGirPct}%</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>greens hit</p>
+                  </div>
+                )}
+                {milestones.mostBirdies !== null && milestones.mostBirdies > 0 && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Most birdies</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#22C55E' }}>{milestones.mostBirdies}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>in one round</p>
+                  </div>
+                )}
+                {milestones.totalBirdies > 0 && (
+                  <div className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+                    <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Career birdies</p>
+                    <p className="text-xl font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#22C55E' }}>{milestones.totalBirdies}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#4A4D60' }}>and counting</p>
                   </div>
                 )}
               </div>

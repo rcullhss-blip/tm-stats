@@ -11,19 +11,24 @@ interface Props {
   onComplete: (holes: HoleData[]) => void
   initialHoles?: HoleData[]
   initialHole?: number
+  initialHighest?: number
   editingFromSummary?: boolean
+  onProgress?: (holes: HoleData[], current: number, highest: number) => void
 }
 
-function defaultHole(holeNumber: number): HoleData {
+function defaultHole(holeNumber: number, par: 3 | 4 | 5 = 4): HoleData {
   return {
     holeNumber,
-    par: 4,
-    score: 4,
+    par,
+    score: par,
     fir: null,
     gir: null,
-    putts: null,
+    // Putts defaults to 2 (the stepper shows 2) so an untouched stepper saves
+    // what the golfer sees — not nothing.
+    putts: 2,
     upAndDown: null,
     sandSave: null,
+    bunker: null,
   }
 }
 
@@ -133,14 +138,14 @@ function PillToggle({
   )
 }
 
-export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, editingFromSummary = false }: Props) {
+export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, initialHighest, editingFromSummary = false, onProgress }: Props) {
   const holeCount = setup.holes
   const [current, setCurrent] = useState(initialHole)
   const [highestReached, setHighestReached] = useState(
-    editingFromSummary ? holeCount - 1 : initialHole
+    editingFromSummary ? holeCount - 1 : Math.max(initialHighest ?? initialHole, initialHole)
   )
   const [holes, setHoles] = useState<HoleData[]>(
-    initialHoles ?? Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1))
+    initialHoles ?? Array.from({ length: holeCount }, (_, i) => defaultHole(i + 1, setup.parsPrefill?.[i] ?? 4))
   )
   const scorecardRef = useRef<HTMLDivElement>(null)
   const activeTileRef = useRef<HTMLDivElement>(null)
@@ -164,8 +169,16 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
         updated.fir = null
       }
 
-      // Sand save only relevant if up_and_down = true and there was a bunker
-      // (we'll let user control both; auto-link will be in full tracking mode)
+      // Quick-mode short game rules: hitting the green clears the short-game
+      // questions; sand save is derived — it's only "made" when the golfer was
+      // in a greenside bunker AND got up and down.
+      if ('gir' in updates || 'upAndDown' in updates || 'bunker' in updates) {
+        if (updated.gir === true) {
+          updated.upAndDown = null
+          updated.bunker = null
+        }
+        updated.sandSave = updated.bunker === true ? updated.upAndDown === true : null
+      }
 
       next[current] = updated
       return next
@@ -205,6 +218,12 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
     }
   }, [current])
 
+  // Report progress upward so the in-progress round survives a reload
+  useEffect(() => {
+    onProgress?.(holes, current, highestReached)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holes, current, highestReached])
+
   // Running to-par across completed holes
   const completedScore = holes.slice(0, current).reduce((sum, h) => sum + h.score, 0)
   const completedPar = holes.slice(0, current).reduce((sum, h) => sum + h.par, 0)
@@ -220,7 +239,6 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           className="mb-4 px-4 py-3 rounded-xl flex items-center gap-2"
           style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}
         >
-          <span style={{ color: '#F59E0B', fontSize: '16px' }}>✏️</span>
           <p className="text-xs font-medium" style={{ color: '#F59E0B' }}>
             Editing round — tap any hole in the strip above to jump to it, then tap through to the summary when done.
           </p>
@@ -231,7 +249,6 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           className="mb-4 px-4 py-3 rounded-xl flex items-center gap-2"
           style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}
         >
-          <span style={{ color: '#F59E0B', fontSize: '16px' }}>✏️</span>
           <p className="text-xs font-medium" style={{ color: '#F59E0B' }}>
             Editing Hole {current + 1} — tap Next when done to return to Hole {highestReached + 1}.
           </p>
@@ -363,7 +380,8 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
                 <button
                   key={p}
                   type="button"
-                  onClick={() => updateHole({ par: p, score: p, fir: p === 3 ? null : null })}
+                  // Score follows par only while untouched — fixing the par later keeps an edited score
+                  onClick={() => updateHole({ par: p, score: hole.score === hole.par ? p : hole.score })}
                   className="py-3 rounded-xl font-bold text-lg transition-colors"
                   style={{
                     backgroundColor: hole.par === p ? '#CC2222' : '#1A1D27',
@@ -444,18 +462,20 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
               </div>
             )}
 
-            {/* Sand save — only if up and down was from bunker */}
+            {/* Greenside bunker — sand save is derived from this + up and down */}
             {hole.gir === false && hole.upAndDown !== null && (
               <div>
                 <p className="text-sm font-medium mb-1" style={{ color: '#9A9DB0' }}>
-                  Sand save?
-                </p>
-                <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
                   Were you in a greenside bunker?
                 </p>
+                <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
+                  {hole.upAndDown
+                    ? 'If yes, that up and down counts as a sand save.'
+                    : 'If yes, this counts as a missed sand save attempt.'}
+                </p>
                 <PillToggle
-                  value={hole.sandSave}
-                  onChange={(sandSave) => updateHole({ sandSave: sandSave ?? null })}
+                  value={hole.bunker ?? null}
+                  onChange={(bunker) => updateHole({ bunker: bunker ?? null })}
                 />
               </div>
             )}
@@ -469,7 +489,9 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             holeNumber={hole.holeNumber}
             par={hole.par}
             initialShots={hole.shots ?? []}
-            onChangePar={p => updateHole({ par: p, score: p, fir: null, gir: null, putts: null, shots: [] })}
+            onChangePar={p => updateHole({ par: p, score: p })}
+            onShotsChange={shots => updateHole({ shots })}
+            trackProcess={setup.trackProcess}
             onComplete={(data) => {
               const updatedHoles = holes.map((h, i) =>
                 i === current ? { ...h, ...data } : h

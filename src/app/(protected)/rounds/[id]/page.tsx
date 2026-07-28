@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { HoleRow } from '@/lib/types'
 import type { ShotEntry } from '@/lib/types'
-import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import AICoachingPanel from '@/components/rounds/AICoachingPanel'
 import BadRoundWidget from '@/components/rounds/BadRoundWidget'
 import DeleteRoundButton from '@/components/rounds/DeleteRoundButton'
@@ -51,7 +51,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
     .eq('id', user.id)
     .single()
 
-  const skillLevel: SkillLevel = (profile?.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(profile?.handicap ?? null)
+  const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
 
   const { data: round } = await supabase
     .from('rounds')
@@ -99,9 +99,25 @@ export default async function RoundDetailPage({ params }: PageProps) {
   const bogeys = holeList.filter(h => h.score === h.par + 1).length
   const doubles = holeList.filter(h => h.score >= h.par + 2).length
 
-  // SG calculations (full tracking rounds only)
+  // SG access: Pro sees SG on every round; free users get it on their FIRST
+  // full-tracking round only (the free taster), then it locks.
+  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
   const isFullTracking = round.input_mode === 'full'
-  const sgData = isFullTracking
+  let sgUnlocked = isPro
+  if (!isPro && isFullTracking) {
+    const { data: firstFull } = await supabase
+      .from('rounds')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('input_mode', 'full')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    sgUnlocked = firstFull?.id === id
+  }
+
+  // SG calculations (full tracking rounds only, when unlocked)
+  const sgData = isFullTracking && sgUnlocked
     ? calculateRoundSG(
         holeList.map(h => ({
           holeNumber: h.hole_number,
@@ -139,7 +155,6 @@ export default async function RoundDetailPage({ params }: PageProps) {
   const revisedCoachFeedback = coachChallenge?.revised_ai_feedback ?? null
 
   // Bad round detection: score significantly above handicap, or 3+ doubles
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
   const scoreDiff = totalDiff - (profile?.handicap ?? totalDiff)
   const isBadRound = isPro && (scoreDiff >= 8 || doubles >= 3)
   // Derive weakest stat for bad round recovery
@@ -151,6 +166,38 @@ export default async function RoundDetailPage({ params }: PageProps) {
   else if (udPct !== null && udPct < 0.3 && girPct < 0.5) weakestStat = 'Short game'
   else if (girPct < 0.3) weakestStat = 'GIR (approach play)'
   else if (fairwaysTotal > 0 && fairwaysHit / fairwaysTotal < 0.4) weakestStat = 'Driving accuracy'
+
+  // Share prompt: is this the best of the player's recent rounds? (Pro only)
+  let isBestRecent = false
+  if (isPro && round.score_total != null && round.par_total != null) {
+    const { data: recent } = await supabase
+      .from('rounds')
+      .select('id, score_total, par_total')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(10)
+    const others = (recent ?? []).filter(r => r.id !== id && r.score_total != null && r.par_total != null)
+    const thisToPar = round.score_total - round.par_total
+    isBestRecent = others.length >= 2 && others.every(r => thisToPar <= (r.score_total! - r.par_total!))
+  }
+
+  // Mental process tracking — shots with a process answer recorded
+  const allShots: ShotEntry[] = holeList.flatMap(h => (Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []))
+  const processShots = allShots.filter(s => typeof s.process === 'boolean')
+  const processYes = processShots.filter(s => s.process === true).length
+  const processPct = processShots.length > 0 ? Math.round((processYes / processShots.length) * 100) : null
+  const processPutts = processShots.filter(s => s.lieType === 'green')
+  const processLong = processShots.filter(s => s.lieType !== 'green')
+  const processPuttsPct = processPutts.length > 0 ? Math.round((processPutts.filter(s => s.process).length / processPutts.length) * 100) : null
+  const processLongPct = processLong.length > 0 ? Math.round((processLong.filter(s => s.process).length / processLong.length) * 100) : null
+  // Holes where the process broke down most (2+ "no" answers)
+  const processBreakdownHoles = holeList
+    .map(h => {
+      const shots = Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []
+      const nos = shots.filter(s => s.process === false).length
+      return { holeNumber: h.hole_number, nos, score: h.score, par: h.par }
+    })
+    .filter(h => h.nos >= 2)
 
   // Par breakdown
   const parBreakdown = ([3, 4, 5] as const).map(par => {
@@ -175,13 +222,24 @@ export default async function RoundDetailPage({ params }: PageProps) {
         >
           ← Rounds
         </Link>
-        <Link
-          href={`/rounds/${id}/edit`}
-          className="text-sm px-3 py-2 rounded-lg"
-          style={{ backgroundColor: '#22263A', color: '#9A9DB0', border: '1px solid #2E3247' }}
-        >
-          Edit
-        </Link>
+        <div className="flex items-center gap-2">
+          {isPro && (
+            <Link
+              href={`/rounds/${id}/share`}
+              className="text-sm px-3 py-2 rounded-lg font-medium"
+              style={{ backgroundColor: '#CC222220', color: '#CC2222', border: '1px solid #CC222240' }}
+            >
+              Share
+            </Link>
+          )}
+          <Link
+            href={`/rounds/${id}/edit`}
+            className="text-sm px-3 py-2 rounded-lg"
+            style={{ backgroundColor: '#22263A', color: '#9A9DB0', border: '1px solid #2E3247' }}
+          >
+            Edit
+          </Link>
+        </div>
       </div>
 
       {/* Round header */}
@@ -224,6 +282,54 @@ export default async function RoundDetailPage({ params }: PageProps) {
         </p>
         <p className="text-sm mt-1" style={{ color: '#9A9DB0' }}>Par {totalPar}</p>
       </div>
+
+      {/* Share prompt — best recent round */}
+      {isBestRecent && (
+        <div className="mb-6 p-4 rounded-xl flex items-center justify-between gap-3" style={{ backgroundColor: '#22C55E10', border: '1px solid #22C55E30' }}>
+          <div>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#F0F0F0' }}>Your best round in a while</p>
+            <p className="text-xs" style={{ color: '#9A9DB0' }}>Worth showing off — share the snapshot.</p>
+          </div>
+          <Link
+            href={`/rounds/${id}/share`}
+            className="px-4 py-2.5 rounded-lg text-sm font-semibold shrink-0"
+            style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
+          >
+            Share
+          </Link>
+        </div>
+      )}
+
+      {/* SG locked — free user who has used their free SG round */}
+      {isFullTracking && !sgUnlocked && (
+        <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222240' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#CC2222' }}>
+            Strokes Gained — Pro
+          </p>
+          <p className="text-sm mb-1 font-semibold" style={{ color: '#F0F0F0' }}>
+            You&apos;ve used your free Strokes Gained round
+          </p>
+          <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+            Your shot-by-shot data for this round is saved. Upgrade to see exactly where you gained and lost shots — off the tee, approach, around the green and putting — on this and every round.
+          </p>
+          <Link
+            href="/upgrade"
+            className="inline-block px-4 py-2 rounded-lg text-xs font-semibold"
+            style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
+          >
+            Go Pro — £4.99/mo
+          </Link>
+        </div>
+      )}
+
+      {/* Free SG preview banner */}
+      {!isPro && sgUnlocked && sgData && (
+        <div className="mb-3 px-4 py-3 rounded-xl" style={{ backgroundColor: '#22C55E10', border: '1px solid #22C55E30' }}>
+          <p className="text-xs font-medium" style={{ color: '#22C55E' }}>
+            Free Strokes Gained preview — Pro members see this on every round.
+          </p>
+        </div>
+      )}
 
       {/* Strokes Gained breakdown — full tracking rounds */}
       {sgData && (
@@ -299,6 +405,59 @@ export default async function RoundDetailPage({ params }: PageProps) {
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Mental process breakdown */}
+      {processPct !== null && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>
+            Mental process
+          </h2>
+          <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+            <div
+              className="flex items-center justify-between pb-3 mb-3"
+              style={{ borderBottom: '1px solid #2E3247' }}
+            >
+              <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Process kept</span>
+              <span
+                className="text-xl font-bold"
+                style={{
+                  fontFamily: 'var(--font-dm-mono)',
+                  color: processPct >= 80 ? '#22C55E' : processPct >= 60 ? '#F59E0B' : '#EF4444',
+                }}
+              >
+                {processPct}%
+              </span>
+            </div>
+            <p className="text-sm mb-3" style={{ color: '#9A9DB0' }}>
+              Fully committed on {processYes} of {processShots.length} shots — commitment, not outcome.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {processLongPct !== null && (
+                <div className="p-3 rounded-lg text-center" style={{ backgroundColor: '#22263A' }}>
+                  <p className="text-lg font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{processLongPct}%</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Long game</p>
+                </div>
+              )}
+              {processPuttsPct !== null && (
+                <div className="p-3 rounded-lg text-center" style={{ backgroundColor: '#22263A' }}>
+                  <p className="text-lg font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{processPuttsPct}%</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Putting</p>
+                </div>
+              )}
+            </div>
+            {processBreakdownHoles.length > 0 && (
+              <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2E3247' }}>
+                <p className="text-xs font-semibold mb-1.5" style={{ color: '#9A9DB0' }}>Where it slipped</p>
+                {processBreakdownHoles.map(h => (
+                  <p key={h.holeNumber} className="text-xs mb-1" style={{ color: '#9A9DB0' }}>
+                    Hole {h.holeNumber} — {h.nos} uncommitted shots, scored {h.score} on a par {h.par}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -476,12 +635,12 @@ export default async function RoundDetailPage({ params }: PageProps) {
               {/* Header */}
               <div
                 className="grid text-xs font-medium py-2 px-3"
-                style={{ color: '#9A9DB0', gridTemplateColumns: isFullTracking ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderBottom: '1px solid #2E3247' }}
+                style={{ color: '#9A9DB0', gridTemplateColumns: sgData ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderBottom: '1px solid #2E3247' }}
               >
                 <span>#</span><span>Par</span><span>Score</span>
                 <span>FIR</span><span>GIR</span><span>Putts</span>
                 <span>U&D</span><span>Sand</span>
-                {isFullTracking && <span style={{ color: '#22C55E80' }}>SG</span>}
+                {sgData && <span style={{ color: '#22C55E80' }}>SG</span>}
               </div>
 
               {holeList.map((h, i) => {
@@ -491,7 +650,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
                   <div
                     key={h.id}
                     className="grid items-center py-2.5 px-3"
-                    style={{ gridTemplateColumns: isFullTracking ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderBottom: i < holeList.length - 1 ? '1px solid #2E3247' : 'none' }}
+                    style={{ gridTemplateColumns: sgData ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderBottom: i < holeList.length - 1 ? '1px solid #2E3247' : 'none' }}
                   >
                     <span className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{h.hole_number}</span>
                     <span className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{h.par}</span>
@@ -509,7 +668,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
                     <span className="text-xs" style={{ color: h.sand_save === true ? '#22C55E' : h.sand_save === false ? '#EF4444' : '#4A4D60' }}>
                       {h.sand_save === true ? '✓' : h.sand_save === false ? '✗' : '—'}
                     </span>
-                    {isFullTracking && (
+                    {sgData && (
                       <span className="text-xs font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: holeSG ? sgColor(holeSG.sgTotal) : '#4A4D60' }}>
                         {holeSG ? fmtSG(holeSG.sgTotal) : '—'}
                       </span>
@@ -521,7 +680,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
               {/* Totals */}
               <div
                 className="grid items-center py-2.5 px-3"
-                style={{ gridTemplateColumns: isFullTracking ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderTop: '2px solid #2E3247' }}
+                style={{ gridTemplateColumns: sgData ? '28px 28px 44px 36px 36px 40px 36px 36px 48px' : '28px 28px 44px 36px 36px 40px 36px 36px', borderTop: '2px solid #2E3247' }}
               >
                 <span className="text-xs font-medium col-span-2" style={{ color: '#9A9DB0' }}>Total</span>
                 <span className="text-sm font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor(totalDiff) }}>{totalScore}</span>
@@ -530,7 +689,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
                 <span className="text-xs" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{totalPutts}</span>
                 <span className="text-xs" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{upDowns}/{upDownAttempts}</span>
                 <span className="text-xs" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{sandAttempts > 0 ? `${sandSaves}/${sandAttempts}` : '—'}</span>
-                {isFullTracking && sgData && (
+                {sgData && (
                   <span className="text-xs font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: sgColor(sgData.sgTotal) }}>{fmtSG(sgData.sgTotal)}</span>
                 )}
               </div>
@@ -539,8 +698,8 @@ export default async function RoundDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Shot-by-shot breakdown — full tracking only */}
-      {isFullTracking && holeList.some(h => Array.isArray(h.shots) && (h.shots as unknown as ShotEntry[]).length > 0) && (
+      {/* Shot-by-shot breakdown — full tracking only (SG unlocked) */}
+      {sgData && holeList.some(h => Array.isArray(h.shots) && (h.shots as unknown as ShotEntry[]).length > 0) && (
         <div className="mb-6">
           <h2 className="text-base font-semibold mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
             Shot breakdown
@@ -606,6 +765,9 @@ export default async function RoundDetailPage({ params }: PageProps) {
                 ]
               })}
             </div>
+            <p className="text-xs mt-2" style={{ color: '#4A4D60' }}>
+              Each shot is scored on its own, so a long lag putt can show red even when your 2-putt was fine — the bold <span style={{ color: '#9A9DB0' }}>Hole</span> row is your net for the hole.
+            </p>
         </div>
       )}
 

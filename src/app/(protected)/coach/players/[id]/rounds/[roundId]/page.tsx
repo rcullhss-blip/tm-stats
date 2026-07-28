@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { HoleRow, ShotEntry } from '@/lib/types'
-import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 import CoachAIChallenge from '@/components/coach/CoachAIChallenge'
 
 interface PageProps {
@@ -73,7 +73,7 @@ export default async function CoachPlayerRoundPage({ params }: PageProps) {
   const totalDiff = totalScore - totalPar
 
   // SG calculation
-  const skillLevel: SkillLevel = (player.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(player.handicap ?? null)
+  const skillLevel: SkillLevel = normalizeSkillLevel(player.sg_baseline) ?? handicapToSkillLevel(player.handicap ?? null)
   const holesForSG = holeList.map((h: HoleRow) => ({
     holeNumber: h.hole_number,
     par: h.par as 3 | 4 | 5,

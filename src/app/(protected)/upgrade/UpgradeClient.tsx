@@ -5,24 +5,33 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+// Flip to 'gocardless' (Direct Debit) by setting NEXT_PUBLIC_PAYMENT_PROVIDER.
+// Defaults to Stripe so nothing changes until the switch is thrown.
+const PROVIDER = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === 'gocardless' ? 'gocardless' : 'stripe'
+
 const FEATURES = [
-  { icon: '📊', label: 'Unlimited rounds', sub: 'Free plan is capped at 5' },
-  { icon: '🎯', label: 'Full Strokes Gained', sub: 'Off tee, approach, around green, putting' },
-  { icon: '🤖', label: 'AI coaching feedback', sub: 'In the voice of your chosen coach' },
-  { icon: '💬', label: 'Named drills', sub: 'Specific practice plans after every round' },
-  { icon: '📈', label: 'Full stats & trends', sub: 'SG averages, scoring breakdowns, charts' },
-  { icon: '🎙️', label: 'All 7 coaching modes', sub: 'Club Pro, Technical Analyst, Ball Flight Coach and more' },
+  { label: 'Unlimited rounds', sub: 'Free plan is capped at 5' },
+  { label: 'Full Strokes Gained', sub: 'Off tee, approach, around green, putting' },
+  { label: 'AI coaching feedback', sub: 'In the voice of your chosen coach' },
+  { label: 'Named drills', sub: 'Specific practice plans after every round' },
+  { label: 'Full stats & trends', sub: 'SG averages, scoring breakdowns, charts' },
+  { label: 'All 7 coaching modes', sub: 'Club Pro, Technical Analyst, Ball Flight Coach and more' },
 ]
 
 export default function UpgradeClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const roundLimitHit = searchParams.get('reason') === 'round_limit'
+  // ?switch=1 lets an existing Pro member re-confirm on a new payment method
+  // (e.g. moving from Stripe card to GoCardless Direct Debit) without being
+  // bounced to the dashboard. Their Pro access is untouched during the switch.
+  const switching = searchParams.get('switch') === '1'
   const [plan, setPlan] = useState<'monthly' | 'yearly'>('yearly')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (switching) return
     const supabase = createClient()
     supabase.from('users').select('subscription_status').single().then(({ data }) => {
       if (data?.subscription_status === 'pro') router.replace('/dashboard')
@@ -33,10 +42,11 @@ export default function UpgradeClient() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/stripe/checkout', {
+      const endpoint = PROVIDER === 'gocardless' ? '/api/gocardless/checkout' : '/api/stripe/checkout'
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, switch: switching }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
@@ -61,6 +71,13 @@ export default function UpgradeClient() {
         </div>
       )}
 
+      {switching && (
+        <div className="p-3 rounded-xl mb-6 text-sm" style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3350' }}>
+          <p className="font-semibold mb-1">Moving your Pro subscription to Direct Debit</p>
+          <p style={{ color: '#9A9DB0' }}>Your Pro access stays on throughout. Set up the Direct Debit below and we&apos;ll cancel your old card payment so you&apos;re never charged twice.</p>
+        </div>
+      )}
+
       {/* Hero */}
       <div className="text-center mb-8">
         <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#CC2222' }}>
@@ -76,9 +93,8 @@ export default function UpgradeClient() {
 
       {/* Features */}
       <div className="space-y-3 mb-8">
-        {FEATURES.map(({ icon, label, sub }) => (
+        {FEATURES.map(({ label, sub }) => (
           <div key={label} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
-            <span className="text-xl w-8 text-center">{icon}</span>
             <div>
               <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>{label}</p>
               <p className="text-xs" style={{ color: '#9A9DB0' }}>{sub}</p>
@@ -161,11 +177,11 @@ export default function UpgradeClient() {
           opacity: loading ? 0.7 : 1,
         }}
       >
-        {loading ? 'Loading checkout…' : `Go Pro — ${plan === 'yearly' ? '£50/year' : '£4.99/month'}`}
+        {loading ? 'Loading checkout…' : `${switching ? 'Set up Direct Debit' : 'Go Pro'} — ${plan === 'yearly' ? '£50/year' : '£4.99/month'}`}
       </button>
 
       <p className="text-center text-xs mt-4" style={{ color: '#4A4D60' }}>
-        Secure payment via Stripe. Cancel any time.
+        {PROVIDER === 'gocardless' ? 'Secure Direct Debit via GoCardless. Cancel any time.' : 'Secure payment via Stripe. Cancel any time.'}
       </p>
     </div>
   )

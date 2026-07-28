@@ -59,7 +59,6 @@ export default function AICoachingPanel({ roundId, isPro, coachPersona }: Props)
         style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222230' }}
       >
         <div className="flex items-start gap-3">
-          <span className="text-xl">🎙️</span>
           <div>
             <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>
               AI Coaching — Pro feature

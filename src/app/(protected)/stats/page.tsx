@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
 import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
-import { calculateRoundSG, handicapToSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
 
 export default async function StatsPage() {
@@ -16,7 +16,7 @@ export default async function StatsPage() {
     .eq('id', user.id)
     .single()
 
-  const skillLevel: SkillLevel = (profile?.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(profile?.handicap ?? null)
+  const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
   const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
 
   const { data: roundsRaw } = await supabase
@@ -33,7 +33,6 @@ export default async function StatsPage() {
       <div className="px-4 py-6 max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Stats</h1>
         <div className="text-center py-16">
-          <div className="text-5xl mb-4">📊</div>
           <h2 className="text-lg font-semibold mb-2" style={{ color: '#F0F0F0' }}>No data yet</h2>
           <p className="text-sm" style={{ color: '#9A9DB0' }}>Log a few rounds and your stats will appear here.</p>
         </div>
@@ -72,7 +71,8 @@ export default async function StatsPage() {
       const sandAttempts = holes.filter(h => h.sand_save !== null).length
       const sandSaves = holes.filter(h => h.sand_save === true).length
 
-      const sgResult = r.input_mode === 'full'
+      // SG aggregates/trends are Pro — free users get SG on their first full round only (round detail page)
+      const sgResult = isPro && r.input_mode === 'full'
         ? calculateRoundSG(
             holes.map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null })),
             skillLevel
@@ -135,6 +135,14 @@ export default async function StatsPage() {
       const bogeys = holes.filter(h => h.score === h.par + 1).length
       const doubles = holes.filter(h => h.score >= h.par + 2).length
 
+      // Mental process % for this round (if tracked)
+      const procShots = holes
+        .flatMap(h => (Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []))
+        .filter(s => typeof s.process === 'boolean')
+      const processPct = procShots.length > 0
+        ? (procShots.filter(s => s.process).length / procShots.length) * 100
+        : null
+
       return {
         id: r.id,
         date: r.date,
@@ -153,12 +161,40 @@ export default async function StatsPage() {
         sgAroundGreen: sgResult?.sgAroundGreen ?? null,
         sgPutt: sgResult?.sgPutt ?? null,
         sgBands: sgBands ?? null,
+        processPct,
         eagles, birdies, pars, bogeys, doubles,
         totalHoles: holes.length,
       }
     })
 
   const sgRoundCount = rounds.filter(r => r.sgTotal !== null).length
+
+  // Milestones & streaks — all-time, computed from hole-level data
+  const chrono = [...roundList].sort((a, b) => a.date.localeCompare(b.date))
+  let longestBogeyFreeRun = 0
+  let run = 0
+  for (const r of chrono) {
+    const hs = [...(holesMap.get(r.id) ?? [])].sort((a, b) => a.hole_number - b.hole_number)
+    for (const h of hs) {
+      if (h.score <= h.par) {
+        run++
+        if (run > longestBogeyFreeRun) longestBogeyFreeRun = run
+      } else {
+        run = 0
+      }
+    }
+  }
+  const r18 = rounds.filter(r => r.totalHoles >= 18)
+  const milestones = {
+    bestToPar: rounds.length > 0 ? Math.min(...rounds.map(r => r.scoreToPar)) : null,
+    bestGross18: r18.length > 0 ? Math.min(...r18.map(r => r.scoreToPar + r.par)) : null,
+    fewestPutts18: r18.length > 0 ? Math.min(...r18.map(r => Math.round(r.puttsPerHole * r.totalHoles))) : null,
+    bestGirPct: rounds.length > 0 ? Math.round(Math.max(...rounds.map(r => r.girPct))) : null,
+    mostBirdies: rounds.length > 0 ? Math.max(...rounds.map(r => r.birdies + r.eagles)) : null,
+    totalBirdies: rounds.reduce((s, r) => s + r.birdies + r.eagles, 0),
+    longestBogeyFreeRun,
+    totalRounds: rounds.length,
+  }
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
@@ -176,6 +212,7 @@ export default async function StatsPage() {
         sgRoundCount={sgRoundCount}
         handicapHistory={(handicapHistoryRaw ?? []).map((h: { date: string; handicap: number }) => ({ date: h.date, handicap: Number(h.handicap) }))}
         handicap={profile?.handicap ?? null}
+        milestones={milestones}
       />
     </div>
   )

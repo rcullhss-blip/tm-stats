@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { calculateRoundSG, handicapToSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import type { ShotEntry, HoleRow } from '@/lib/types'
 
 // Map legacy DB values to new keys (backward compatibility)
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
   }
 
-  const skillLevel: SkillLevel = (profile?.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(profile?.handicap ?? null)
+  const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
   const feedbackLevel = profile?.feedback_level ?? 'intermediate'
   const rawPersona = profile?.coach_persona ?? 'club_pro'
   const coachPersona = LEGACY_MAP[rawPersona] ?? rawPersona
@@ -319,6 +319,7 @@ No introduction. No extra commentary.`
     let girPct: number | null = null
     let puttsPerHole: number | null = null
     let udPct: number | null = null
+    let processLine: string | null = null
 
     if (fullRounds.length >= 2) {
       const roundIds = fullRounds.map(r => r.id)
@@ -366,6 +367,24 @@ No introduction. No extra commentary.`
             putt: sgTotals.putt / sgTotals.count,
           }
         }
+
+        // Mental process % per round, paired with the score — lets the AI
+        // correlate commitment with scoring
+        const processPairs: string[] = []
+        for (const round of fullRounds) {
+          const holes = holeList.filter(h => h.round_id === round.id)
+          const shots = holes
+            .flatMap(h => (Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []))
+            .filter(s => typeof s.process === 'boolean')
+          if (shots.length === 0) continue
+          const pct = Math.round(shots.filter(s => s.process).length / shots.length * 100)
+          const scored = scoredRounds.find(x => x.id === round.id)
+          const toPar = scored ? scored.score_total! - scored.par_total! : null
+          processPairs.push(`${pct}% process${toPar !== null ? ` → ${toPar > 0 ? '+' : ''}${toPar}` : ''}`)
+        }
+        if (processPairs.length >= 2) {
+          processLine = `Mental process tracking (per round: % of shots with full pre-shot commitment → score vs par): ${processPairs.join(', ')}`
+        }
       }
     }
 
@@ -390,6 +409,7 @@ No introduction. No extra commentary.`
       sgAvgs
         ? `SG averages (${fullRounds.length} full-tracking rounds) — Off tee: ${sgAvgs.offTee.toFixed(2)}, Approach: ${sgAvgs.approach.toFixed(2)}, Around green: ${sgAvgs.aroundGreen.toFixed(2)}, Putting: ${sgAvgs.putt.toFixed(2)}`
         : null,
+      processLine,
     ].filter(Boolean).join('\n')
 
     const patternPrompt = `Analyse the following stats for ${profile?.name ?? 'a golfer'}:
@@ -494,6 +514,20 @@ No intro, no labels, no extra text.`
   Putting: ${sgData.sgPutt.toFixed(2)}`
       : '\nStrokes Gained: Not available (round logged in quick mode)'
 
+    // Mental process tracking — % of shots where the player fully committed to their pre-shot process
+    const allShotEntries: ShotEntry[] = holes.flatMap(h => (Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []))
+    const procShots = allShotEntries.filter(s => typeof s.process === 'boolean')
+    const procYes = procShots.filter(s => s.process === true).length
+    const procPutts = procShots.filter(s => s.lieType === 'green')
+    const procLong = procShots.filter(s => s.lieType !== 'green')
+    const processBlock = procShots.length > 0
+      ? `\nMental process tracking (player marked Yes/No on each shot: did they fully commit to their pre-shot process, regardless of result):
+  Process kept: ${procYes}/${procShots.length} shots (${Math.round(procYes / procShots.length * 100)}%)${procLong.length > 0 ? `
+  Long game: ${procLong.filter(s => s.process).length}/${procLong.length} (${Math.round(procLong.filter(s => s.process).length / procLong.length * 100)}%)` : ''}${procPutts.length > 0 ? `
+  Putting: ${procPutts.filter(s => s.process).length}/${procPutts.length} (${Math.round(procPutts.filter(s => s.process).length / procPutts.length * 100)}%)` : ''}
+  If process % is low in a category, address the mental side (commitment, routine, distraction) — not just technique.`
+      : ''
+
     const notesBlock = round.notes ? `\nPlayer notes: "${round.notes}"` : ''
     const conditionParts = [
       round.mood ? `Mood: ${round.mood}` : null,
@@ -504,7 +538,7 @@ No intro, no labels, no extra text.`
     const pName = profile?.name?.split(' ')[0] ?? 'this player'
     userPrompt = `Here is the round data for ${pName} (handicap ${profile?.handicap ?? 'unknown'}):
 
-${statsLines}${sgBlock}${notesBlock}${conditionParts.length ? '\n' + conditionParts.join(' | ') : ''}
+${statsLines}${sgBlock}${processBlock}${notesBlock}${conditionParts.length ? '\n' + conditionParts.join(' | ') : ''}
 
 Give ${pName} specific coaching feedback based on these exact numbers.`
   }

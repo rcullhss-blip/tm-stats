@@ -24,7 +24,9 @@ This guide walks you through everything: setting up your account, adding players
 6. [Understanding Strokes Gained Data](#6-understanding-strokes-gained-data)
 7. [The AI Challenge Feature](#7-the-ai-challenge-feature)
 8. [Coaching Scenarios and Examples](#8-coaching-scenarios-and-examples)
-9. [Frequently Asked Questions](#9-frequently-asked-questions)
+9. [Your Weekly Digest Email](#9-your-weekly-digest-email)
+10. [Mental Process Tracking](#10-mental-process-tracking)
+11. [Frequently Asked Questions](#11-frequently-asked-questions)
 
 ---
 
@@ -296,7 +298,39 @@ Essential. You add detailed context explaining the swing change programme, the e
 
 ---
 
-## 9. Frequently Asked Questions
+## 9. Your Weekly Digest Email
+
+Every Monday morning, if any of your squad logged rounds in the previous 7 days, you receive a digest email containing:
+
+- Each active player's rounds for the week — courses, scores, average and best vs par
+- A list of players who didn't log anything (your gentle nudge list)
+- A link straight to your coach dashboard
+
+If nobody in your squad played, no email is sent — you will never get an empty digest. The email is informational only; all the detail (SG, AI feedback, round-by-round data) lives in your dashboard.
+
+---
+
+## 10. Mental Process Tracking
+
+Players using Full Tracking can optionally enable **mental process tracking** at round setup. On every shot, they answer one question: *"Did you fully commit to your process?"* — Yes or No. It measures commitment, not outcome: a poor shot with full commitment is a Yes; a good shot they bailed on is a No.
+
+**What you get as a coach:**
+
+- A **Process %** for the round on the player's round page, split into long game vs putting, with the holes where commitment broke down listed alongside the scores on those holes
+- A **process trend** on their stats page across rounds
+- The platform correlates process with scoring — e.g. "when this player's process is above 75%, they average +4; below it, +9"
+
+**How to use it:**
+
+- A player whose SG is fine but whose process % collapses in competitions has a mental game issue, not a technical one — coach the routine, not the swing
+- A low putting process % with poor putting SG suggests doubt over the ball — routine and commitment work before stroke mechanics
+- The AI coaching already factors this in: when process % is low, the feedback addresses commitment and routine rather than technique
+
+This is the first structured mental-game baseline most players will ever have. Encourage your serious competitors to turn it on — but frame it honestly: it requires self-awareness and honesty on every shot, so it suits players who are ready for it.
+
+---
+
+## 11. Frequently Asked Questions
 
 **Can players see that I've submitted an AI Challenge for their round?**  
 Yes. The revised feedback is clearly shown on their round detail page and labelled as coming from their coach. They can see the revised feedback but not your original context input.
@@ -345,5 +379,5 @@ We are always looking to improve the coaching tools based on feedback from worki
 
 ---
 
-*TM Stats Coach's Guide — Version 1.3*  
+*TM Stats Coach's Guide — Version 1.4*  
 *© TM Stats Ltd. All rights reserved.*

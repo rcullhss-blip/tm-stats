@@ -46,6 +46,11 @@ export default function RoundSummary({ setup, holes, saving, error, onBack, onSa
   const upDowns = holes.filter(h => h.upAndDown === true).length
   const upDownAttempts = holes.filter(h => h.gir === false).length
 
+  // Mental process score — shots where the golfer recorded a process answer
+  const processShots = holes.flatMap(h => h.shots ?? []).filter(s => typeof s.process === 'boolean')
+  const processYes = processShots.filter(s => s.process === true).length
+  const processPct = processShots.length > 0 ? Math.round((processYes / processShots.length) * 100) : null
+
   const eagles = holes.filter(h => h.score <= h.par - 2).length
   const birdies = holes.filter(h => h.score === h.par - 1).length
   const pars = holes.filter(h => h.score === h.par).length
@@ -144,6 +149,25 @@ export default function RoundSummary({ setup, holes, saving, error, onBack, onSa
           </div>
         )}
       </div>
+
+      {/* Mental process score */}
+      {processPct !== null && (
+        <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+          <p className="text-sm font-medium mb-1" style={{ color: '#9A9DB0' }}>Mental process</p>
+          <p
+            className="text-3xl font-bold"
+            style={{
+              fontFamily: 'var(--font-dm-mono)',
+              color: processPct >= 80 ? '#22C55E' : processPct >= 60 ? '#F59E0B' : '#EF4444',
+            }}
+          >
+            {processPct}%
+          </p>
+          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>
+            Fully committed on {processYes} of {processShots.length} shots
+          </p>
+        </div>
+      )}
 
       {/* Scoring distribution */}
       <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>

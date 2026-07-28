@@ -10,6 +10,8 @@ interface Props {
   initialShots?: ShotEntry[]   // Restore shots when navigating back
   onChangePar: (p: 3 | 4 | 5) => void
   onComplete: (data: Omit<HoleData, 'holeNumber'>) => void
+  onShotsChange?: (shots: ShotEntry[]) => void  // Live updates so in-progress shots survive a reload
+  trackProcess?: boolean  // Mental process tracking — Yes/No per shot
 }
 
 const LIE_OPTIONS: { value: LieType; label: string }[] = [
@@ -67,26 +69,23 @@ function deriveShotStats(shots: ShotEntry[], par: 3 | 4 | 5): Omit<HoleData, 'ho
   // Putts: shots on the green with dist > 0 (exclude the hole-out dist=0 marker)
   const putts = shots.filter(s => s.lieType === 'green' && s.distanceToPin > 0).length
 
-  // Up and down: missed green AND holed out in 2 shots from off green (1 chip + 1 putt)
+  // Up and down: missed GIR AND holed out in ≤2 shots counting from the first
+  // off-green position once the GIR chance had passed. This is only computed when
+  // the hole is finished (deriveShotStats runs on hole-out), so the last entered
+  // shot always holed it — chip-ins count correctly.
   const upAndDown: boolean | null =
     !gir && shots.length > 0
       ? (() => {
-          const firstGreenIdx = shots.findIndex(s => s.lieType === 'green')
-          // Chip-in from off green (no green shot recorded, last shot has dist=0)
-          if (firstGreenIdx === -1) {
-            const lastShot = shots[shots.length - 1]
-            return lastShot?.distanceToPin === 0 ? true : null
-          }
-          // Count only real putts (dist > 0), not the hole-out marker
-          const puttsCount = shots.filter((s, i) => i >= firstGreenIdx && s.lieType === 'green' && s.distanceToPin > 0).length
-          // Up & down = exactly 1 putt after getting on (2 total shots from off green)
-          return puttsCount <= 1
+          const startIdx = shots.findIndex((s, i) => i >= girThreshold && s.lieType !== 'green')
+          // Holed out before the GIR chance even passed (e.g. holed approach) — up & down by definition
+          if (startIdx === -1) return true
+          return shots.length - startIdx <= 2
         })()
       : null
 
-  // Sand save: had a bunker shot AND made up and down
-  const hadBunker = shots.some((s, i) => i > 0 && s.lieType === 'bunker')
-  const sandSave: boolean | null = hadBunker && upAndDown !== null ? upAndDown : null
+  // Sand save: greenside bunker (within 50y of the pin) AND made up and down
+  const hadGreensideBunker = shots.some((s, i) => i > 0 && s.lieType === 'bunker' && s.distanceToPin <= 50)
+  const sandSave: boolean | null = hadGreensideBunker && upAndDown !== null ? upAndDown : null
 
   return { score, fir, gir, putts, upAndDown, sandSave }
 }
@@ -105,7 +104,7 @@ function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   return 'fairway'
 }
 
-export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete }: Props) {
+export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false }: Props) {
   const [shots, setShots] = useState<ShotEntry[]>(initialShots ?? [])
   const [pendingLie, setPendingLie] = useState<LieType>(() => {
     if (initialShots && initialShots.length > 0) {
@@ -115,6 +114,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   })
   const [pendingQuality, setPendingQuality] = useState<LieQuality>('good')
   const [pendingDist, setPendingDist] = useState('')
+  const [pendingProcess, setPendingProcess] = useState<boolean | null>(null)
   const [error, setError] = useState('')
 
   const isPenalty = pendingLie === 'penalty'
@@ -136,6 +136,12 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       }
       distYards = pendingLie === 'green' ? feetToYards(raw) : raw
     }
+
+    // Process answer required on real shots when tracking is on (penalties have no swing)
+    if (trackProcess && !isPenalty && pendingProcess === null) {
+      setError('Did you commit to your process on this shot? Tap Yes or No.')
+      return
+    }
     setError('')
 
     const newShot: ShotEntry = {
@@ -143,11 +149,14 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       distanceToPin: distYards,
       lieType: pendingLie,
       ...(LIES_WITH_QUALITY.includes(pendingLie) && pendingQuality !== 'good' ? { lieQuality: pendingQuality } : {}),
+      ...(trackProcess && !isPenalty && pendingProcess !== null ? { process: pendingProcess } : {}),
     }
     const newShots = [...shots, newShot]
     setShots(newShots)
+    onShotsChange?.(newShots)
     setPendingDist('')
     setPendingQuality('good')
+    setPendingProcess(null)
     setPendingLie(nextLieSuggestion(newShots, par))
   }
 
@@ -156,8 +165,10 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     const prev = shots[shots.length - 1]
     const updated = shots.slice(0, -1)
     setShots(updated)
+    onShotsChange?.(updated)
     setPendingLie(prev.lieType)
     setPendingQuality(prev.lieQuality ?? 'good')
+    setPendingProcess(prev.process ?? null)
     // Penalty shots have no user-entered distance — restore blank
     if (prev.lieType === 'penalty') {
       setPendingDist('')
@@ -245,6 +256,17 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                         }}
                       >
                         {s.lieQuality}
+                      </span>
+                    )}
+                    {typeof s.process === 'boolean' && (
+                      <span
+                        className="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: s.process ? '#22C55E20' : '#EF444420',
+                          color: s.process ? '#22C55E' : '#EF4444',
+                        }}
+                      >
+                        {s.process ? '✓ process' : '✗ process'}
                       </span>
                     )}
                   </div>
@@ -340,6 +362,37 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           </div>
         )}
 
+        {/* Mental process — Yes/No per shot, about commitment not outcome */}
+        {trackProcess && !isPenalty && (
+          <div className="mb-3">
+            <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
+              Did you fully commit to your process on this shot?
+            </p>
+            <div className="flex gap-2">
+              {([true, false] as const).map(v => {
+                const selected = pendingProcess === v
+                const color = v ? '#22C55E' : '#EF4444'
+                return (
+                  <button
+                    key={String(v)}
+                    type="button"
+                    onClick={() => setPendingProcess(selected ? null : v)}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium"
+                    style={{
+                      backgroundColor: selected ? `${color}20` : '#1A1D27',
+                      color: selected ? color : '#9A9DB0',
+                      border: `1px solid ${selected ? `${color}60` : '#2E3247'}`,
+                      minHeight: '44px',
+                    }}
+                  >
+                    {v ? 'Yes' : 'No'}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-xs mb-3" style={{ color: '#EF4444' }}>{error}</p>}
 
         <div className="flex gap-2">
@@ -361,7 +414,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
             className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
             style={{ backgroundColor: '#22263A', color: '#F59E0B', border: '1px solid #F59E0B40', minHeight: '48px' }}
           >
-            ⛳ Hole Out (chip-in)
+            Hole Out (chip-in)
           </button>
         )}
 

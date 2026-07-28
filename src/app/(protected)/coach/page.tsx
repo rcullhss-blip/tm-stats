@@ -125,7 +125,6 @@ export default async function CoachPage() {
 
       {players.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-5xl mb-3">👥</p>
           <p className="text-sm" style={{ color: '#9A9DB0' }}>No players yet. Share your join code to get started.</p>
         </div>
       ) : (

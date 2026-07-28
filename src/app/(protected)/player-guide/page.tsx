@@ -2,7 +2,6 @@ import Link from 'next/link'
 
 const sections = [
   {
-    icon: '⛳',
     title: 'Log a Round',
     color: '#CC2222',
     content: `Every improvement starts with data. Log your round hole by hole using Quick Stats (fast, scorecard-style) or Full Tracking (shot by shot). Full Tracking takes about 30 seconds extra per hole but unlocks Strokes Gained — the most powerful stat in golf.`,
@@ -10,12 +9,27 @@ const sections = [
       'Quick Stats: enter par, score, FIR, GIR, and putts per hole',
       'Full Tracking: enter each shot with lie type and distance to pin',
       'Full Tracking also asks for lie quality (Good / Awkward / Severe) on fairway, rough, bunker, and fringe shots — this makes your Strokes Gained numbers more accurate by giving extra credit for shots played from difficult lies',
+      'Played the course before? Tap it in the recent courses list at setup and every par pre-fills from your last round there',
+      'Your round saves to your phone as you go — if the browser reloads or you lose signal, tap "Log a round" and resume exactly where you were',
       'Made a mistake mid-round? Tap any completed hole in the scorecard strip to jump back to it — tap Next when done and you return straight to where you were',
       'Both modes build your scoring history and trend charts',
     ],
+    callout: 'Your first Full Tracking round includes a free Strokes Gained breakdown — see exactly where you gained and lost shots, on your own data. After that, SG is a Pro feature.',
   },
   {
-    icon: '📊',
+    title: 'Mental Process Tracking (optional)',
+    color: '#A855F7',
+    content: `Turn this on at round setup (Full Tracking) and every shot asks one extra question: did you fully commit to your process? It measures commitment, not the result — a bad shot with full commitment is still a Yes. At the end you get a Process %: the first real baseline for your mental game.`,
+    bullets: [
+      'Yes = full routine, clear target, committed swing — no distractions, no doubt',
+      'No = rushed it, doubted the club, got distracted, or bailed on the shot — even if it turned out fine',
+      'Your round page shows the breakdown: long game vs putting, and the holes where it slipped',
+      'The Stats page tracks your process trend and shows what committing is worth in shots per round',
+      'Your AI coach sees the numbers — when the issue is mental, the coaching says so',
+    ],
+    callout: 'It takes honesty on every shot, which is exactly why it works. If it feels like too much, leave it off — everything else works the same.',
+  },
+  {
     title: 'Strokes Gained Explained',
     color: '#22C55E',
     content: `Strokes Gained (SG) is the exact same stat used on the PGA Tour. It measures how much better or worse you performed than a benchmark golfer at your handicap level — for every single shot.`,
@@ -29,7 +43,6 @@ const sections = [
     callout: 'Most amateur golfers think they lose shots off the tee. SG often reveals the real culprit is putting or approach play. Now you can see the truth.',
   },
   {
-    icon: '🤖',
     title: 'AI Coaching (Pro)',
     color: '#9A9DB0',
     content: `After every round, your AI coach analyses your exact numbers and gives specific, actionable feedback. Not generic golf tips — feedback based on your actual data from that round.`,
@@ -43,21 +56,42 @@ const sections = [
     callout: 'Set your coaching style and game context in Profile → Settings. The more context you give, the more specific the feedback.',
   },
   {
-    icon: '📈',
     title: 'Stats Page (Pro)',
     color: '#CC2222',
     content: `Your full statistical picture across every round you have logged. Filter by time range, round type, or 9/18 holes. See where your handicap is really coming from.`,
     bullets: [
       'Scoring trends, ball striking, short game, and putting breakdowns',
       'SG trend charts across all 4 categories',
+      'Mental process trend — and what committing fully is worth in shots per round',
       'Benchmark layer: how you compare to your handicap band average',
       'Score impact simulator: see what fixing one area would do to your score',
+      'Milestones & streaks: bogey-free runs, lowest 18, fewest putts, career birdies',
       'Personal bests and scoring distribution',
       'Handicap trend chart',
     ],
   },
   {
-    icon: '🧠',
+    title: 'Practice Log & Compare Rounds',
+    color: '#22C55E',
+    content: `Your AI coach gives you drills — the practice log is where you prove you did them. And the compare view shows whether the work is paying off.`,
+    bullets: [
+      'Practice log (Dashboard → Practice): log date, focus area, minutes, and notes per session',
+      'See your sessions and total practice time for the month at a glance',
+      'Compare rounds (Rounds → Compare): any two rounds side by side — stats, SG, and process %',
+      'Compare the same course a month apart, or a practice round vs a competition round',
+    ],
+  },
+  {
+    title: 'Share Your Round (Pro)',
+    color: '#CC2222',
+    content: `Shot a good one? Tap Share on any round page and get a branded snapshot — score, stats, Strokes Gained — sized for an Instagram story.`,
+    bullets: [
+      'One tap opens your phone\'s share sheet — pick Instagram and it drops straight into your story',
+      'Works for WhatsApp, Messages, and anywhere else too',
+      'On a computer the image downloads instead',
+    ],
+  },
+  {
     title: 'Mental Game (Pro)',
     color: '#9A9DB0',
     content: `Talk through the mental side of your game with an experienced golf mentor. Not a therapist — a trusted playing partner who has been around the game for years. Get a calm perspective on what is going on between the ears.`,
@@ -69,7 +103,6 @@ const sections = [
     ],
   },
   {
-    icon: '🗓',
     title: 'Dashboard',
     color: '#CC2222',
     content: `Your home screen. See your recent form at a glance, get a pre-round plan before you play, and find out what your biggest opportunity area is right now.`,
@@ -82,7 +115,6 @@ const sections = [
     ],
   },
   {
-    icon: '👤',
     title: 'Profile & Settings',
     color: '#9A9DB0',
     content: `Set up your profile to get the most out of TM Stats. The more context you give, the better the coaching.`,
@@ -95,7 +127,6 @@ const sections = [
     ],
   },
   {
-    icon: '🔓',
     title: 'Getting the Most Out of TM Stats',
     color: '#22C55E',
     content: `The more data you log, the more accurate and useful every feature becomes. Here is how to build a game you can actually track.`,
@@ -139,7 +170,6 @@ export default function PlayerGuidePage() {
           >
             {/* Section header */}
             <div className="flex items-center gap-3 px-4 pt-4 pb-3" style={{ borderBottom: '1px solid #2E3247' }}>
-              <span className="text-2xl">{s.icon}</span>
               <h2 className="text-base font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
                 {s.title}
               </h2>

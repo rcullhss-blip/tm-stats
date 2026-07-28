@@ -137,7 +137,6 @@ export default function MentalGameClient({ isPro }: Props) {
     return (
       <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222230' }}>
         <div className="flex items-start gap-3">
-          <span className="text-xl">🧠</span>
           <div>
             <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Mental Game — Pro feature</p>
             <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
@@ -324,7 +323,6 @@ export default function MentalGameClient({ isPro }: Props) {
         </div>
       ) : sessions.length === 0 ? (
         <div className="text-center py-10">
-          <p className="text-3xl mb-3">💬</p>
           <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>No chats yet</p>
           <p className="text-xs" style={{ color: '#9A9DB0' }}>
             Start a conversation about the mental side of your game.

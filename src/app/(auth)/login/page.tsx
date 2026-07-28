@@ -18,7 +18,7 @@ async function handleLogin(e: React.FormEvent) {
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       if (error.message.toLowerCase().includes('confirm')) {
@@ -28,6 +28,26 @@ async function handleLogin(e: React.FormEvent) {
       }
       setLoading(false)
       return
+    }
+
+    // Users who signed up with email confirmation have no profile row yet —
+    // create it from the signup metadata (name + handicap) on first login.
+    if (data.user) {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', data.user.id)
+        .maybeSingle()
+      if (!existing) {
+        const meta = data.user.user_metadata ?? {}
+        await supabase.from('users').upsert({
+          id: data.user.id,
+          email: data.user.email ?? email,
+          name: typeof meta.name === 'string' && meta.name ? meta.name : null,
+          handicap: typeof meta.handicap === 'number' ? meta.handicap : null,
+          subscription_status: 'free',
+        }, { onConflict: 'id' })
+      }
     }
 
     router.push(email.toLowerCase() === 'rcullhss@gmail.com' ? '/admin' : '/dashboard')

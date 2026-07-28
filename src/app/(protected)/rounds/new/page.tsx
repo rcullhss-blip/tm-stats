@@ -28,5 +28,23 @@ export default async function NewRoundPage() {
     }
   }
 
-  return <NewRoundClient />
+  // Course memory — recently played courses for one-tap setup + par prefill
+  const { data: recentRounds } = await supabase
+    .from('rounds')
+    .select('id, course_name, holes')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false })
+    .limit(30)
+
+  const seen = new Set<string>()
+  const recentCourses: { name: string; holes: number; lastRoundId: string }[] = []
+  for (const r of recentRounds ?? []) {
+    const key = r.course_name.trim().toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    recentCourses.push({ name: r.course_name, holes: r.holes, lastRoundId: r.id })
+    if (recentCourses.length >= 5) break
+  }
+
+  return <NewRoundClient recentCourses={recentCourses} />
 }

@@ -1,4 +1,7 @@
 import Link from 'next/link'
+import { createServiceClient } from '@/lib/supabase/service'
+
+export const dynamic = 'force-dynamic'
 
 const modules = [
   {
@@ -43,7 +46,26 @@ const modules = [
   },
 ]
 
-export default function MarketingHubPage() {
+export default async function MarketingHubPage() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = createServiceClient() as any
+  const count = async (table: string, mod?: (q: unknown) => unknown): Promise<number> => {
+    let q = sb.from(table).select('id', { count: 'exact', head: true })
+    if (mod) q = mod(q)
+    const { count: c } = await q
+    return c ?? 0
+  }
+
+  // Emails sent (all time) = lifecycle emails logged + outreach emails sent.
+  const [lifecycleSent, outreachSent, blogPostsLive] = await Promise.all([
+    count('email_log'),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    count('marketing_contacts', (q: any) => q.in('status', ['contacted', 'followed_up', 'replied'])),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    count('blog_posts', (q: any) => q.not('published_at', 'is', null)),
+  ]).catch(() => [0, 0, 0])
+  const emailsSent = lifecycleSent + outreachSent
+
   return (
     <div className="px-4 py-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-2">
@@ -61,11 +83,11 @@ export default function MarketingHubPage() {
       {/* Stats strip */}
       <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="p-3 rounded-xl text-center" style={{ backgroundColor: '#1A1D27' }}>
-          <p className="text-2xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: '#F0F0F0' }}>0</p>
+          <p className="text-2xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: '#F0F0F0' }}>{emailsSent}</p>
           <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Emails sent (all time)</p>
         </div>
         <div className="p-3 rounded-xl text-center" style={{ backgroundColor: '#1A1D27' }}>
-          <p className="text-2xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: '#F0F0F0' }}>0</p>
+          <p className="text-2xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: '#F0F0F0' }}>{blogPostsLive}</p>
           <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Blog posts live</p>
         </div>
       </div>

@@ -1,197 +1,127 @@
 import { NextResponse } from 'next/server'
 import { assertAdmin, forbidden } from '@/lib/admin-auth'
-import * as cheerio from 'cheerio'
+import { createServiceClient } from '@/lib/supabase/service'
 
-type Contact = {
-  name: string
-  email: string
-  organisation: string
-  type: string
-  region: string
-}
+export const maxDuration = 300
 
-async function scrapeEnglandGolf(): Promise<Contact[]> {
-  const contacts: Contact[] = []
+// Download every scraped contact as a CSV (opens/saves in a spreadsheet).
+// Used by the "Export CSV" button on the scraper page.
+export async function GET() {
+  const admin = await assertAdmin()
+  if (!admin) return forbidden()
 
-  try {
-    // England Golf club finder — fetches the public directory page by page
-    const res = await fetch('https://www.englandgolf.org/find-a-golf-club/', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TM Stats contact finder)' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const supabase = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
 
-    const html = await res.text()
-    const $ = cheerio.load(html)
-
-    // England Golf club cards — each result has club name and sometimes email
-    $('.club-finder__result, .club-card, [class*="club"]').each((_, el) => {
-      const name = $(el).find('h2, h3, .club-name, [class*="name"]').first().text().trim()
-      const email = $(el).find('a[href^="mailto:"]').attr('href')?.replace('mailto:', '').trim()
-      const region = $(el).find('[class*="county"], [class*="region"]').first().text().trim()
-
-      if (email && name) {
-        contacts.push({ name: '', email, organisation: name, type: 'GOLF_CLUB', region })
-      }
-    })
-
-    // Also try to find any mailto links across the page
-    if (contacts.length === 0) {
-      $('a[href^="mailto:"]').each((_, el) => {
-        const email = $(el).attr('href')?.replace('mailto:', '').trim() || ''
-        const text = $(el).closest('div, li, tr').find('h2, h3, strong').first().text().trim()
-        if (email && email.includes('@') && !email.includes('englandgolf')) {
-          contacts.push({ name: '', email, organisation: text || 'Golf Club', type: 'GOLF_CLUB', region: '' })
-        }
-      })
-    }
-  } catch {
-    // Site may block or timeout — return empty with message
+  const cols = ['organisation', 'email', 'website', 'type', 'region', 'status', 'created_at', 'contacted_at']
+  // Pull every row in pages (Supabase caps a single select at 1000).
+  const rows: Record<string, unknown>[] = []
+  const pageSize = 1000
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await sb
+      .from('marketing_contacts')
+      .select(cols.join(','))
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+    if (error || !data || data.length === 0) break
+    rows.push(...data)
+    if (data.length < pageSize) break
   }
 
-  return contacts
-}
-
-async function scrapeNCAA(division: string): Promise<Contact[]> {
-  const contacts: Contact[] = []
-  const type = `NCAA_${division.toUpperCase()}`
-
-  try {
-    // NCAA Golf program search — public directory
-    const url = `https://www.ncaa.com/schools-index/0/${division.toLowerCase()}/M/golf.html`
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research bot)' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-    const html = await res.text()
-    const $ = cheerio.load(html)
-
-    $('table tbody tr, .school-list li, [class*="school"]').each((_, el) => {
-      const name = $(el).find('a, td').first().text().trim()
-      const link = $(el).find('a').first().attr('href')
-      if (name && link) {
-        // We get school names — build plausible coach contact
-        const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '')
-        contacts.push({
-          name: 'Golf Coach',
-          email: `golf@${slug}.edu`,
-          organisation: name,
-          type,
-          region: '',
-        })
-      }
-    })
-  } catch {
-    // Fallback — return empty
+  const esc = (v: unknown) => {
+    const s = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
+  const csv = [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n') + '\n'
 
-  return contacts
+  const date = new Date().toISOString().slice(0, 10)
+  return new NextResponse(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="tmstats-contacts-${date}.csv"`,
+    },
+  })
 }
 
-async function scrapeNAIA(): Promise<Contact[]> {
-  const contacts: Contact[] = []
-
-  try {
-    const res = await fetch('https://www.naia.org/sports/mgolf/index', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research bot)' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-    const html = await res.text()
-    const $ = cheerio.load(html)
-
-    $('[class*="school"], [class*="team"], table tbody tr').each((_, el) => {
-      const name = $(el).find('a, td').first().text().trim()
-      if (name && name.length > 3) {
-        const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '')
-        contacts.push({
-          name: 'Golf Coach',
-          email: `golf@${slug}.edu`,
-          organisation: name,
-          type: 'NAIA',
-          region: '',
-        })
-      }
-    })
-  } catch {
-    // Return empty
-  }
-
-  return contacts
-}
-
-async function scrapeBUCS(): Promise<Contact[]> {
-  const contacts: Contact[] = []
-
-  try {
-    const res = await fetch('https://www.bucs.org.uk/sports/golf/', {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; research bot)' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-    const html = await res.text()
-    const $ = cheerio.load(html)
-
-    $('a[href^="mailto:"]').each((_, el) => {
-      const email = $(el).attr('href')?.replace('mailto:', '').trim() || ''
-      const name = $(el).closest('div, li').find('h2, h3, strong').first().text().trim()
-      if (email && email.includes('@')) {
-        contacts.push({ name: '', email, organisation: name || 'University Golf Club', type: 'UK_COLLEGE', region: 'UK' })
-      }
-    })
-  } catch {
-    // Return empty
-  }
-
-  return contacts
-}
-
+// Admin control panel for the contact pipeline. The heavy lifting lives in
+// /api/cron/scrape (runs nightly); this route lets Rob trigger a batch on
+// demand, paste known URLs straight into the queue, and see pipeline status.
 export async function POST(request: Request) {
   const admin = await assertAdmin()
   if (!admin) return forbidden()
 
-  const { sourceId, type } = await request.json()
+  const body = await request.json().catch(() => ({}))
+  const action = body.action ?? 'status'
 
-  try {
-    let contacts: Contact[] = []
+  const supabase = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any
 
-    switch (sourceId) {
-      case 'england_golf':
-        contacts = await scrapeEnglandGolf()
-        break
-      case 'ncaa_d1':
-        contacts = await scrapeNCAA('D1')
-        break
-      case 'ncaa_d2':
-        contacts = await scrapeNCAA('D2')
-        break
-      case 'ncaa_d3':
-        contacts = await scrapeNCAA('D3')
-        break
-      case 'naia':
-        contacts = await scrapeNAIA()
-        break
-      case 'uk_university':
-        contacts = await scrapeBUCS()
-        break
-      default:
-        return NextResponse.json({ error: 'Unknown source' }, { status: 400 })
+  if (action === 'add_urls') {
+    const urls: string[] = (body.urls ?? []).filter((u: string) => /^https?:\/\//.test(u))
+    const type = body.type ?? 'GOLF_CLUB'
+    let added = 0
+    for (const url of urls.slice(0, 200)) {
+      const { error } = await sb.from('crawl_queue').upsert(
+        { url: url.trim(), kind: 'club_site', type, organisation: null },
+        { onConflict: 'url', ignoreDuplicates: true }
+      )
+      if (!error) added++
     }
-
-    return NextResponse.json({
-      ok: true,
-      count: contacts.length,
-      contacts,
-      message: contacts.length > 0
-        ? `Found ${contacts.length} contacts`
-        : 'No contacts found — site may block automated requests. Use CSV import instead.',
-    })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ ok: true, added })
   }
+
+  if (action === 'set_status') {
+    const email = String(body.email ?? '')
+    const status = String(body.status ?? '')
+    if (!email || !['replied', 'bounced', 'unsubscribed', 'verified'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status update' }, { status: 400 })
+    }
+    await sb.from('marketing_contacts').update({ status }).eq('email', email)
+    return NextResponse.json({ ok: true })
+  }
+
+  if (action === 'crawl') {
+    // Run one crawl batch now by invoking the cron route with its secret
+    const origin = new URL(request.url).origin
+    const res = await fetch(`${origin}/api/cron/scrape`, {
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+    })
+    const result = await res.json().catch(() => ({}))
+    return NextResponse.json({ ok: res.ok, ...result })
+  }
+
+  // Default: pipeline status
+  const counts: Record<string, number> = {}
+  for (const status of ['pending', 'done', 'failed']) {
+    const { count } = await sb
+      .from('crawl_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', status)
+    counts[`queue_${status}`] = count ?? 0
+  }
+  for (const status of ['found', 'verified', 'contacted', 'followed_up', 'replied', 'bounced']) {
+    const { count } = await sb
+      .from('marketing_contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', status)
+    counts[`contacts_${status}`] = count ?? 0
+  }
+
+  // Outreach activity this week (first touches + follow-ups)
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { count: sentThisWeek } = await sb
+    .from('marketing_contacts')
+    .select('id', { count: 'exact', head: true })
+    .or(`contacted_at.gte.${weekAgo},followed_up_at.gte.${weekAgo}`)
+  counts.sent_this_week = sentThisWeek ?? 0
+
+  const { data: recent } = await sb
+    .from('marketing_contacts')
+    .select('email, organisation, type, region, status, created_at, contacted_at')
+    .order('created_at', { ascending: false })
+    .limit(25)
+
+  return NextResponse.json({ ok: true, counts, recent: recent ?? [] })
 }

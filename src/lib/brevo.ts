@@ -29,7 +29,12 @@ export async function sendEmail(params: SendEmailParams) {
     body: JSON.stringify({
       sender: {
         name: process.env.BREVO_SENDER_NAME || 'Rob Cull - TM Stats Golf',
-        email: process.env.BREVO_SENDER_EMAIL || 'rob@tmstatsgolf.com',
+        email: process.env.BREVO_SENDER_EMAIL || 'contact@tmstatsgolf.com',
+      },
+      // Replies go to a monitored inbox Rob can access, not the sending address.
+      replyTo: {
+        email: process.env.BREVO_REPLY_TO || 'info@tmstatsgolf.com',
+        name: process.env.BREVO_SENDER_NAME || 'Rob Cull - TM Stats Golf',
       },
       to: params.to,
       subject: params.subject,

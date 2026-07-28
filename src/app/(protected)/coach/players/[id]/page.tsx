@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { HoleRow, ShotEntry } from '@/lib/types'
-import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -65,7 +65,7 @@ export default async function CoachPlayerPage({ params }: PageProps) {
   const rounds = roundsRaw ?? []
 
   // Calculate SG averages across full-tracking rounds
-  const skillLevel: SkillLevel = (player.sg_baseline as SkillLevel | null) ?? handicapToSkillLevel(player.handicap ?? null)
+  const skillLevel: SkillLevel = normalizeSkillLevel(player.sg_baseline) ?? handicapToSkillLevel(player.handicap ?? null)
 
   let sgOffTee = 0, sgApproach = 0, sgAroundGreen = 0, sgPutt = 0, sgCount = 0
 
@@ -150,7 +150,6 @@ export default async function CoachPlayerPage({ params }: PageProps) {
 
         {rounds.length === 0 ? (
           <div className="text-center py-10">
-            <p className="text-4xl mb-2">📋</p>
             <p className="text-sm" style={{ color: '#9A9DB0' }}>No rounds logged yet.</p>
           </div>
         ) : (

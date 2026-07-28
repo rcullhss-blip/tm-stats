@@ -24,18 +24,28 @@ export default async function RoundsPage() {
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
           Rounds
         </h1>
-        <Link
-          href="/rounds/new"
-          className="px-4 py-2 rounded-lg font-semibold text-sm"
-          style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '44px', display: 'flex', alignItems: 'center' }}
-        >
-          + New
-        </Link>
+        <div className="flex items-center gap-2">
+          {roundList.length >= 2 && (
+            <Link
+              href="/rounds/compare"
+              className="px-4 py-2 rounded-lg font-medium text-sm"
+              style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '44px', display: 'flex', alignItems: 'center' }}
+            >
+              Compare
+            </Link>
+          )}
+          <Link
+            href="/rounds/new"
+            className="px-4 py-2 rounded-lg font-semibold text-sm"
+            style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '44px', display: 'flex', alignItems: 'center' }}
+          >
+            + New
+          </Link>
+        </div>
       </div>
 
       {roundList.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-5xl mb-4">🏌️</div>
           <h2 className="text-lg font-semibold mb-2" style={{ color: '#F0F0F0' }}>No rounds yet</h2>
           <p className="text-sm mb-6" style={{ color: '#9A9DB0' }}>
             Log your first round to start tracking your game.

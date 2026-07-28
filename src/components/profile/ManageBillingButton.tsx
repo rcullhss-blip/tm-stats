@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 
+// Direct Debit (GoCardless) has no Stripe-style self-serve portal, so for those
+// members we route "manage billing" to support instead of the Stripe portal.
+const PROVIDER = process.env.NEXT_PUBLIC_PAYMENT_PROVIDER === 'gocardless' ? 'gocardless' : 'stripe'
+
 export default function ManageBillingButton() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,16 +35,28 @@ export default function ManageBillingButton() {
           Active
         </span>
       </div>
-      {error && <p className="text-xs mb-2" style={{ color: '#EF4444' }}>{error}</p>}
-      <button
-        type="button"
-        onClick={openPortal}
-        disabled={loading}
-        className="w-full py-2.5 rounded-lg text-sm font-medium"
-        style={{ backgroundColor: '#22263A', color: '#9A9DB0', border: '1px solid #2E3247' }}
-      >
-        {loading ? 'Loading…' : 'Manage billing & subscription'}
-      </button>
+      {PROVIDER === 'gocardless' ? (
+        <a
+          href="mailto:info@tmstatsgolf.com?subject=Manage%20my%20TM%20Stats%20subscription"
+          className="block w-full text-center py-2.5 rounded-lg text-sm font-medium"
+          style={{ backgroundColor: '#22263A', color: '#9A9DB0', border: '1px solid #2E3247' }}
+        >
+          Contact us to change or cancel
+        </a>
+      ) : (
+        <>
+          {error && <p className="text-xs mb-2" style={{ color: '#EF4444' }}>{error}</p>}
+          <button
+            type="button"
+            onClick={openPortal}
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg text-sm font-medium"
+            style={{ backgroundColor: '#22263A', color: '#9A9DB0', border: '1px solid #2E3247' }}
+          >
+            {loading ? 'Loading…' : 'Manage billing & subscription'}
+          </button>
+        </>
+      )}
     </div>
   )
 }

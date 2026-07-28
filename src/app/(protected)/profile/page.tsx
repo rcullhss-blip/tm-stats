@@ -6,9 +6,10 @@ import LogoutButton from '@/components/profile/LogoutButton'
 import SGBaselinePicker from '@/components/profile/SGBaselinePicker'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
-import { handicapToSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
+import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
 import type { HoleRow, ShotEntry } from '@/lib/types'
 import PromoRedeemForm from '@/components/profile/PromoRedeemForm'
+import ReferralCard from '@/components/profile/ReferralCard'
 import JoinTeamForm from '@/components/profile/JoinTeamForm'
 
 export default async function ProfilePage() {
@@ -52,7 +53,7 @@ export default async function ProfilePage() {
   // Golf DNA — SG averages across last 10 full-tracking rounds
   let golfDNA: { strength: string; opportunity: string; strengthVal: string; opportunityVal: string } | null = null
   if (isPro) {
-    const skillLevel = (profile?.sg_baseline as ReturnType<typeof handicapToSkillLevel> | null) ?? handicapToSkillLevel(profile?.handicap ?? null)
+    const skillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
     const { data: fullRounds } = await supabase
       .from('rounds')
       .select('id')
@@ -177,6 +178,11 @@ export default async function ProfilePage() {
         </div>
       )}
 
+      {/* Referral */}
+      <div className="mb-4">
+        <ReferralCard />
+      </div>
+
       {/* Edit form */}
       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
         <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Settings</p>
@@ -235,10 +241,22 @@ export default async function ProfilePage() {
           style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
         >
           <div className="flex items-center gap-3">
-            <span>📖</span>
             <div>
               <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Player guide</p>
               <p className="text-xs" style={{ color: '#9A9DB0' }}>How to use every feature</p>
+            </div>
+          </div>
+          <span style={{ color: '#9A9DB0' }}>→</span>
+        </a>
+        <a
+          href="/blog"
+          className="flex items-center justify-between p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
+        >
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Blog</p>
+              <p className="text-xs" style={{ color: '#9A9DB0' }}>Improvement articles and golf insights</p>
             </div>
           </div>
           <span style={{ color: '#9A9DB0' }}>→</span>
@@ -249,7 +267,6 @@ export default async function ProfilePage() {
           style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
         >
           <div className="flex items-center gap-3">
-            <span>✉️</span>
             <div>
               <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Contact support</p>
               <p className="text-xs" style={{ color: '#9A9DB0' }}>Get help or send feedback</p>

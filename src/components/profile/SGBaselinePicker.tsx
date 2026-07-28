@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
+import { SKILL_LEVEL_LABELS, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 import { saveSGBaseline } from '@/app/(protected)/profile/actions'
 
 interface Props {
@@ -10,15 +10,16 @@ interface Props {
   handicap: number | null
 }
 
-const ALL_LEVELS: SkillLevel[] = ['tour', 'scratch', 'low', 'mid', 'high', 'beginner']
+const ALL_LEVELS: SkillLevel[] = ['tour', 'scratch', 'h1_4', 'h5_9', 'h10_14', 'h15_19', 'h20_28', 'h29']
 
 export default function SGBaselinePicker({ currentLevel, savedBaseline, handicap }: Props) {
   const [pending, startTransition] = useTransition()
 
   const availableLevels: SkillLevel[] = ALL_LEVELS
+  const normalizedSaved = normalizeSkillLevel(savedBaseline)
 
   function handleSelect(level: SkillLevel) {
-    const newBaseline = level === savedBaseline ? null : level
+    const newBaseline = level === normalizedSaved ? null : level
     startTransition(() => saveSGBaseline(newBaseline))
   }
 
@@ -39,13 +40,13 @@ export default function SGBaselinePicker({ currentLevel, savedBaseline, handicap
         )}
       </div>
       <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
-        {savedBaseline
-          ? `Manually set to ${SKILL_LEVEL_LABELS[savedBaseline as SkillLevel] ?? savedBaseline}`
+        {normalizedSaved
+          ? `Manually set to ${SKILL_LEVEL_LABELS[normalizedSaved]}`
           : `Auto: ${SKILL_LEVEL_LABELS[currentLevel]} (from your handicap)`}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {availableLevels.map(level => {
-          const isActive = savedBaseline ? level === savedBaseline : level === currentLevel
+          const isActive = normalizedSaved ? level === normalizedSaved : level === currentLevel
           const isTour = level === 'tour'
           return (
             <button
