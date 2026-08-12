@@ -18,6 +18,8 @@ export default function ScraperPage() {
   const [message, setMessage] = useState('')
   const [pasteUrls, setPasteUrls] = useState('')
   const [pasteType, setPasteType] = useState('GOLF_CLUB')
+  const [importType, setImportType] = useState('NCAA_D1')
+  const [importRegion, setImportRegion] = useState('')
 
   const refresh = useCallback(async () => {
     const res = await fetch('/api/marketing/scraper/run', {
@@ -80,6 +82,43 @@ export default function ScraperPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'set_status', email, status: 'replied' }),
     })
+    refresh()
+  }
+
+  async function importCsvFiles(files: File[]) {
+    setBusy(true)
+    let totalImported = 0
+    let totalFound = 0
+    let totalSkipped = 0
+    let failed = 0
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      setMessage(`Reading ${file.name} (${i + 1} of ${files.length})…`)
+      try {
+        const csv = await file.text()
+        const res = await fetch('/api/marketing/scraper/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'import_contacts', csv, type: importType, region: importRegion.trim() || null }),
+        })
+        const data = await res.json()
+        if (data.ok) {
+          totalImported += data.imported ?? 0
+          totalFound += data.found ?? 0
+          totalSkipped += data.skipped ?? 0
+        } else {
+          failed++
+        }
+      } catch {
+        failed++
+      }
+    }
+    const filesWord = files.length === 1 ? 'file' : 'files'
+    setMessage(
+      `${files.length} ${filesWord} processed${failed ? ` (${failed} failed)` : ''}: imported ${totalImported} new contacts ` +
+      `(found ${totalFound} email addresses, ${totalSkipped} already in the pipeline). They'll start sending on the next weekday run.`
+    )
+    setBusy(false)
     refresh()
   }
 
@@ -170,6 +209,58 @@ export default function ScraperPage() {
       </div>
 
       {message && <p className="text-sm mb-6" style={{ color: '#22C55E' }}>{message}</p>}
+
+      {/* Import CSV */}
+      <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222266' }}>
+        <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Upload a contact list (CSV)</p>
+        <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+          Drop in one or more spreadsheets of contacts and they go straight into the drip as verified. Every email address in each row is picked up — so a row with a men&apos;s coach and a women&apos;s coach email adds both. Duplicates and anyone already contacted are skipped automatically. You can select several CSVs at once (they all use the category and region set below).
+        </p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <select
+            value={importType}
+            onChange={e => setImportType(e.target.value)}
+            className="px-3 py-2.5 rounded-xl text-sm outline-none"
+            style={{ backgroundColor: '#22263A', border: '1px solid #2E3247', color: '#F0F0F0' }}
+          >
+            <option value="NCAA_D1">NCAA D1</option>
+            <option value="NCAA_D2">NCAA D2</option>
+            <option value="NCAA_D3">NCAA D3</option>
+            <option value="GOLF_CLUB">Golf club</option>
+            <option value="UK_COLLEGE">UK university</option>
+            <option value="CREATOR">Creator / coach</option>
+          </select>
+          <input
+            type="text"
+            value={importRegion}
+            onChange={e => setImportRegion(e.target.value)}
+            placeholder="Region (optional, e.g. USA)"
+            className="px-3 py-2.5 rounded-xl text-sm outline-none flex-1 min-w-[140px]"
+            style={{ backgroundColor: '#22263A', border: '1px solid #2E3247', color: '#F0F0F0' }}
+          />
+        </div>
+        <label
+          className="inline-block px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
+          style={{ backgroundColor: busy ? '#7a1515' : '#CC2222', color: '#F0F0F0', opacity: busy ? 0.6 : 1 }}
+        >
+          {busy ? 'Working…' : 'Choose CSV file(s)'}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            multiple
+            disabled={busy}
+            className="hidden"
+            onChange={e => {
+              const files = Array.from(e.target.files ?? [])
+              if (files.length) importCsvFiles(files)
+              e.target.value = ''
+            }}
+          />
+        </label>
+        <p className="text-xs mt-3" style={{ color: '#9A9DB0' }}>
+          Pick the right category above so the correct email template is used before uploading. The template that goes out to each contact is chosen by category (NCAA coaches get the program email; golf clubs get the club email).
+        </p>
+      </div>
 
       {/* Paste URLs */}
       <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
