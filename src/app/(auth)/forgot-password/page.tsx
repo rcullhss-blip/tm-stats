@@ -3,9 +3,12 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import Turnstile from '@/components/auth/Turnstile'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaKey, setCaptchaKey] = useState(0)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,10 +21,13 @@ export default function ForgotPasswordPage() {
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      captchaToken: captchaToken || undefined,
     })
 
     if (error) {
       setError(error.message)
+      setCaptchaToken('')
+      setCaptchaKey(k => k + 1)
       setLoading(false)
       return
     }
@@ -81,6 +87,8 @@ export default function ForgotPasswordPage() {
               {error}
             </p>
           )}
+
+          <Turnstile key={captchaKey} onToken={setCaptchaToken} />
 
           <button
             type="submit"

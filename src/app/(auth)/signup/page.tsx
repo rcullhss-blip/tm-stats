@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Turnstile from '@/components/auth/Turnstile'
 
 const REF_KEY = 'tmstats_ref'
 
@@ -12,6 +13,9 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [handicap, setHandicap] = useState('')
+  const [company, setCompany] = useState('') // honeypot — real users never fill this
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaKey, setCaptchaKey] = useState(0) // bump to reset the captcha after an error
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
@@ -34,6 +38,29 @@ export default function SignupPage() {
 
     try {
 
+    // Honeypot: bots auto-fill every field, including this hidden one. Real
+    // users can't see it, so anything here is a bot — quietly stop.
+    if (company) {
+      setNotice('Almost there — check your email for a confirmation link, then log in.')
+      setLoading(false)
+      return
+    }
+
+    if (!name.trim()) {
+      setError('Please enter your name.')
+      setLoading(false)
+      return
+    }
+
+    // Reject obvious junk names (URLs, code, absurd length) — real names don't
+    // contain http, angle brackets, or run past 60 characters.
+    const cleanName = name.trim()
+    if (cleanName.length > 60 || /https?:|<|>|\{|\}|\[|\]/i.test(cleanName)) {
+      setError('Please enter a valid name.')
+      setLoading(false)
+      return
+    }
+
     if (password.length < 8) {
       setError('Password must be at least 8 characters.')
       setLoading(false)
@@ -42,16 +69,21 @@ export default function SignupPage() {
 
     // Name + handicap go in the auth metadata so they survive the
     // email-confirmation flow (the profile row is created on first sign-in).
+    // captchaToken is verified by Supabase when captcha protection is enabled;
+    // it is ignored while protection is off, so this is safe to always send.
     const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name, handicap: handicap ? parseFloat(handicap) : null },
+        data: { name: cleanName, handicap: handicap ? parseFloat(handicap) : null },
+        captchaToken: captchaToken || undefined,
       },
     })
 
     if (signupError) {
       setError(signupError.message)
+      setCaptchaToken('')
+      setCaptchaKey(k => k + 1) // captcha tokens are single-use — get a fresh one
       setLoading(false)
       return
     }
@@ -74,9 +106,11 @@ export default function SignupPage() {
       }, { onConflict: 'id' })
     }
 
-    // Sign in explicitly to guarantee a fresh session before navigating
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-    if (loginError) {
+    // signUp already returned a session (checked above), and the client has
+    // stored it. Do not sign in again here: the captcha token is single-use
+    // and a second auth call would be rejected once captcha protection is on.
+    const { data: sessionCheck } = await supabase.auth.getSession()
+    if (!sessionCheck.session) {
       setError('Account created — please log in.')
       setLoading(false)
       return
@@ -127,6 +161,8 @@ export default function SignupPage() {
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
+            required
+            maxLength={60}
             autoComplete="name"
             className="w-full px-4 py-3 rounded-xl text-sm outline-none"
             style={{
@@ -136,6 +172,20 @@ export default function SignupPage() {
             }}
             placeholder="Your name"
           />
+        </div>
+
+        {/* Honeypot — hidden from real users, catches form-filling bots. */}
+        <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: 'auto', height: 0, width: 0, overflow: 'hidden' }}>
+          <label>
+            Company
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={company}
+              onChange={e => setCompany(e.target.value)}
+            />
+          </label>
         </div>
 
         <div>
@@ -215,6 +265,8 @@ export default function SignupPage() {
             {notice}
           </div>
         )}
+
+        <Turnstile key={captchaKey} onToken={setCaptchaToken} />
 
         <button
           type="submit"

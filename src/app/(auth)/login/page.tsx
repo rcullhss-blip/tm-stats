@@ -4,10 +4,13 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Turnstile from '@/components/auth/Turnstile'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [captchaToken, setCaptchaToken] = useState('')
+  const [captchaKey, setCaptchaKey] = useState(0)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -18,9 +21,15 @@ async function handleLogin(e: React.FormEvent) {
     setError('')
     setLoading(true)
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: { captchaToken: captchaToken || undefined },
+    })
 
     if (error) {
+      setCaptchaToken('')
+      setCaptchaKey(k => k + 1) // single-use token — refresh for the retry
       if (error.message.toLowerCase().includes('confirm')) {
         setError('Please confirm your email before logging in.')
       } else {
@@ -113,6 +122,8 @@ async function handleLogin(e: React.FormEvent) {
             {error}
           </p>
         )}
+
+        <Turnstile key={captchaKey} onToken={setCaptchaToken} />
 
         <button
           type="submit"
