@@ -96,6 +96,17 @@ export default async function AdminPage() {
           <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Generate and manage access codes</p>
         </Link>
         <Link
+          href="/admin/marketing/seo"
+          className="block p-4 rounded-xl"
+          style={{ backgroundColor: '#1A1D27', border: '1px solid #22C55E55' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Google Search</span>
+            <span style={{ color: '#9A9DB0' }}>→</span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Clicks, impressions and keyword rankings from Search Console</p>
+        </Link>
+        <Link
           href="/admin/marketing"
           className="block p-4 rounded-xl"
           style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}
