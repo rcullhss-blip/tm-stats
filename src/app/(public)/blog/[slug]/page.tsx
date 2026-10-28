@@ -20,10 +20,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.meta_title || post.title,
     description: post.meta_desc || post.excerpt || '',
+    alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.meta_title || post.title,
       description: post.meta_desc || post.excerpt || '',
       type: 'article',
+      url: `/blog/${slug}`,
     },
   }
 }
@@ -40,8 +42,34 @@ export default async function BlogPostPage({ params }: Props) {
 
   if (!post) return notFound()
 
+  const url = `https://www.tmstatsgolf.com/blog/${post.slug}`
+  const schema = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: post.title,
+      description: post.meta_desc || post.excerpt || '',
+      datePublished: post.published_at,
+      dateModified: post.published_at,
+      mainEntityOfPage: url,
+      image: `${url}/opengraph-image`,
+      author: { '@type': 'Person', name: 'Rob Cull', url: 'https://www.tmstatsgolf.com/about' },
+      publisher: { '@type': 'Organization', name: 'TM Stats', logo: { '@type': 'ImageObject', url: 'https://www.tmstatsgolf.com/icon-only-logo.png' } },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.tmstatsgolf.com' },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://www.tmstatsgolf.com/blog' },
+        { '@type': 'ListItem', position: 3, name: post.title, item: url },
+      ],
+    },
+  ]
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       {/* Back link */}
       <Link href="/blog" className="text-sm mb-8 inline-block" style={{ color: '#9A9DB0' }}>
         ← All posts

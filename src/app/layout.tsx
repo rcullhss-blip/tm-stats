@@ -54,7 +54,31 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${dmMono.variable}`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([
+              {
+                '@context': 'https://schema.org',
+                '@type': 'Organization',
+                name: 'TM Stats',
+                url: 'https://www.tmstatsgolf.com',
+                logo: 'https://www.tmstatsgolf.com/icon-only-logo.png',
+                founder: { '@type': 'Person', name: 'Rob Cull' },
+                sameAs: ['https://www.instagram.com/tmstatsgolf'],
+              },
+              {
+                '@context': 'https://schema.org',
+                '@type': 'WebSite',
+                name: 'TM Stats',
+                url: 'https://www.tmstatsgolf.com',
+              },
+            ]),
+          }}
+        />
+      </body>
     </html>
   )
 }

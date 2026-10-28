@@ -1,3 +1,12 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'About TM Stats | Built by a County Golfer, Not a Software Company',
+  description:
+    'TM Stats was built by Rob Cull, a former Cheshire county golfer and NCAA Division II player, because no golf stats app gave serious amateurs proper Strokes Gained on a phone at a fair price.',
+  alternates: { canonical: '/about' },
+}
+
 export default function AboutPage() {
   return (
     <div className="max-w-lg mx-auto px-6 py-12">

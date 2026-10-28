@@ -17,6 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${title} | TM Stats`,
     description: page.stat.answer(page.band).slice(0, 158),
+    alternates: { canonical: `/golf-stats/${slug}` },
     openGraph: { title, description: page.stat.answer(page.band).slice(0, 158), type: 'article' },
   }
 }
@@ -27,9 +28,31 @@ export default async function GolfStatPage({ params }: Props) {
   if (!page) notFound()
 
   const { band, stat } = page
+  const url = `https://www.tmstatsgolf.com/golf-stats/${slug}`
+  const schema = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        { '@type': 'Question', name: stat.question(band), acceptedAnswer: { '@type': 'Answer', text: stat.answer(band) } },
+        { '@type': 'Question', name: `What does ${stat.name.toLowerCase()} mean?`, acceptedAnswer: { '@type': 'Answer', text: stat.explainer } },
+        { '@type': 'Question', name: `How do I improve my ${stat.name.toLowerCase()}?`, acceptedAnswer: { '@type': 'Answer', text: stat.improve } },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.tmstatsgolf.com' },
+        { '@type': 'ListItem', position: 2, name: 'Golf stats', item: 'https://www.tmstatsgolf.com/golf-stats' },
+        { '@type': 'ListItem', position: 3, name: stat.question(band), item: url },
+      ],
+    },
+  ]
 
   return (
     <main className="flex-1 px-6 py-10 max-w-lg mx-auto w-full">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
       <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#CC2222' }}>
         Golf stats benchmarks
       </p>

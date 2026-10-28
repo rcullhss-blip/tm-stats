@@ -12,6 +12,7 @@ export default function Footer() {
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-4 text-sm">
           <Link href="/about" style={{ color: '#9A9DB0' }}>About</Link>
           <Link href="/golf-stats" style={{ color: '#9A9DB0' }}>Stats Benchmarks</Link>
+          <Link href="/strokes-gained" style={{ color: '#9A9DB0' }}>Strokes Gained</Link>
           <Link href="/compare" style={{ color: '#9A9DB0' }}>Compare</Link>
           <Link href="/blog" style={{ color: '#9A9DB0' }}>Blog</Link>
           <Link href="/contact" style={{ color: '#9A9DB0' }}>Contact</Link>

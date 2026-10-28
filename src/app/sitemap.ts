@@ -10,10 +10,11 @@ export const revalidate = 3600 // refresh hourly so new blog posts appear the sa
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: SITE, changeFrequency: 'weekly', priority: 1 },
-    { url: `${SITE}/about`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE}/blog`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${SITE}/golf-stats`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE}/compare`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE}/strokes-gained`, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE}/about`, changeFrequency: 'yearly', priority: 0.3 },
     ...COMPETITORS.map(c => ({ url: `${SITE}/compare/${c.slug}`, changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: `${SITE}/signup`, changeFrequency: 'monthly', priority: 0.9 },
   ]

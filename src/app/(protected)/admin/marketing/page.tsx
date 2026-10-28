@@ -5,6 +5,14 @@ export const dynamic = 'force-dynamic'
 
 const modules = [
   {
+    id: 'seo',
+    label: 'Google Search',
+    desc: 'Clicks, impressions and rankings from Search Console, plus where golf stats tracker sits today.',
+    icon: '◈',
+    color: '#22C55E',
+    stat: 'Live from Google',
+  },
+  {
     id: 'outreach',
     label: 'Outreach Engine',
     desc: 'Upload coach/club CSVs, generate personalised emails, send via Brevo in controlled batches.',
@@ -77,7 +85,7 @@ export default async function MarketingHubPage() {
         </span>
       </div>
       <p className="text-sm mb-8" style={{ color: '#9A9DB0' }}>
-        Six modules. Zero ad spend. Growth on autopilot.
+        Seven modules. Zero ad spend. Growth on autopilot.
       </p>
 
       {/* Stats strip */}
