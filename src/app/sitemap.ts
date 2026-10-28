@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/golf-stats`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE}/compare`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE}/strokes-gained`, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE}/strokes-gained-calculator`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${SITE}/about`, changeFrequency: 'yearly', priority: 0.3 },
     ...COMPETITORS.map(c => ({ url: `${SITE}/compare/${c.slug}`, changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: `${SITE}/signup`, changeFrequency: 'monthly', priority: 0.9 },

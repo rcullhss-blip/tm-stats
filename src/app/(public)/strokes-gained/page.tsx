@@ -95,7 +95,7 @@ export default function StrokesGainedPage() {
         You need the distance and lie of every shot. Sensor systems and GPS watches capture that for you, and I have written honest <U href="/compare">comparisons of Arccos, Shot Scope and 18Birdies</U> if you are considering one. The other way is to enter the shots yourself on your phone as you go. It takes about a minute a hole, which is less time than most people spend looking for a tee peg, and it is what I built TM Stats to do. The app works out all four categories against a baseline for your handicap, and the coaching layer turns the numbers into something to do on Tuesday night.
       </P>
       <P>
-        Whichever way you do it, two rules. Log every round, including the bad ones, because the bad ones are where the information is. And give it ten rounds before you decide anything. One round of Strokes Gained is a story. Ten rounds is a pattern.
+        If you want to see the sum for a single shot first, the free <U href="/strokes-gained-calculator">Strokes Gained calculator</U> does it in seconds. Whichever way you do it, two rules. Log every round, including the bad ones, because the bad ones are where the information is. And give it ten rounds before you decide anything. One round of Strokes Gained is a story. Ten rounds is a pattern.
       </P>
 
       <H2>Common questions</H2>
