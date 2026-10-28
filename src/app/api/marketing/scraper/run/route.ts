@@ -260,7 +260,8 @@ export async function POST(request: Request) {
     // Manually fire one outreach batch now (same logic + daily ramp as the cron)
     // so sending doesn't depend on the Vercel cron actually triggering.
     const origin = new URL(request.url).origin
-    const res = await fetch(`${origin}/api/cron/outreach`, {
+    const extra = Math.max(0, Math.min(80, Number(body.extra ?? 0) || 0))
+    const res = await fetch(`${origin}/api/cron/outreach${extra ? `?extra=${extra}` : ''}`, {
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
     })
     const result = await res.json().catch(() => ({}))

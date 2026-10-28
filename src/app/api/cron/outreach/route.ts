@@ -32,7 +32,10 @@ export async function GET(request: Request) {
 
   // Warmup week: measured from the ramp-start date above.
   const week = Math.max(0, Math.floor((Date.now() - RAMP_START.getTime()) / (7 * 24 * 60 * 60 * 1000)))
-  const dailyLimit = WARMUP[Math.min(week, WARMUP.length - 1)]
+  // Optional one-off top-up from the admin "send now" button (?extra=N): lets a
+  // manual run go past today's ramp, but never past 280 (Brevo free tier is 300).
+  const extra = Math.max(0, Math.min(80, Number(new URL(request.url).searchParams.get('extra') ?? 0) || 0))
+  const dailyLimit = Math.min(280, WARMUP[Math.min(week, WARMUP.length - 1)] + extra)
 
   // How many already sent today (cron retries / manual runs stay safe)
   const todayStart = new Date()
