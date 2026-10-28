@@ -85,18 +85,16 @@ export async function getSummary(days = 28): Promise<ScSummary> {
   const end = daysAgo(2), start = daysAgo(2 + days - 1)
   const prevEnd = daysAgo(2 + days), prevStart = daysAgo(2 + days * 2 - 1)
   const base = { startDate: iso(start), endDate: iso(end) }
-  const [daily, prevDaily, queries, pages, targets] = await Promise.all([
+  // The API only ANDs filters, so pull a wide query list once and pick the
+  // target keywords out of it ourselves.
+  const [daily, prevDaily, allQueries, pages] = await Promise.all([
     query(token, { ...base, dimensions: ['date'], rowLimit: 100 }),
     query(token, { startDate: iso(prevStart), endDate: iso(prevEnd), dimensions: ['date'], rowLimit: 100 }),
-    query(token, { ...base, dimensions: ['query'], rowLimit: 15 }),
+    query(token, { ...base, dimensions: ['query'], rowLimit: 500 }),
     query(token, { ...base, dimensions: ['page'], rowLimit: 15 }),
-    query(token, {
-      ...base,
-      dimensions: ['query'],
-      rowLimit: 50,
-      dimensionFilterGroups: [{ filters: TARGET_QUERIES.map(q => ({ dimension: 'query', operator: 'equals', expression: q })), groupType: 'or' }],
-    }),
   ])
+  const queries = allQueries.slice(0, 15)
+  const targets = allQueries
   return {
     range: { start: iso(start), end: iso(end) },
     totals: sum(daily),
