@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/service'
 import { allSeoPages } from '@/lib/seo-stats'
 
-const SITE = 'https://tmstatsgolf.com'
+const SITE = 'https://www.tmstatsgolf.com'
 
-export const revalidate = 86400 // refresh daily so new blog posts appear
+export const revalidate = 3600 // refresh hourly so new blog posts appear the same morning
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
