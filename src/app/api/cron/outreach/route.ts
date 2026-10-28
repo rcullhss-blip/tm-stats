@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { sendEmail } from '@/lib/brevo'
-import { DRIP_TEMPLATES, FOLLOW_UP } from '@/lib/outreach-templates'
+import { DRIP_TEMPLATES, followUpFor } from '@/lib/outreach-templates'
 
 export const maxDuration = 300
 
@@ -59,10 +59,11 @@ export async function GET(request: Request) {
 
     for (const contact of due ?? []) {
       try {
+        const fu = followUpFor(contact.type)
         await sendEmail({
           to: [{ email: contact.email, name: contact.name || contact.organisation || '' }],
-          subject: FOLLOW_UP.subject,
-          htmlContent: FOLLOW_UP.html(contact.organisation ?? '', promoCode),
+          subject: fu.subject,
+          htmlContent: fu.html(contact.organisation ?? '', promoCode, contact.name ?? ''),
           tags: ['outreach-followup', String(contact.type).toLowerCase()],
         })
         await sb
@@ -99,7 +100,7 @@ export async function GET(request: Request) {
       await sendEmail({
         to: [{ email: contact.email, name: contact.name || contact.organisation || '' }],
         subject: template.subject,
-        htmlContent: template.html(contact.organisation ?? '', promoCode),
+        htmlContent: template.html(contact.organisation ?? '', promoCode, contact.name ?? ''),
         tags: ['outreach', String(contact.type).toLowerCase(), ...campTag],
       })
       await sb

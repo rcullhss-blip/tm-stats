@@ -4,7 +4,7 @@
 
 interface Template {
   subject: string
-  html: (org: string, promoCode: string) => string
+  html: (org: string, promoCode: string, name?: string) => string
 }
 
 const FONT = "Calibri, 'Segoe UI', -apple-system, Helvetica, Arial, sans-serif"
@@ -98,4 +98,114 @@ export const FOLLOW_UP: Template = {
     <p style="margin:0 0 14px;">The short version: <strong>three months of complimentary access to TM Stats</strong> (Strokes Gained tracking and coaching feedback) for ${org || 'your golfers'} — promo code <strong>${code}</strong>. One reply and I'll send the sign-up link over.</p>
     <p style="margin:0 0 14px;">If it's not for you, no problem at all — this is the last you'll hear from me.</p>
   `),
+}
+
+
+// ─── October 2026 press, podcast and coach campaigns ─────────────────────────
+// Copy approved by Rob on 28 Oct 2026. Branded like the test emails: light
+// background, logo header, icon signature. Greeting uses the contact's first
+// name when we have one. Every link is a full https address.
+
+const SITE = 'https://www.tmstatsgolf.com'
+const SANS = "Helvetica, Arial, sans-serif"
+
+function greet(name?: string): string {
+  const first = (name ?? '').trim().split(/\s+/)[0]
+  return first ? `Hi ${first},` : 'Hello,'
+}
+
+function pressLetter(bodyHtml: string): string {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#F5F5F7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F7;padding:24px 0;"><tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:12px;overflow:hidden;">
+  <tr><td style="padding:26px 36px 10px 36px;"><img src="${SITE}/logo-black.png" width="150" alt="TM Stats" style="display:block;border:0;width:150px;height:auto;"></td></tr>
+  <tr><td style="padding:14px 36px 32px 36px;font-family:${SANS};font-size:15px;line-height:1.6;color:#1A1D27;">
+    ${bodyHtml}
+    <p style="margin:0 0 16px 0;">Kind regards,</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid #E6E6EA;"><tr>
+      <td style="padding-top:18px;vertical-align:top;padding-right:16px;"><img src="${SITE}/icon-only-logo.png" width="44" height="43" alt="TM Stats" style="display:block;border:0;"></td>
+      <td style="padding-top:18px;vertical-align:top;font-family:${SANS};font-size:14px;line-height:1.5;color:#1A1D27;"><strong>Rob Cull</strong><br>Founder, TM Stats Golf<br><a href="${SITE}" style="color:#CC2222;text-decoration:none;">www.tmstatsgolf.com</a> &nbsp;|&nbsp; 07597 195645<br><span style="color:#6B6E80;">Strokes Gained analytics for serious amateur golfers. No sensors, no hardware.</span></td>
+    </tr></table>
+  </td></tr>
+</table>
+<p style="font-family:${SANS};font-size:11px;color:#8A8D9E;margin:14px 0 0 0;">TM Stats Golf, Wirral, United Kingdom &nbsp;|&nbsp; <a href="${SITE}" style="color:#8A8D9E;">tmstatsgolf.com</a></p>
+</td></tr></table></body></html>`
+}
+const p = (t: string) => `<p style="margin:0 0 16px 0;">${t}</p>`
+const ul = (items: string[]) => `<ul style="margin:0 0 16px 0;padding-left:20px;">${items.map(i => `<li style="margin:0 0 8px 0;">${i}</li>`).join('')}</ul>`
+const a = (href: string, text: string) => `<a href="${href}" style="color:#CC2222;text-decoration:underline;">${text}</a>`
+const BIO = 'I am Rob Cull, founder of TM Stats. I played NCAA golf at Newberry College in South Carolina on a golf scholarship and county golf for Cheshire.'
+
+DRIP_TEMPLATES.PRESS_ROUNDUP = {
+  subject: 'A UK-built Strokes Gained app for your next golf apps roundup',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I hope you are well. I am writing because TM Stats is a good fit for your golf apps coverage and I would like to put it forward for your next update.')
+    + p(BIO + ' I built TM Stats because every app that offered proper Strokes Gained analysis needed sensors or a watch, plus a yearly subscription on top.')
+    + p('What it does:')
+    + ul(['Strokes Gained for every shot, split into off the tee, approach, around the green and putting, measured against a baseline for your own handicap.',
+          'Shots can be entered as you play or after the round, about a minute a hole. No hardware, nothing to charge.',
+          'A coaching layer turns the numbers into what to practise.',
+          'Free for five rounds, then £4.99 a month or £50 a year.'])
+    + p(`Two free resources your readers may also find useful: a ${a(SITE + '/strokes-gained-calculator', 'Strokes Gained calculator')} and ${a(SITE + '/golf-stats', 'benchmarks by handicap')}. Neither needs an account.`)
+    + p('I would be glad to set you up with full access today and create a personalised code so your readers can test the app properly. Screenshots and a short video are ready whenever you need them, and I am happy to arrange a call at a time that suits you.')),
+}
+
+DRIP_TEMPLATES.PRESS_DATA = {
+  subject: 'Where club golfers really lose shots, by handicap',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I hope you are well. I have a data-led feature idea that I think would suit your readers, and I would like to offer it to you first.')
+    + p('I am Rob Cull, founder of TM Stats. I played NCAA golf at Newberry College in South Carolina and county golf for Cheshire, and I built TM Stats, a Strokes Gained app that works from shots entered on a phone rather than sensors. Because every shot has a distance and a lie, the data shows where golfers at each handicap really lose shots, and it is rarely where they think.')
+    + p('Three findings from the benchmarks:')
+    + ul(['The biggest gap between a 15 handicap and a scratch golfer is greens hit, roughly 35% against 65%. That is approach play, not driving.',
+          'Putts per round barely changes across the handicap range, about three putts between a 25 handicap and scratch, yet putting is where most club golfers believe they lose shots.',
+          'Greens in regulation hides the real problem. A green hit to 45 feet counts the same as one hit to 6 feet, so the traditional stats send golfers to the wrong part of the range.'])
+    + p(`I can provide ${a(SITE + '/golf-stats', 'benchmark tables for every handicap band')}, quotes, and a worked example from my own rounds, with TM Stats credited as the source. I can also set you up with full access and a personalised reader code so you can see the numbers come out of a live round. If a 15 minute call would help, I can make time this week.`)),
+}
+
+DRIP_TEMPLATES.PRESS_LOCAL = {
+  subject: 'Wirral golfer returns from US college scholarship and builds an app for club players',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I hope you are well. I have a local story that may interest your readers.')
+    + p('I am Rob Cull, a member at Bromborough Golf Club. I went to South Carolina on a golf scholarship and played NCAA golf at Newberry College, then came home, played county golf for Cheshire, and built TM Stats, an app that shows golfers exactly where they lose shots using the same Strokes Gained method the professionals use.')
+    + p('It launched quietly this year. A US college golf programme has just put its whole team on it, and Bidston Golf Club is offering it free to its members this month.')
+    + ul(['Built on the Wirral by one person, with no outside funding.', 'Works on a phone, with no sensors or gadgets.', 'Free to try at ' + a(SITE, 'www.tmstatsgolf.com')])
+    + p('I would be happy to give a short interview, in person or by phone, and I can supply photographs the same day.')),
+}
+
+DRIP_TEMPLATES.PODCAST = {
+  subject: 'Guest suggestion: former NCAA golfer who built a Strokes Gained app',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I hope you are well. I am a regular listener and I would like to suggest myself as a guest for an episode on what the numbers say about getting better at golf.')
+    + p("I am Rob Cull. I played NCAA golf at Newberry College in South Carolina and county golf for Cheshire, then built TM Stats, a Strokes Gained app that works from shots entered on a phone. Along the way I have looked at a lot of club golfers' data, and the gap between what people practise and where they actually lose shots is bigger than most would expect.")
+    + p('Topics I can cover with real numbers:')
+    + ul(['Why fairways, greens and putts mislead you.', 'What a 10 handicap should actually practise.', 'How a college team uses Strokes Gained week to week.', 'The honest trade-offs between an app and sensor systems such as Arccos and Shot Scope.'])
+    + p('There is no need for a product pitch on air. If it sounds like a fit, I will work around your schedule, and I am happy to do a short call beforehand.')),
+}
+
+DRIP_TEMPLATES.PGA_COACH = {
+  subject: 'Free coach account for your pupils, Strokes Gained without the sensors',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I came across your coaching page while putting together a short list of PGA professionals who take performance seriously, and I would like to offer you something for your pupils.')
+    + p('I am Rob Cull. I played NCAA golf at Newberry College in South Carolina and county golf for Cheshire, and I built TM Stats, a Strokes Gained app that works from shots your pupils enter on their phone. No sensors, nothing for them to buy.')
+    + p('The part that may be useful to you is the coach side. You get a dashboard of every pupil who joins your team code: their Strokes Gained by category, recent rounds and the coaching notes, which you can overrule with what you know about the player. It turns "I putted badly" into "I lost 1.8 strokes on the greens from 6 to 10 feet" before they walk into the lesson.')
+    + ul(['Coach accounts are free, now and later. Pupils get five rounds free, then £4.99 a month.', 'A US college programme runs its whole squad on it.', 'I can set you up in ten minutes and give your pupils a code for three months of Pro.'])
+    + p(`If you would like to see it, I can do a 15 minute call this week, or come to the club if you are local to the Wirral. The free ${a(SITE + '/strokes-gained-calculator', 'Strokes Gained calculator')} shows the method in thirty seconds.`)),
+}
+
+const PRESS_FOLLOW_UP: Template = {
+  subject: 'Re: TM Stats, a quick follow-up',
+  html: (_org, _code, name) => pressLetter(
+    p(greet(name))
+    + p('I am just following up in case this was missed. I would be glad to send screenshots or set up your access today.')),
+}
+
+/** Follow-up template for a contact type: the approved one-liner for the
+ *  October 2026 campaigns, the club offer follow-up for everything else. */
+export function followUpFor(type: string | null | undefined): Template {
+  return ['PRESS_ROUNDUP', 'PRESS_DATA', 'PRESS_LOCAL', 'PODCAST', 'PGA_COACH'].includes(String(type)) ? PRESS_FOLLOW_UP : FOLLOW_UP
 }

@@ -168,13 +168,14 @@ export async function POST(request: Request) {
     // tagged with the campaign name so sending can be split + tracked per campaign.
     const incoming = Array.isArray(body.contacts) ? body.contacts : []
     const campaign = body.campaign ? String(body.campaign).trim().slice(0, 120) : null
-    const map = new Map<string, { email: string; organisation: string | null; type: string; region: string | null; status: string; campaign: string | null }>()
+    const map = new Map<string, { email: string; name: string | null; organisation: string | null; type: string; region: string | null; status: string; campaign: string | null }>()
     for (const c of incoming) {
       const email = String(c?.email ?? '').toLowerCase().trim()
       if (!email || !email.includes('@')) continue
       if (!map.has(email)) {
         map.set(email, {
           email,
+          name: c?.name ? String(c.name).slice(0, 120) : null,
           organisation: c?.organisation ? String(c.organisation) : null,
           type: c?.type ? String(c.type) : 'GOLF_CLUB',
           region: c?.region ? String(c.region) : null,

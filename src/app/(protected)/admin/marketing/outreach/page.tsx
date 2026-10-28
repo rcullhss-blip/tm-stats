@@ -49,6 +49,11 @@ const CONTACT_TYPES = [
   { value: 'NAIA', label: 'NAIA', color: '#a78bfa' },
   { value: 'UK_COLLEGE', label: 'UK College', color: '#f59e0b' },
   { value: 'PGA_PRO', label: 'PGA Pro', color: '#C22431' },
+  { value: 'PGA_COACH', label: 'PGA Coach (Oct 2026 letter)', color: '#CC2222' },
+  { value: 'PRESS_ROUNDUP', label: 'Press: apps roundup', color: '#0ea5e9' },
+  { value: 'PRESS_DATA', label: 'Press: data story', color: '#14b8a6' },
+  { value: 'PRESS_LOCAL', label: 'Press: local', color: '#84cc16' },
+  { value: 'PODCAST', label: 'Podcast guest pitch', color: '#f97316' },
 ]
 
 const EMAIL_RE = /[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/gi
@@ -203,7 +208,9 @@ export default function OutreachPage() {
           // Locate the org / type / region columns from the header (best effort).
           const header = rows[0].map(h => h.trim().toLowerCase())
           const looksLikeHeader = header.some(h => /school|college|university|team|club|name|coach|email|program|institution|type|region|state/.test(h))
-          const orgIdx = header.findIndex(h => /organis|organiz|institution|school|college|university|club|team|program|^name$/.test(h))
+          const nameIdx = header.findIndex(h => /^name$|first.?name|^contact$|^host$/.test(h))
+          let orgIdx = header.findIndex(h => /organis|organiz|institution|school|college|university|club|team|program|business|podcast|outlet/.test(h))
+          if (orgIdx < 0) orgIdx = header.findIndex(h => /^name$/.test(h))
           const typeIdx = header.findIndex(h => /^type$|category|division/.test(h))
           const regionIdx = header.findIndex(h => /region|state|county/.test(h))
           const dataRows = looksLikeHeader ? rows.slice(1) : rows
@@ -211,6 +218,7 @@ export default function OutreachPage() {
           let fileCount = 0
           for (const cells of dataRows) {
             const org = orgIdx >= 0 && cells[orgIdx] ? cells[orgIdx].trim() : ''
+            const personName = nameIdx >= 0 && nameIdx !== orgIdx && cells[nameIdx] ? cells[nameIdx].trim() : ''
             const rowType = typeIdx >= 0 && cells[typeIdx] ? cells[typeIdx].trim().toUpperCase().replace(/\s+/g, '_') : ''
             const region = regionIdx >= 0 && cells[regionIdx] ? cells[regionIdx].trim() : ''
 
@@ -223,7 +231,7 @@ export default function OutreachPage() {
                 const email = raw.toLowerCase().trim()
                 if (seen.has(email)) continue
                 seen.add(email)
-                parsed.push({ email, name: '', organisation: org, type: rowType || defaultType, region })
+                parsed.push({ email, name: personName, organisation: org, type: rowType || defaultType, region })
                 fileCount++
               }
             }
@@ -315,7 +323,7 @@ export default function OutreachPage() {
         Outreach <span style={{ color: '#C22431' }}>Engine</span>
       </h1>
       <p className="text-sm mb-8" style={{ color: '#9A9DB0' }}>
-        Upload your contact list, configure the campaign, send personalised emails through Brevo at a controlled rate.
+        Upload your contact list, configure the campaign, send personalised emails through Brevo at a controlled rate. A name column is used for the greeting; a type column picks the letter (press, podcast and coach letters are the October 2026 approved copy).
       </p>
 
       <div className="grid gap-8" style={{ gridTemplateColumns: '1fr 320px' }}>
