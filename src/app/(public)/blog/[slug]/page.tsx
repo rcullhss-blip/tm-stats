@@ -52,7 +52,7 @@ export default async function BlogPostPage({ params }: Props) {
       datePublished: post.published_at,
       dateModified: post.published_at,
       mainEntityOfPage: url,
-      image: `${url}/opengraph-image`,
+      image: 'https://www.tmstatsgolf.com/opengraph-image',
       author: { '@type': 'Person', name: 'Rob Cull', url: 'https://www.tmstatsgolf.com/about' },
       publisher: { '@type': 'Organization', name: 'TM Stats', logo: { '@type': 'ImageObject', url: 'https://www.tmstatsgolf.com/icon-only-logo.png' } },
     },
