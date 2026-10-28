@@ -34,7 +34,7 @@ export default function CalculatorPage() {
         Strokes Gained calculator
       </h1>
       <p className="text-sm leading-relaxed mb-6" style={{ color: '#9A9DB0' }}>
-        Enter a hole the way you would in the app: pick your level, the par and length, then where each shot finished until you hole out. You get Strokes Gained for every shot, the hole total, and a split into off the tee, approach, around the green and putting. No sign-up. New to the method? The <Link href="/strokes-gained" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>Strokes Gained explainer</Link> is two minutes.
+        Enter a hole exactly as you would in the app: pick your level and the par, then each shot from where the ball lies, starting with the tee shot and the hole length, until you hole out. You get Strokes Gained for every shot, the hole total, and a split into off the tee, approach, around the green and putting. No sign-up. New to the method? The <Link href="/strokes-gained" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>Strokes Gained explainer</Link> is two minutes.
       </p>
 
       <SgCalculator />
@@ -45,7 +45,7 @@ export default function CalculatorPage() {
         <li>SG for a shot is Before minus After minus one. Positive means the shot left you better placed than average for your level.</li>
         <li>The hole total is the sum of every shot. It also equals the expected strokes from the tee minus the score you took, which is a good way to check it.</li>
         <li>Off the tee is the first shot on a par 4 or 5. Approach is any shot into the green from outside 30 yards, including par 3 tee shots. Around the green is anything inside 30 yards that is not a putt. Putting is putting.</li>
-        <li>The example loaded is a 10 to 14 handicap making par on a 400 yard hole: drive to 150, approach to 25 feet, two putts. Change anything and the numbers update.</li>
+        <li>Try a par 4: Tee 400, Fairway 150, Green 25, Green 3, then press the green button. For a 10 to 14 handicap that par comes out at about plus 0.84.</li>
       </ul>
 
       <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Common questions</h2>
