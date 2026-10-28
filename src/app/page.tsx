@@ -34,12 +34,11 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl font-bold mb-4 leading-tight" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
-            Stop guessing.<br />
-            <span style={{ color: '#CC2222' }}>Know</span> where you lose shots.
+            The golf stats tracker that shows you <span style={{ color: '#CC2222' }}>where you lose shots</span>.
           </h1>
 
           <p className="text-lg mb-8 leading-relaxed" style={{ color: '#9A9DB0' }}>
-            Strokes Gained analytics for serious amateur golfers. Track every round, know exactly what to practice.
+            Strokes Gained analytics for serious amateur golfers. Log every round on your phone and know exactly what to practise.
           </p>
 
           <Link
@@ -68,6 +67,19 @@ export default function LandingPage() {
                 <p className="text-xs leading-relaxed" style={{ color: '#9A9DB0' }}>{desc}</p>
               </div>
             ))}
+          </div>
+
+          {/* What a golf stats tracker should do */}
+          <div className="mb-12">
+            <h2 className="text-xl font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+              A golf stats tracker that tells you what to practise
+            </h2>
+            <p className="text-sm leading-relaxed mb-3" style={{ color: '#9A9DB0' }}>
+              Most golf stats apps count fairways, greens and putts and leave you to work out what it means. TM Stats uses Strokes Gained, the same measure the tour uses, so every shot is compared with what a golfer at your level would expect from that spot. You find out whether your 78 came from the driver, the wedges or the putter.
+            </p>
+            <p className="text-sm leading-relaxed" style={{ color: '#9A9DB0' }}>
+              No sensors, no subscription hardware. Enter each hole on your phone in under a minute, then see your game broken down off the tee, on approach, around the green and on the green. Check your numbers against our free <Link href="/golf-stats" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats benchmarks by handicap</Link>.
+            </p>
           </div>
 
           {/* Features */}
@@ -165,6 +177,27 @@ export default function LandingPage() {
         </section>
       </main>
 
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'TM Stats',
+            applicationCategory: 'SportsApplication',
+            operatingSystem: 'Web, iOS, Android',
+            url: 'https://www.tmstatsgolf.com',
+            description:
+              'Golf stats tracker with Strokes Gained analytics. Log rounds on your phone and see where you lose shots off the tee, on approach, around the green and putting.',
+            offers: [
+              { '@type': 'Offer', price: '0', priceCurrency: 'GBP', name: 'Free' },
+              { '@type': 'Offer', price: '4.99', priceCurrency: 'GBP', name: 'Pro monthly' },
+              { '@type': 'Offer', price: '50', priceCurrency: 'GBP', name: 'Pro yearly' },
+            ],
+            author: { '@type': 'Person', name: 'Rob Cull' },
+          }),
+        }}
+      />
       <Footer />
       <CookieBanner />
     </div>

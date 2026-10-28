@@ -22,8 +22,19 @@ const dmMono = DM_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'TM Stats — Track to Improve',
-  description: "Strokes Gained golf analytics for serious amateur golfers. Know exactly where you're losing shots and what to practice.",
+  metadataBase: new URL('https://www.tmstatsgolf.com'),
+  title: 'Golf Stats Tracker with Strokes Gained | TM Stats',
+  description:
+    'TM Stats is a golf stats tracker for serious amateur golfers. Log rounds on your phone, see Strokes Gained off the tee, on approach, around the green and putting, and know exactly what to practise. Free to start.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'TM Stats',
+    title: 'Golf Stats Tracker with Strokes Gained | TM Stats',
+    description:
+      'Track every round, see Strokes Gained by category and find out where you really lose shots. Free to start, no hardware needed.',
+    url: 'https://www.tmstatsgolf.com',
+  },
   icons: {
     icon: '/icon-only-logo.png',
   },

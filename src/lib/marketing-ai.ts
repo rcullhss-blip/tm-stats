@@ -9,14 +9,31 @@ About Rob:
 - County golfer for Cheshire
 - Member at Bromborough Golf Club on the Wirral
 - Built TM Stats because he couldn't find a stats platform that actually helped him improve
+- Plays off scratch-ish; his own rounds are typically 70 to 78
 
-Rob's writing voice:
-- Direct and confident but not arrogant
-- Knowledgeable about golf and data without being academic or dry
-- Speaks as a golfer first, a tech person second
-- Brief, punchy sentences. Not overly formal
-- Genuine enthusiasm for Strokes Gained as a concept
-- UK English spelling (organisation, colour, recognise, etc.)`
+How Rob writes. Follow all of this:
+- Like a golfer talking to a mate in the clubhouse. Plain words, contractions, first person.
+- Short sentences mostly, with the odd longer one. Vary the rhythm. Never three short punchy fragments in a row.
+- Never use an em dash or an en dash. Not once. Use a comma, a full stop or brackets instead.
+- Never use these words or patterns: game-changer, dive in, unlock, elevate, journey, leverage, robust, seamless, "in today's", "whether you're a ... or a ...", "it's not about X, it's about Y", "here's the thing", "let's be honest", "the truth is", "at the end of the day", "final thoughts", "in conclusion", "ultimately".
+- No stacked rhetorical questions. One question in a whole post is plenty.
+- No motivational padding. Every paragraph should tell the reader something they can use.
+- Be specific. Prefer a real-feeling example from Rob's own golf over a generalisation: a round of 74 where he lost 2.1 strokes on approach, a week of practice that fixed one thing. Scores between 70 and 80, Strokes Gained numbers small and believable (within about plus or minus 3 per round).
+- Do not name specific holes, yardages or courses other than Bromborough in passing. Do not invent statistics about other golfers or quote studies.
+- Have an opinion. Say what the stats can't tell you as well as what they can.
+- Headings are plain and descriptive, not clever. No heading called Introduction, Conclusion or Final Thoughts.
+- UK English spelling: organisation, colour, recognise, practise (verb).
+- Mention TM Stats once near the end, lightly, as what Rob built to do this. Never a hard sell.`
+
+// Safety net for the dash rule above. Models still slip em and en dashes in,
+// so strip them from anything that reaches a reader.
+function stripDashes(text: string): string {
+  return text
+    .replace(/(\d)\s*[\u2013\u2014]\s*(\d)/g, '$1 to $2')
+    .replace(/\s*[\u2014\u2013]\s*/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .replace(/([.!?])\s*,\s*/g, '$1 ')
+}
 
 // Plain text reply. Use this for anything long (article bodies, newsletters):
 // a JSON string field is a bad home for prose, because a straight double
@@ -29,7 +46,7 @@ async function callClaudeText(prompt: string, maxTokens = 4096, systemPrompt?: s
     messages: [{ role: 'user', content: prompt }],
   })
   const block = message.content[0]
-  return block.type === 'text' ? block.text.replace(/^```(?:html)?\s*|```\s*$/g, '').trim() : ''
+  return block.type === 'text' ? stripDashes(block.text.replace(/^```(?:html)?\s*|```\s*$/g, '').trim()) : ''
 }
 
 // Ask Claude for JSON that matches a schema. Structured outputs guarantee the
@@ -58,7 +75,11 @@ async function callClaudeJSON<T>(
   })
   const block = message.content[0]
   if (block.type !== 'text') throw new Error('Claude returned no text block')
-  return JSON.parse(block.text) as T
+  const parsed = JSON.parse(block.text) as Record<string, unknown>
+  for (const k of Object.keys(parsed)) {
+    if (typeof parsed[k] === 'string') parsed[k] = stripDashes(parsed[k] as string)
+  }
+  return parsed as T
 }
 
 export async function personaliseOutreachEmail(
