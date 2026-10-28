@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const faqs = [
   { q: 'How does the Strokes Gained calculator work?', a: 'Every spot on the course has an expected number of strokes to hole out for a golfer at a given level. The calculator takes the expected strokes from where your shot started, subtracts the expected strokes from where it finished, and subtracts one for the shot itself. A positive number means the shot was better than average for your level.' },
   { q: 'Where do the expected strokes numbers come from?', a: 'They are baselines built on the research behind Strokes Gained, adjusted for handicap bands so a 15 handicap is compared with other 15 handicaps rather than with tour players. They are the same baselines TM Stats uses to score full rounds.' },
-  { q: 'What counts as a good Strokes Gained number for one shot?', a: 'Most shots sit between minus 0.3 and plus 0.3. A tee shot into the trees or a chunked wedge can cost more than a full stroke. A holed putt from 20 feet gains roughly half a stroke. Over a round, the useful figure is the total by category, which is what the app gives you.' },
+  { q: 'What counts as a good Strokes Gained number for one shot?', a: 'Most ordinary shots sit between about minus 0.5 and plus 0.5. A tee shot into the trees or a chunked wedge can cost a full stroke or more, and a well struck approach to a close range can gain more than one at mid-handicap level. A holed putt from 15 feet gains about 0.6. Over a round, the useful figure is the total by category, which is what the app gives you.' },
   { q: 'Is this calculator free?', a: 'Yes, and it needs no sign-up. If you want Strokes Gained for every shot across a whole round, and split into the four categories, TM Stats does that from your phone and the first five rounds are free.' },
 ]
 
@@ -41,10 +41,10 @@ export default function CalculatorPage() {
 
       <h2 className="text-lg font-bold mb-3 mt-10" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Try these</h2>
       <ul className="text-sm space-y-2 mb-8" style={{ color: '#9A9DB0' }}>
-        <li>A 10 handicap hits a 150 yard approach from the fairway to 25 feet. Roughly plus 0.2. A good shot, not a great one.</li>
-        <li>The same golfer puts it in a greenside bunker. Roughly minus 0.4. That is where a bogey comes from.</li>
-        <li>Holing a 15 foot putt. About plus 0.5, which is why a run of made putts feels like free shots.</li>
-        <li>A drive from 400 yards that ends 220 yards out in the rough. Barely negative. Tee shots cost less than most golfers think unless they go out of play.</li>
+        <li>A 10 to 14 handicap hits a 150 yard approach from the fairway to 25 feet: about plus 1.1. Hitting the green from there is a genuinely good shot at that level, which is why the number is big.</li>
+        <li>The same golfer puts it in a greenside bunker 10 yards short: about plus 0.1. Covering 140 yards still counts for something. The damage comes on the next shot if the bunker shot stays in or runs through.</li>
+        <li>Holing a 15 foot putt: about plus 0.6, which is why a run of made putts feels like free shots.</li>
+        <li>A drive from 400 yards that only goes 180 and finds the rough: about minus 0.9. A short, crooked tee shot costs nearly a full stroke.</li>
       </ul>
 
       <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Common questions</h2>
