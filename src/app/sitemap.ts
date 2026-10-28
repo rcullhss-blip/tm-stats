@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/service'
 import { allSeoPages } from '@/lib/seo-stats'
+import { COMPETITORS } from '@/lib/compare'
 
 const SITE = 'https://www.tmstatsgolf.com'
 
@@ -12,6 +13,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/about`, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${SITE}/blog`, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${SITE}/golf-stats`, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE}/compare`, changeFrequency: 'monthly', priority: 0.8 },
+    ...COMPETITORS.map(c => ({ url: `${SITE}/compare/${c.slug}`, changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: `${SITE}/signup`, changeFrequency: 'monthly', priority: 0.9 },
   ]
 
