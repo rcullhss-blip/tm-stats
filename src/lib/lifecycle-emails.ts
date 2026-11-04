@@ -63,6 +63,14 @@ export const LIFECYCLE_EMAILS: Record<string, LifecycleEmail> = {
       <p style="margin: 0 0 14px; line-height: 1.6;">Pro is £4.99/month (or £50/year) and unlocks unlimited rounds, <strong>Strokes Gained on every round</strong>, SG trends, and AI coaching that reads your actual numbers. Other platforms charge several times that for SG alone.</p>
     `, 'Go Pro', `${SITE}/upgrade`),
   },
+  lapsed_never_started: {
+    type: 'lapsed_never_started',
+    subject: 'Still want to see where your shots go?',
+    html: (id, name) => wrap(id, name, `
+      <p style="margin: 0 0 14px; line-height: 1.6;">You signed up a while back but never logged a round, so there's nothing in your account yet — no pressure, just a nudge.</p>
+      <p style="margin: 0 0 14px; line-height: 1.6;">It takes about two minutes in Quick mode. Use Full Tracking on your first one and you'll get a free Strokes Gained breakdown straight away.</p>
+    `, 'Log your first round', `${SITE}/rounds/new`),
+  },
   winback: {
     type: 'winback',
     subject: 'Your stats are still here',

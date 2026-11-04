@@ -31,10 +31,39 @@ export async function GET(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
 
+  // Daily sweep: downgrade any promo access that has lapsed. The per-user check
+  // in the protected layout only fires when that user opens the app, so inactive
+  // users would otherwise stay "pro" in the database forever.
+  await sb
+    .from('users')
+    .update({ subscription_status: 'free', promo_expires_at: null })
+    .eq('subscription_status', 'pro')
+    .lt('promo_expires_at', new Date().toISOString())
+
   const { data: usersRaw } = await sb
     .from('users')
     .select('id, email, name, subscription_status, stripe_customer_id, email_opt_out, created_at')
-  const users: UserLite[] = (usersRaw ?? []).filter((u: UserLite) => u.email && !u.email_opt_out)
+
+  // Only email accounts that have confirmed their address. Bot/junk signups
+  // almost never confirm, so this keeps welcome emails off fake addresses and
+  // protects sending reputation. If the auth lookup fails, fall back to the
+  // old behaviour (send to all) rather than silently emailing no one.
+  const confirmed = new Set<string>()
+  try {
+    for (let page = 1; page <= 100; page++) {
+      const { data: authList, error } = await sb.auth.admin.listUsers({ page, perPage: 200 })
+      const list = authList?.users ?? []
+      if (error || list.length === 0) break
+      for (const u of list) {
+        if (u.email_confirmed_at || u.confirmed_at) confirmed.add(u.id)
+      }
+      if (list.length < 200) break
+    }
+  } catch {}
+
+  const users: UserLite[] = (usersRaw ?? [])
+    .filter((u: UserLite) => u.email && !u.email_opt_out)
+    .filter((u: UserLite) => confirmed.size === 0 || confirmed.has(u.id))
 
   const { data: logRaw } = await sb.from('email_log').select('user_id, email_type')
   const alreadySent = new Set((logRaw ?? []).map((l: { user_id: string; email_type: string }) => `${l.user_id}:${l.email_type}`))
@@ -61,6 +90,9 @@ export async function GET(request: Request) {
     // send the first one they haven't had yet (one email per user per run)
     const candidates: string[] = []
     if (userRounds.length === 0 && accountAge >= 3 * day && accountAge <= 30 * day) candidates.push('welcome_nudge')
+    // welcome_nudge only covers the first 30 days — without this, anyone who signs up
+    // and never logs a round ages out of that window and never hears from us again.
+    if (userRounds.length === 0 && accountAge > 30 * day) candidates.push('lapsed_never_started')
     if (fullRounds.length >= 1 && !isPro) candidates.push('sg_explainer')
     if (!isPro && userRounds.length >= 4) candidates.push('upgrade_push')
     if (lastRoundAge !== null && lastRoundAge >= 30 * day && lastRoundAge <= 90 * day) candidates.push('winback')

@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
-import AdminUserActions from '@/components/admin/AdminUserActions'
 import AdminCreateCoach from '@/components/admin/AdminCreateCoach'
+import AdminUserCard from '@/components/admin/AdminUserCard'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -17,6 +17,16 @@ export default async function AdminPage() {
   if (!isAdmin) return notFound()
 
   const service = createServiceClient()
+
+  // Sweep lapsed promo access before showing the list, so a user whose code
+  // expired but who hasn't opened the app since (which is when the per-user
+  // check in the layout runs) is corrected here too — the list is accurate.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (service as any)
+    .from('users')
+    .update({ subscription_status: 'free', promo_expires_at: null })
+    .eq('subscription_status', 'pro')
+    .lt('promo_expires_at', new Date().toISOString())
 
   // Fetch all users
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,12 +49,6 @@ export default async function AdminPage() {
   const userList = users ?? []
   const proCount = userList.filter((u: { subscription_status: string }) => u.subscription_status === 'pro').length
   const teamCount = userList.filter((u: { subscription_status: string }) => u.subscription_status === 'team').length
-
-  function planColor(status: string) {
-    if (status === 'pro') return '#22C55E'
-    if (status === 'team') return '#3B82F6'
-    return '#9A9DB0'
-  }
 
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto">
@@ -121,34 +125,10 @@ export default async function AdminPage() {
 
       {/* User list */}
       <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Users</h2>
+      <p className="text-xs mb-2" style={{ color: '#4A4D60' }}>Tap a name to see their stats.</p>
       <div className="space-y-2">
         {userList.map((u: { id: string; email: string; name: string | null; handicap: number | null; subscription_status: string; created_at: string; promo_expires_at: string | null }) => (
-          <div key={u.id} className="p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#F0F0F0' }}>{u.name ?? u.email}</p>
-                <p className="text-xs truncate" style={{ color: '#4A4D60' }}>{u.email}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span
-                    className="text-xs px-1.5 py-0.5 rounded font-medium"
-                    style={{ backgroundColor: u.subscription_status !== 'free' ? '#22C55E20' : '#22263A', color: planColor(u.subscription_status) }}
-                  >
-                    {u.subscription_status}
-                  </span>
-                  <span className="text-xs" style={{ color: '#4A4D60' }}>
-                    {rcMap[u.id] ?? 0} rounds
-                    {u.handicap != null ? ` · hcp ${u.handicap}` : ''}
-                  </span>
-                </div>
-                {u.promo_expires_at && (
-                  <p className="text-xs mt-0.5" style={{ color: '#F59E0B' }}>
-                    Promo expires {new Date(u.promo_expires_at).toLocaleDateString('en-GB')}
-                  </p>
-                )}
-              </div>
-              <AdminUserActions userId={u.id} currentPlan={u.subscription_status} />
-            </div>
-          </div>
+          <AdminUserCard key={u.id} user={u} roundCount={rcMap[u.id] ?? 0} />
         ))}
       </div>
     </div>
