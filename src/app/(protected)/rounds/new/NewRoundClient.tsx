@@ -7,6 +7,7 @@ import type { SetupData, HoleData } from '@/lib/types'
 import RoundSetup, { type RecentCourse } from '@/components/rounds/RoundSetup'
 import HoleEntry from '@/components/rounds/HoleEntry'
 import RoundSummary from '@/components/rounds/RoundSummary'
+import VoiceRoundEntry from '@/components/rounds/VoiceRoundEntry'
 
 const DRAFT_KEY = 'tmstats_round_draft'
 
@@ -51,7 +52,9 @@ interface Props {
 
 export default function NewRoundClient({ recentCourses = [] }: Props) {
   const router = useRouter()
-  const [step, setStep] = useState<'setup' | 'holes' | 'summary'>('setup')
+  const [step, setStep] = useState<'setup' | 'voice' | 'holes' | 'summary'>('setup')
+  // Per-hole notes from voice entry: what the golfer still needs to check or add
+  const [voiceNotes, setVoiceNotes] = useState<(string | null)[] | null>(null)
   const [setup, setSetup] = useState<SetupData | null>(null)
   const [holeData, setHoleData] = useState<HoleData[]>([])
   const [editingFromSummary, setEditingFromSummary] = useState(false)
@@ -204,6 +207,25 @@ export default function NewRoundClient({ recentCourses = [] }: Props) {
         onNext={(data) => {
           setSetup(data)
           setResumePos(null)
+          setVoiceNotes(null)
+          setStep(data.voice ? 'voice' : 'holes')
+        }}
+      />
+    )
+  }
+
+  if (step === 'voice' && setup) {
+    return (
+      <VoiceRoundEntry
+        setup={setup}
+        onBack={() => setStep('setup')}
+        onDone={(voiceDraft) => {
+          // Load what was heard into the normal entry screens, starting at hole 1,
+          // so the golfer clicks through and approves every hole.
+          setSetup({ ...setup, inputMode: voiceDraft.inputMode, voice: false })
+          setHoleData(voiceDraft.holes)
+          setVoiceNotes(voiceDraft.notes)
+          setResumePos({ current: 0, highest: 0 })
           setStep('holes')
         }}
       />
@@ -230,6 +252,7 @@ export default function NewRoundClient({ recentCourses = [] }: Props) {
         initialHighest={resumePos?.highest}
         editingFromSummary={editingFromSummary}
         onProgress={handleProgress}
+        voiceNotes={voiceNotes ?? undefined}
       />
     )
   }

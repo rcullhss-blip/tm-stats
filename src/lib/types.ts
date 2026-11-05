@@ -203,6 +203,10 @@ export interface SetupData {
   inputMode: InputMode
   parsPrefill?: (3 | 4 | 5)[]
   trackProcess?: boolean
+  // Voice entry: the golfer talks through the round and checks the result.
+  voice?: boolean
+  // Tee yardage per hole from the last full-tracking round at this course, where known.
+  yardagesPrefill?: (number | null)[]
 }
 
 export interface HoleData {

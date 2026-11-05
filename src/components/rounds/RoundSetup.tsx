@@ -25,6 +25,7 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
   const [roundType, setRoundType] = useState<RoundType>('practice')
   const [inputMode, setInputMode] = useState<InputMode>('quick')
   const [trackProcess, setTrackProcess] = useState(false)
+  const [voice, setVoice] = useState(false)
   const [loadingPars, setLoadingPars] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,17 +36,23 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
     // Course memory: played here before → pre-fill the pars from the last round
     const match = recentCourses.find(c => c.name.trim().toLowerCase() === name.toLowerCase())
     let parsPrefill: (3 | 4 | 5)[] | undefined
+    let yardagesPrefill: (number | null)[] | undefined
     if (match) {
       setLoadingPars(true)
       try {
         const supabase = createClient()
         const { data } = await supabase
           .from('holes')
-          .select('hole_number, par')
+          .select('hole_number, par, shots')
           .eq('round_id', match.lastRoundId)
           .order('hole_number')
         if (data && data.length > 0) {
           parsPrefill = data.slice(0, holes).map(h => h.par as 3 | 4 | 5)
+          // Tee yardages, when the last round here was shot by shot (used by voice entry)
+          yardagesPrefill = data.slice(0, holes).map(h => {
+            const first = Array.isArray(h.shots) ? (h.shots[0] as { lieType?: string; distanceToPin?: number } | undefined) : undefined
+            return first?.lieType === 'tee' && typeof first.distanceToPin === 'number' ? first.distanceToPin : null
+          })
         }
       } catch {
         // No signal / fetch failed — carry on without the prefill
@@ -58,9 +65,11 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
       courseName: name,
       holes,
       roundType,
-      inputMode,
+      inputMode: voice ? 'full' : inputMode,
       parsPrefill,
-      trackProcess: inputMode === 'full' ? trackProcess : false,
+      trackProcess: !voice && inputMode === 'full' ? trackProcess : false,
+      voice,
+      yardagesPrefill,
     })
   }
 
@@ -216,11 +225,11 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
           <div className="space-y-2">
             <button
               type="button"
-              onClick={() => setInputMode('quick')}
+              onClick={() => { setInputMode('quick'); setVoice(false) }}
               className="w-full p-4 rounded-xl text-left transition-colors"
               style={{
-                backgroundColor: inputMode === 'quick' ? '#22263A' : '#1A1D27',
-                border: `1px solid ${inputMode === 'quick' ? '#CC2222' : '#2E3247'}`,
+                backgroundColor: !voice && inputMode === 'quick' ? '#22263A' : '#1A1D27',
+                border: `1px solid ${!voice && inputMode === 'quick' ? '#CC2222' : '#2E3247'}`,
               }}
             >
               <p className="font-semibold text-sm" style={{ color: '#F0F0F0' }}>Quick entry</p>
@@ -231,11 +240,11 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
 
             <button
               type="button"
-              onClick={() => setInputMode('full')}
+              onClick={() => { setInputMode('full'); setVoice(false) }}
               className="w-full p-4 rounded-xl text-left transition-colors"
               style={{
-                backgroundColor: inputMode === 'full' ? '#22263A' : '#1A1D27',
-                border: `1px solid ${inputMode === 'full' ? '#CC2222' : '#2E3247'}`,
+                backgroundColor: !voice && inputMode === 'full' ? '#22263A' : '#1A1D27',
+                border: `1px solid ${!voice && inputMode === 'full' ? '#CC2222' : '#2E3247'}`,
               }}
             >
               <div className="flex items-start justify-between">
@@ -253,11 +262,36 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
                 </span>
               </div>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setVoice(true)}
+              className="w-full p-4 rounded-xl text-left transition-colors"
+              style={{
+                backgroundColor: voice ? '#22263A' : '#1A1D27',
+                border: `1px solid ${voice ? '#CC2222' : '#2E3247'}`,
+              }}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-semibold text-sm" style={{ color: '#F0F0F0' }}>Talk it through</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>
+                    Describe your round out loud, then check each hole. No typing.
+                  </p>
+                </div>
+                <span
+                  className="text-xs px-2 py-0.5 rounded ml-2 shrink-0"
+                  style={{ backgroundColor: '#CC222220', color: '#CC2222' }}
+                >
+                  New
+                </span>
+              </div>
+            </button>
           </div>
         </div>
 
         {/* Mental process tracking — full tracking only */}
-        {inputMode === 'full' && (
+        {inputMode === 'full' && !voice && (
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>
               Mental process tracking <span className="font-normal">(optional)</span>

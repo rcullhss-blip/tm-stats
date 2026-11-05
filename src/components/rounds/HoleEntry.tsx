@@ -14,6 +14,9 @@ interface Props {
   initialHighest?: number
   editingFromSummary?: boolean
   onProgress?: (holes: HoleData[], current: number, highest: number) => void
+  // Voice entry: one note per hole (null = heard in full). Presence of the list
+  // means the holes were filled in from a recording and need checking.
+  voiceNotes?: (string | null)[]
 }
 
 function defaultHole(holeNumber: number, par: 3 | 4 | 5 = 4): HoleData {
@@ -138,7 +141,7 @@ function PillToggle({
   )
 }
 
-export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, initialHighest, editingFromSummary = false, onProgress }: Props) {
+export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, initialHighest, editingFromSummary = false, onProgress, voiceNotes }: Props) {
   const holeCount = setup.holes
   const [current, setCurrent] = useState(initialHole)
   const [highestReached, setHighestReached] = useState(
@@ -349,6 +352,23 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           })}
         </div>
       </div>
+
+      {/* Filled in from a voice recording — tell the golfer what to check on this hole */}
+      {voiceNotes && !editingFromSummary && current >= highestReached && (
+        voiceNotes[current] ? (
+          <div className="mb-4 px-4 py-3 rounded-xl" style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: '#F59E0B' }}>From your recording</p>
+            <p className="text-sm" style={{ color: '#F0F0F0', lineHeight: 1.5 }}>{voiceNotes[current]}</p>
+          </div>
+        ) : (
+          <div className="mb-4 px-4 py-3 rounded-xl" style={{ backgroundColor: '#22C55E15', border: '1px solid #22C55E40' }}>
+            <p className="text-sm" style={{ color: '#22C55E', lineHeight: 1.5 }}>
+              Filled in from your recording. Check it, then tap {setup.inputMode === 'full' ? '"Next hole"' : 'Next'}.
+              {setup.inputMode === 'full' ? ' Use "Undo last shot" to change anything.' : ''}
+            </p>
+          </div>
+        )
+      )}
 
       {/* Hole header */}
       <div className="flex items-center justify-between mb-6">
