@@ -240,7 +240,7 @@ DRIP_TEMPLATES.UK_CLUB = {
   subject: 'Free golf stats app for your members',
   subjectFor: org => `Free golf stats app for ${org} members`,
   attachments: [
-    { name: 'TM Stats for golf clubs.pdf', url: `${SITE}/TM-Stats-for-golf-clubs.pdf` },
+    { name: 'TM STATS INFO.pdf', url: `${SITE}/TM-Stats-for-golf-clubs.pdf` },
     { name: 'TM Stats locker room poster.pdf', url: `${SITE}/TM-Stats-locker-room-poster.pdf` },
   ],
   html: (org) => {
