@@ -43,6 +43,7 @@ type CampaignStatus = 'idle' | 'uploading' | 'ready' | 'sending' | 'complete'
 
 const CONTACT_TYPES = [
   { value: 'GOLF_CLUB', label: 'Golf Club', color: '#22c55e' },
+  { value: 'UK_CLUB', label: 'UK Club (Nov 2026 plain email)', color: '#10b981' },
   { value: 'NCAA_D1', label: 'NCAA D1', color: '#3b82f6' },
   { value: 'NCAA_D2', label: 'NCAA D2', color: '#6366f1' },
   { value: 'NCAA_D3', label: 'NCAA D3', color: '#8b5cf6' },

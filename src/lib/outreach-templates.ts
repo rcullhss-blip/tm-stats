@@ -4,7 +4,13 @@
 
 interface Template {
   subject: string
+  // Optional subject that includes the organisation's name. Falls back to subject.
+  subjectFor?: (org: string) => string
   html: (org: string, promoCode: string, name?: string) => string
+}
+
+export function subjectOf(template: Template, org: string): string {
+  return template.subjectFor && org ? template.subjectFor(org) : template.subject
 }
 
 const FONT = "Calibri, 'Segoe UI', -apple-system, Helvetica, Arial, sans-serif"
@@ -204,8 +210,54 @@ const PRESS_FOLLOW_UP: Template = {
     + p('I am just following up in case this was missed. I would be glad to send screenshots or set up your access today.')),
 }
 
+// ─── UK golf clubs, November 2026 national send ─────────────────────────────
+// Same wording as the plain email that went to the North West clubs from the
+// info@ mailbox in October 2026 (the one Bidston, Formby and Fairfield replied
+// to), so it reads as one person writing, not a mailshot: no banner, no logo,
+// a short blurb the secretary can paste straight into a newsletter.
+
+function plainNote(bodyHtml: string): string {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#FFFFFF;">
+<div style="font-family:${SANS};font-size:15px;line-height:1.6;color:#1A1D27;max-width:600px;padding:8px 4px;">
+${bodyHtml}
+</div></body></html>`
+}
+
+const blurbBox = (text: string) =>
+  `<div style="margin:0 0 16px 0;padding:12px 16px;border-left:3px solid #CC2222;background:#F5F5F7;">${text}</div>`
+
+const CLUB_SIGN_OFF =
+  p('Thanks,<br>Rob Cull<br>TM Stats Golf | <a href="' + SITE + '" style="color:#CC2222;">tmstatsgolf.com</a> | 07597 195645')
+  + `<p style="margin:0;font-size:12px;color:#8A8D9E;">If you would rather not hear from me, just reply and I will not email again.</p>`
+
+DRIP_TEMPLATES.UK_CLUB = {
+  subject: 'Free golf stats app for your members',
+  subjectFor: org => `Free golf stats app for ${org} members`,
+  html: (org, code) => {
+    const club = org || 'your club'
+    const link = `${SITE}/signup?ref=${code}`
+    return plainNote(
+      p('Hi,')
+      + p("I'm Rob Cull, a member at Bromborough and a former Cheshire county player. I've built a golf stats app called TM Stats that shows golfers exactly where they lose shots (off the tee, approach, short game and putting), using the same strokes gained numbers the tour uses.")
+      + p(`I'd like to give ${club} members 3 months free. All I'm asking is whether you could pass it on, for example in the next members' newsletter or on the noticeboard. Here's a short blurb you can copy straight in:`)
+      + blurbBox(`Free for ${club} members: 3 months of TM Stats, the strokes gained app built by a Cheshire county golfer. Log your rounds on your phone and see exactly where you're losing shots. Sign up here and the 3 months are applied automatically: <a href="${link}" style="color:#CC2222;">${link.replace('https://', '')}</a>`)
+      + p("I'm happy to jump on a quick call and show the captain or the pro how it works if that's useful.")
+      + CLUB_SIGN_OFF)
+  },
+}
+
+const CLUB_FOLLOW_UP: Template = {
+  subject: 'Re: Free golf stats app for your members',
+  subjectFor: org => `Re: Free golf stats app for ${org} members`,
+  html: () => plainNote(
+    p('Hi,')
+    + p("Just bumping this in case it got buried. Happy to send a poster for the clubhouse instead if that's easier.")
+    + CLUB_SIGN_OFF),
+}
+
 /** Follow-up template for a contact type: the approved one-liner for the
  *  October 2026 campaigns, the club offer follow-up for everything else. */
 export function followUpFor(type: string | null | undefined): Template {
+  if (String(type) === 'UK_CLUB') return CLUB_FOLLOW_UP
   return ['PRESS_ROUNDUP', 'PRESS_DATA', 'PRESS_LOCAL', 'PODCAST', 'PGA_COACH'].includes(String(type)) ? PRESS_FOLLOW_UP : FOLLOW_UP
 }
