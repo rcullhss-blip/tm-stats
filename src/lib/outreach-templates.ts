@@ -235,7 +235,10 @@ const CLUB_SIGN_OFF =
 DRIP_TEMPLATES.UK_CLUB = {
   subject: 'Free golf stats app for your members',
   subjectFor: org => `Free golf stats app for ${org} members`,
-  attachments: [{ name: 'TM Stats for golf clubs.pdf', url: `${SITE}/TM-Stats-for-golf-clubs.pdf` }],
+  attachments: [
+    { name: 'TM Stats for golf clubs.pdf', url: `${SITE}/TM-Stats-for-golf-clubs.pdf` },
+    { name: 'TM Stats locker room poster.pdf', url: `${SITE}/TM-Stats-locker-room-poster.pdf` },
+  ],
   html: (org) => {
     const club = org || 'your club'
     // Fixed code so the link matches the QR code printed on the attached PDF
@@ -245,7 +248,7 @@ DRIP_TEMPLATES.UK_CLUB = {
       + p("I'm Rob Cull, a former NCAA US college player and former Cheshire county player, and a member at Bromborough. I've built a golf stats app called TM Stats that shows golfers exactly where they lose shots (off the tee, approach, short game and putting), using the same strokes gained numbers the tour uses.")
       + p(`I'd like to give ${club} members 3 months free. All I'm asking is whether you could pass it on, for example in the next members' newsletter or on the noticeboard. Here's a short blurb you can copy straight in:`)
       + blurbBox(`Free for ${club} members: 3 months of TM Stats, the strokes gained app built by a former NCAA US college and Cheshire county player. Log your rounds on your phone and see exactly where you're losing shots. Sign up here and the 3 months are applied automatically: <a href="${link}" style="color:#CC2222;">${link.replace('https://', '')}</a>`)
-      + p("I've attached a one page overview of what TM Stats does. I'm happy to jump on a call to go through it.")
+      + p("I've attached a one page overview of what TM Stats does, and a poster for the locker room or noticeboard with a code members can scan. I'm happy to jump on a call to go through it.")
       + CLUB_SIGN_OFF)
   },
 }
@@ -255,7 +258,7 @@ const CLUB_FOLLOW_UP: Template = {
   subjectFor: org => `Re: Free golf stats app for ${org} members`,
   html: () => plainNote(
     p('Hi,')
-    + p("Just bumping this in case it got buried. Happy to send a poster for the clubhouse instead if that's easier.")
+    + p("Just bumping this in case it got buried. The overview and the locker room poster are attached to my first email if they're useful.")
     + CLUB_SIGN_OFF),
 }
 
