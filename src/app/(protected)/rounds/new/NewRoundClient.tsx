@@ -150,6 +150,9 @@ export default function NewRoundClient({ recentCourses = [] }: Props) {
     }
 
     clearDraft()
+    // Email the golfer (and their coach) a PDF breakdown. Fire and forget: the
+    // round is already saved, so a failed email must never get in the way.
+    fetch(`/api/rounds/${round.id}/summary-email`, { method: 'POST', keepalive: true }).catch(() => {})
     router.push(`/rounds/${round.id}`)
   }
 

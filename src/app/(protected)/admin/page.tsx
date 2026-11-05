@@ -6,6 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import AdminCreateCoach from '@/components/admin/AdminCreateCoach'
 import AdminUserCard from '@/components/admin/AdminUserCard'
+import AdminTeamInvites from '@/components/admin/AdminTeamInvites'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -122,6 +123,8 @@ export default async function AdminPage() {
           <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Outreach, blog, newsletter, Instagram, scraper</p>
         </Link>
       </div>
+
+      <AdminTeamInvites />
 
       {/* User list */}
       <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Users</h2>

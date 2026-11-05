@@ -193,7 +193,9 @@ export async function GET(request: Request) {
     const { data: lifecycleRaw } = await sb.from('email_log').select('email_type, sent_at').gte('sent_at', weekAgo)
     const lifecycleCounts: Record<string, number> = {}
     for (const row of lifecycleRaw ?? []) {
-      lifecycleCounts[row.email_type] = (lifecycleCounts[row.email_type] ?? 0) + 1
+      // Round breakdown emails are logged one type per round ("rs:<round id>")
+      const type = String(row.email_type).startsWith('rs:') ? 'round_breakdown_pdf' : row.email_type
+      lifecycleCounts[type] = (lifecycleCounts[type] ?? 0) + 1
     }
     const lifecycleRows: [string, string | number][] = Object.keys(lifecycleCounts).length > 0
       ? Object.entries(lifecycleCounts).map(([k, v]) => [k.replace(/_/g, ' '), v] as [string, number])

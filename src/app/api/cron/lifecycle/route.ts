@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { EMAIL_FROM } from '@/lib/email-from'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/service'
-import { LIFECYCLE_EMAILS } from '@/lib/lifecycle-emails'
+import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO } from '@/lib/lifecycle-emails'
 
 export const maxDuration = 60
 
@@ -49,6 +48,11 @@ export async function GET(request: Request) {
   // protects sending reputation. If the auth lookup fails, fall back to the
   // old behaviour (send to all) rather than silently emailing no one.
   const confirmed = new Set<string>()
+  // Accounts we created on a player's behalf (a coach sent a roster) are flagged
+  // needs_claim until the player opens their claim link and sets a password.
+  // They cannot log in yet, so "log a round" nudges would land on a login page
+  // they have no password for. They get the claim email instead (admin page).
+  const awaitingClaim = new Set<string>()
   try {
     for (let page = 1; page <= 100; page++) {
       const { data: authList, error } = await sb.auth.admin.listUsers({ page, perPage: 200 })
@@ -56,6 +60,7 @@ export async function GET(request: Request) {
       if (error || list.length === 0) break
       for (const u of list) {
         if (u.email_confirmed_at || u.confirmed_at) confirmed.add(u.id)
+        if (u.app_metadata?.needs_claim === true) awaitingClaim.add(u.id)
       }
       if (list.length < 200) break
     }
@@ -64,9 +69,14 @@ export async function GET(request: Request) {
   const users: UserLite[] = (usersRaw ?? [])
     .filter((u: UserLite) => u.email && !u.email_opt_out)
     .filter((u: UserLite) => confirmed.size === 0 || confirmed.has(u.id))
+    .filter((u: UserLite) => !awaitingClaim.has(u.id))
 
-  const { data: logRaw } = await sb.from('email_log').select('user_id, email_type')
-  const alreadySent = new Set((logRaw ?? []).map((l: { user_id: string; email_type: string }) => `${l.user_id}:${l.email_type}`))
+  const { data: logRaw } = await sb.from('email_log').select('user_id, email_type, sent_at')
+  const sentAt = new Map<string, number>()
+  for (const l of (logRaw ?? []) as { user_id: string; email_type: string; sent_at: string }[]) {
+    sentAt.set(`${l.user_id}:${l.email_type}`, new Date(l.sent_at).getTime())
+  }
+  const alreadySent = { has: (key: string) => sentAt.has(key) }
 
   const { data: roundsRaw } = await sb
     .from('rounds')
@@ -90,6 +100,14 @@ export async function GET(request: Request) {
     // send the first one they haven't had yet (one email per user per run)
     const candidates: string[] = []
     if (userRounds.length === 0 && accountAge >= 3 * day && accountAge <= 30 * day) candidates.push('welcome_nudge')
+    // Second touch around day 10: a different ask (a one-line "what stopped you?")
+    // rather than the same nudge again. Only once the first nudge is at least
+    // five days old, so nobody gets two emails back to back.
+    const firstNudgeAt = sentAt.get(`${user.id}:welcome_nudge`)
+    if (
+      userRounds.length === 0 && accountAge >= 10 * day && accountAge <= 30 * day &&
+      firstNudgeAt !== undefined && now - firstNudgeAt >= 5 * day
+    ) candidates.push('welcome_nudge_2')
     // welcome_nudge only covers the first 30 days — without this, anyone who signs up
     // and never logs a round ages out of that window and never hears from us again.
     if (userRounds.length === 0 && accountAge > 30 * day) candidates.push('lapsed_never_started')
@@ -105,7 +123,8 @@ export async function GET(request: Request) {
 
     const firstName = user.name?.split(' ')[0] || 'golfer'
     const { error: sendError } = await resend.emails.send({
-      from: EMAIL_FROM,
+      from: PERSONAL_FROM,
+      replyTo: REPLY_TO,
       to: [user.email],
       subject: template.subject,
       html: template.html(user.id, firstName),
