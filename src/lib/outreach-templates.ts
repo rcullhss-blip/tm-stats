@@ -117,6 +117,12 @@ export const FOLLOW_UP: Template = {
 const SITE = 'https://www.tmstatsgolf.com'
 const SANS = "Helvetica, Arial, sans-serif"
 
+// Rob's email signature: logo, name, site and phone. Used on every letter below.
+const SIGNATURE = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid #E6E6EA;"><tr>
+      <td style="padding-top:18px;vertical-align:top;padding-right:16px;"><img src="${SITE}/icon-only-logo.png" width="44" height="43" alt="TM Stats" style="display:block;border:0;"></td>
+      <td style="padding-top:18px;vertical-align:top;font-family:${SANS};font-size:14px;line-height:1.5;color:#1A1D27;"><strong>Rob Cull</strong><br>Founder, TM Stats Golf<br><a href="${SITE}" style="color:#CC2222;text-decoration:none;">www.tmstatsgolf.com</a> &nbsp;|&nbsp; 07597 195645<br><span style="color:#6B6E80;">Strokes Gained analytics for serious amateur golfers. No sensors, no hardware.</span></td>
+    </tr></table>`
+
 function greet(name?: string): string {
   const first = (name ?? '').trim().split(/\s+/)[0]
   return first ? `Hi ${first},` : 'Hello,'
@@ -130,10 +136,7 @@ function pressLetter(bodyHtml: string): string {
   <tr><td style="padding:14px 36px 32px 36px;font-family:${SANS};font-size:15px;line-height:1.6;color:#1A1D27;">
     ${bodyHtml}
     <p style="margin:0 0 16px 0;">Kind regards,</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:12px;border-top:1px solid #E6E6EA;"><tr>
-      <td style="padding-top:18px;vertical-align:top;padding-right:16px;"><img src="${SITE}/icon-only-logo.png" width="44" height="43" alt="TM Stats" style="display:block;border:0;"></td>
-      <td style="padding-top:18px;vertical-align:top;font-family:${SANS};font-size:14px;line-height:1.5;color:#1A1D27;"><strong>Rob Cull</strong><br>Founder, TM Stats Golf<br><a href="${SITE}" style="color:#CC2222;text-decoration:none;">www.tmstatsgolf.com</a> &nbsp;|&nbsp; 07597 195645<br><span style="color:#6B6E80;">Strokes Gained analytics for serious amateur golfers. No sensors, no hardware.</span></td>
-    </tr></table>
+    ${SIGNATURE}
   </td></tr>
 </table>
 <p style="font-family:${SANS};font-size:11px;color:#8A8D9E;margin:14px 0 0 0;">TM Stats Golf, Wirral, United Kingdom &nbsp;|&nbsp; <a href="${SITE}" style="color:#8A8D9E;">tmstatsgolf.com</a></p>
@@ -229,8 +232,9 @@ const blurbBox = (text: string) =>
   `<div style="margin:0 0 16px 0;padding:12px 16px;border-left:3px solid #CC2222;background:#F5F5F7;">${text}</div>`
 
 const CLUB_SIGN_OFF =
-  p('Thanks,<br>Rob Cull<br>TM Stats Golf | <a href="' + SITE + '" style="color:#CC2222;">tmstatsgolf.com</a> | 07597 195645')
-  + `<p style="margin:0;font-size:12px;color:#8A8D9E;">If you would rather not hear from me, just reply and I will not email again.</p>`
+  p('Thanks,')
+  + SIGNATURE
+  + `<p style="margin:18px 0 0 0;font-size:12px;color:#8A8D9E;">If you would rather not hear from me, just reply and I will not email again.</p>`
 
 DRIP_TEMPLATES.UK_CLUB = {
   subject: 'Free golf stats app for your members',
