@@ -105,6 +105,7 @@ export async function GET(request: Request) {
         subject: subjectOf(template, contact.organisation ?? ''),
         htmlContent: template.html(contact.organisation ?? '', promoCode, contact.name ?? ''),
         tags: ['outreach', String(contact.type).toLowerCase(), ...campTag],
+        attachments: template.attachments,
       })
       await sb
         .from('marketing_contacts')

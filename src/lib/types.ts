@@ -193,6 +193,9 @@ export interface ShotEntry {
   // Mental process tracking (optional, chosen at round setup): true = golfer fully
   // committed to their pre-shot process on this shot, regardless of the result.
   process?: boolean
+  // Entry-screen only, never saved: voice entry heard this shot but not its
+  // distance. The golfer fills it in on the hole screen before the hole can be completed.
+  needsDistance?: boolean
 }
 
 export interface SetupData {

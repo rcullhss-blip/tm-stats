@@ -6,6 +6,8 @@ interface Template {
   subject: string
   // Optional subject that includes the organisation's name. Falls back to subject.
   subjectFor?: (org: string) => string
+  // Optional files attached to the first email (fetched from the URL at send time)
+  attachments?: { name: string; url: string }[]
   html: (org: string, promoCode: string, name?: string) => string
 }
 
@@ -233,15 +235,17 @@ const CLUB_SIGN_OFF =
 DRIP_TEMPLATES.UK_CLUB = {
   subject: 'Free golf stats app for your members',
   subjectFor: org => `Free golf stats app for ${org} members`,
-  html: (org, code) => {
+  attachments: [{ name: 'TM Stats for golf clubs.pdf', url: `${SITE}/TM-Stats-for-golf-clubs.pdf` }],
+  html: (org) => {
     const club = org || 'your club'
-    const link = `${SITE}/signup?ref=${code}`
+    // Fixed code so the link matches the QR code printed on the attached PDF
+    const link = `${SITE}/signup?ref=TMSTATS3FREE`
     return plainNote(
       p('Hi,')
-      + p("I'm Rob Cull, a member at Bromborough and a former Cheshire county player. I've built a golf stats app called TM Stats that shows golfers exactly where they lose shots (off the tee, approach, short game and putting), using the same strokes gained numbers the tour uses.")
+      + p("I'm Rob Cull, a former NCAA US college player and former Cheshire county player, and a member at Bromborough. I've built a golf stats app called TM Stats that shows golfers exactly where they lose shots (off the tee, approach, short game and putting), using the same strokes gained numbers the tour uses.")
       + p(`I'd like to give ${club} members 3 months free. All I'm asking is whether you could pass it on, for example in the next members' newsletter or on the noticeboard. Here's a short blurb you can copy straight in:`)
-      + blurbBox(`Free for ${club} members: 3 months of TM Stats, the strokes gained app built by a Cheshire county golfer. Log your rounds on your phone and see exactly where you're losing shots. Sign up here and the 3 months are applied automatically: <a href="${link}" style="color:#CC2222;">${link.replace('https://', '')}</a>`)
-      + p("I'm happy to jump on a quick call and show the captain or the pro how it works if that's useful.")
+      + blurbBox(`Free for ${club} members: 3 months of TM Stats, the strokes gained app built by a former NCAA US college and Cheshire county player. Log your rounds on your phone and see exactly where you're losing shots. Sign up here and the 3 months are applied automatically: <a href="${link}" style="color:#CC2222;">${link.replace('https://', '')}</a>`)
+      + p("I've attached a one page overview of what TM Stats does. I'm happy to jump on a call to go through it.")
       + CLUB_SIGN_OFF)
   },
 }

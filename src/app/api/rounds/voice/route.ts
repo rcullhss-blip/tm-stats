@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { assertAdmin } from '@/lib/admin-auth'
 import { transcribeRoundAudio } from '@/lib/voice-transcribe'
 import { parseRoundTranscript, VoiceParseError } from '@/lib/voice-parse'
 
@@ -23,9 +23,8 @@ function numberList(raw: FormDataEntryValue | null, max: number): (number | null
 // saved here; the app loads the result into the normal entry screens for the
 // golfer to check and approve.
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 })
+  // Admin only while it is being tested: each recording costs money to process.
+  if (!(await assertAdmin())) return NextResponse.json({ error: 'Voice entry is not switched on for this account yet.' }, { status: 403 })
 
   let form: FormData
   try {

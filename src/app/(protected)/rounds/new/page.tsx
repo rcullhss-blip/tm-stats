@@ -11,7 +11,7 @@ export default async function NewRoundPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('subscription_status')
+    .select('subscription_status, email')
     .eq('id', user.id)
     .single()
 
@@ -46,5 +46,9 @@ export default async function NewRoundPage() {
     if (recentCourses.length >= 5) break
   }
 
-  return <NewRoundClient recentCourses={recentCourses} />
+  // Voice entry costs money per recording, so it is switched on for the admin
+  // account only while it is being tested.
+  const voiceEnabled = profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
+
+  return <NewRoundClient recentCourses={recentCourses} voiceEnabled={voiceEnabled} />
 }

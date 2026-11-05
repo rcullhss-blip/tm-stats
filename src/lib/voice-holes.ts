@@ -33,30 +33,34 @@ function toYards(shot: VoiceShot): number | null {
   return yards > 700 ? null : yards
 }
 
-// The usable run of shots from the start of the hole, stopping at the first
-// one with a missing or impossible distance.
+// Every shot the golfer described, in order. A shot whose distance was not
+// heard (or made no sense) is kept in place and flagged needsDistance, so the
+// golfer fills in just that gap rather than re-entering the rest of the hole.
 function buildShots(voiceShots: VoiceShot[]): { shots: ShotEntry[]; complete: boolean } {
+  if (voiceShots.length === 0 || voiceShots[0].lie !== 'tee') return { shots: [], complete: false }
   const shots: ShotEntry[] = []
   for (const v of voiceShots) {
-    let distance: number
-    if (v.lie === 'penalty') {
-      if (shots.length === 0) break
-      distance = shots[shots.length - 1].distanceToPin
-    } else {
-      const yards = toYards(v)
-      if (yards === null) break
-      distance = yards
-    }
     const quality = v.lie_quality as LieQuality
-    shots.push({
+    const base = {
       shotNumber: shots.length + 1,
-      distanceToPin: distance,
       lieType: v.lie,
       ...(LIES_WITH_QUALITY.includes(v.lie) && quality !== 'good' ? { lieQuality: quality } : {}),
-    })
+    }
+    if (v.lie === 'penalty') {
+      // A penalty has no distance of its own: it sits where the shot before it was played from
+      const prev = shots[shots.length - 1]
+      shots.push({ ...base, distanceToPin: prev.distanceToPin })
+      continue
+    }
+    const yards = toYards(v)
+    shots.push(yards === null ? { ...base, distanceToPin: 0, needsDistance: true } : { ...base, distanceToPin: yards })
   }
-  const startsOnTee = shots.length > 0 && shots[0].lieType === 'tee'
-  return { shots: startsOnTee ? shots : [], complete: startsOnTee && shots.length === voiceShots.length }
+  return { shots, complete: !shots.some(s => s.needsDistance) }
+}
+
+function gapList(shots: ShotEntry[]): string {
+  const gaps = shots.filter(s => s.needsDistance).map(s => s.shotNumber)
+  return gaps.length === 1 ? `shot ${gaps[0]}` : `shots ${gaps.slice(0, -1).join(', ')} and ${gaps[gaps.length - 1]}`
 }
 
 function blankHole(holeNumber: number, par: 3 | 4 | 5): HoleData {
@@ -109,8 +113,8 @@ export function buildVoiceDraft(
       if (complete && !scoreMatches && !v.problem) {
         problems.push(`You said you made ${saidScore} but I counted ${shots.length} shots.`)
       }
-      if (!complete && !v.problem) {
-        problems.push(`I am missing a distance for shot ${shots.length + 1}. Add it below.`)
+      if (!complete && inputMode === 'full') {
+        problems.push(`Add the distance for ${gapList(shots)} in the amber box below.`)
       }
 
       if (inputMode === 'full') {
@@ -118,17 +122,23 @@ export function buildVoiceDraft(
           ? { holeNumber: n, par, ...deriveShotStats(shots, par), shots }
           : { ...blankHole(n, par), shots })
       } else {
-        // Quick round: keep the stats the shots give us, drop the shot list
-        const stats = deriveShotStats(shots, par)
+        // Quick round: every stroke is in the list, so the basic stats do not
+        // need the distances. Keep the stats, drop the shot list.
+        const counted = shots.map(s => (s.needsDistance ? { ...s, distanceToPin: 1 } : s))
+        const stats = deriveShotStats(counted, par)
+        const bunkerGap = shots.some(s => s.needsDistance && s.lieType === 'bunker')
         holes.push({
           ...blankHole(n, par),
-          score: saidScore ?? (complete ? stats.score : par),
+          score: saidScore ?? stats.score,
           fir: stats.fir,
           gir: stats.gir,
-          putts: complete ? stats.putts : (v.putts ?? 2),
+          putts: stats.putts,
           upAndDown: stats.gir ? null : stats.upAndDown,
+          sandSave: bunkerGap ? null : stats.sandSave,
         })
-        if (saidScore === null && !complete) problems.push('I did not hear your score on this hole.')
+        notes.push(scoreMatches ? null : (problems.join(' ') || null))
+        status.push(scoreMatches ? 'complete' : 'partial')
+        continue
       }
       notes.push(problems.length > 0 ? problems.join(' ') : null)
       status.push(isComplete ? 'complete' : 'partial')

@@ -5,6 +5,8 @@ interface SendEmailParams {
   subject: string
   htmlContent: string
   tags?: string[]
+  // Files fetched by Brevo from a public URL and attached to the email
+  attachments?: { name: string; url: string }[]
 }
 
 interface AddContactParams {
@@ -40,6 +42,7 @@ export async function sendEmail(params: SendEmailParams) {
       subject: params.subject,
       htmlContent: params.htmlContent,
       tags: params.tags || ['tmstats-marketing'],
+      ...(params.attachments && params.attachments.length > 0 ? { attachment: params.attachments } : {}),
     }),
   })
 

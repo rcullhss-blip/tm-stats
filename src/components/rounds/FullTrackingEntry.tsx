@@ -73,6 +73,31 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   const [pendingDist, setPendingDist] = useState('')
   const [pendingProcess, setPendingProcess] = useState<boolean | null>(null)
   const [error, setError] = useState('')
+  // Voice entry: distances typed into shots that were heard without one
+  const [gapInputs, setGapInputs] = useState<Record<number, string>>({})
+  const hasGaps = shots.some(s => s.needsDistance)
+
+  // Fill in the distance for a shot voice entry heard without one. Any penalty
+  // straight after it sits at the same spot, so it takes the same distance.
+  function fillGap(index: number) {
+    const shot = shots[index]
+    const raw = parseInt(gapInputs[index] ?? '')
+    const max = shot.lieType === 'green' ? 200 : 600
+    if (isNaN(raw) || raw <= 0 || raw > max) {
+      setError(`Enter the distance for shot ${shot.shotNumber} in ${shot.lieType === 'green' ? 'feet' : 'yards'}`)
+      return
+    }
+    const yards = shot.lieType === 'green' ? feetToYards(raw) : raw
+    const updated = shots.map(s => ({ ...s }))
+    delete updated[index].needsDistance
+    updated[index].distanceToPin = yards
+    for (let i = index + 1; i < updated.length && updated[i].lieType === 'penalty'; i++) {
+      updated[i].distanceToPin = yards
+    }
+    setError('')
+    setShots(updated)
+    onShotsChange?.(updated)
+  }
 
   const isPenalty = pendingLie === 'penalty'
   const onGreen = pendingLie === 'green' || pendingLie === 'fringe'
@@ -127,7 +152,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     setPendingQuality(prev.lieQuality ?? 'good')
     setPendingProcess(prev.process ?? null)
     // Penalty shots have no user-entered distance — restore blank
-    if (prev.lieType === 'penalty') {
+    if (prev.lieType === 'penalty' || prev.needsDistance) {
       setPendingDist('')
     } else {
       setPendingDist(
@@ -139,6 +164,10 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   }
 
   function finalise(finalShots: ShotEntry[]) {
+    if (finalShots.some(s => s.needsDistance)) {
+      setError('Add the missing distance in the amber box above first.')
+      return
+    }
     onComplete({ ...deriveShotStats(finalShots, par), par, shots: finalShots })
   }
 
@@ -227,9 +256,33 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                       </span>
                     )}
                   </div>
-                  <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
-                    {s.lieType === 'penalty' ? '—' : displayDist(s.distanceToPin, s.lieType)}
-                  </span>
+                  {s.needsDistance && s.lieType !== 'penalty' ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        aria-label={`Distance for shot ${s.shotNumber} in ${s.lieType === 'green' ? 'feet' : 'yards'}`}
+                        value={gapInputs[i] ?? ''}
+                        onChange={e => setGapInputs(g => ({ ...g, [i]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); fillGap(i) } }}
+                        placeholder={s.lieType === 'green' ? 'feet' : 'yards'}
+                        className="rounded-lg text-sm text-center outline-none"
+                        style={{ width: '72px', height: '44px', backgroundColor: '#F59E0B15', border: '1px solid #F59E0B', color: '#F0F0F0', fontFamily: 'var(--font-dm-mono)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fillGap(i)}
+                        className="rounded-lg text-sm font-semibold"
+                        style={{ minWidth: '52px', height: '44px', backgroundColor: '#F59E0B', color: '#0F1117' }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
+                      {s.lieType === 'penalty' ? '—' : displayDist(s.distanceToPin, s.lieType)}
+                    </span>
+                  )}
                 </div>
               )
             })}

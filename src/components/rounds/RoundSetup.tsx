@@ -14,11 +14,12 @@ export interface RecentCourse {
 interface Props {
   onNext: (data: SetupData) => void
   recentCourses?: RecentCourse[]
+  voiceEnabled?: boolean
 }
 
 const today = new Date().toISOString().split('T')[0]
 
-export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
+export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = false }: Props) {
   const [date, setDate] = useState(today)
   const [courseName, setCourseName] = useState('')
   const [holes, setHoles] = useState<9 | 18>(18)
@@ -263,7 +264,7 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
               </div>
             </button>
 
-            <button
+            {voiceEnabled && <button
               type="button"
               onClick={() => setVoice(true)}
               className="w-full p-4 rounded-xl text-left transition-colors"
@@ -283,10 +284,10 @@ export default function RoundSetup({ onNext, recentCourses = [] }: Props) {
                   className="text-xs px-2 py-0.5 rounded ml-2 shrink-0"
                   style={{ backgroundColor: '#CC222220', color: '#CC2222' }}
                 >
-                  New
+                  Testing
                 </span>
               </div>
-            </button>
+            </button>}
           </div>
         </div>
 

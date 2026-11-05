@@ -48,9 +48,10 @@ function clearDraft() {
 
 interface Props {
   recentCourses?: RecentCourse[]
+  voiceEnabled?: boolean
 }
 
-export default function NewRoundClient({ recentCourses = [] }: Props) {
+export default function NewRoundClient({ recentCourses = [], voiceEnabled = false }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'setup' | 'voice' | 'holes' | 'summary'>('setup')
   // Per-hole notes from voice entry: what the golfer still needs to check or add
@@ -98,6 +99,14 @@ export default function NewRoundClient({ recentCourses = [] }: Props) {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
+
+    // Voice entry safety net: a shot still waiting for its distance must never be saved
+    const gapHole = holeData.find(h => h.shots?.some(s => s.needsDistance))
+    if (gapHole) {
+      setError(`Hole ${gapHole.holeNumber} still has a shot with no distance. Go back and add it.`)
+      setSaving(false)
+      return
+    }
 
     const parTotal = holeData.reduce((sum, h) => sum + h.par, 0)
     const scoreTotal = holeData.reduce((sum, h) => sum + h.score, 0)
@@ -204,6 +213,7 @@ export default function NewRoundClient({ recentCourses = [] }: Props) {
     return (
       <RoundSetup
         recentCourses={recentCourses}
+        voiceEnabled={voiceEnabled}
         onNext={(data) => {
           setSetup(data)
           setResumePos(null)

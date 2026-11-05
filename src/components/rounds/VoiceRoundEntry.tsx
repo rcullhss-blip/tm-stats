@@ -204,7 +204,7 @@ export default function VoiceRoundEntry({ setup, onBack, onDone }: Props) {
               </p>
             </div>
             <p className="text-xs mt-3" style={{ color: '#9A9DB0', lineHeight: 1.5 }}>
-              Nothing is guessed. Anything we do not hear is left blank for you to fill in.
+              Nothing is guessed. If you forget a yardage, just carry on. It leaves a gap that you fill in when you check the hole.
             </p>
           </div>
         )}
