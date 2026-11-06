@@ -2,6 +2,12 @@
  * Strokes Gained Engine
  * Based on Mark Broadie's research ("Every Shot Counts")
  * Baseline = expected strokes to hole out for the chosen skill level
+ *
+ * Model:  expected = PGA Tour average from that spot + the level's gap to tour
+ * The gap is shared across the hole the way Broadie found it is in real golf:
+ * about two thirds in the long game (driving and approach), about a sixth in
+ * the short game and about 15% in putting. That is what keeps the split
+ * between the four categories honest.
  */
 
 import type { LieType, LieQuality, ShotEntry } from './types'
@@ -35,31 +41,19 @@ export function normalizeSkillLevel(raw: string | null | undefined): SkillLevel 
   return LEGACY_LEVEL_MAP[raw] ?? null
 }
 
-// Per-level skill adjustment (replaces the old `1 + (scratch-1)*scale` formula,
-// which exploded on long shots — e.g. it claimed a 1-handicap needed 5.2 strokes
-// from 394y and turned a +4 round into +14 strokes gained).
-//
-// New model:  expected = scratchExpected + ALPHA[level] * difficultyShape
-//   • difficultyShape ∈ [0,1] scales with how hard the shot is (≈0 for tap-ins,
-//     1 for long full shots) → the adjustment is BOUNDED and can never balloon.
-//   • ALPHA is calibrated so an average round for each band lands at a realistic
-//     score (scratch ≈ +4, 5–9 ≈ +9, 10–14 ≈ +13, 20–28 ≈ +25 over par). Tour is
-//     negative — they expect fewer strokes than scratch.
-const LEVEL_ALPHA: Record<SkillLevel, number> = {
-  tour:   -0.345,
-  scratch: 0,
-  h1_4:    0.115,
-  h5_9:    0.288,
-  h10_14:  0.518,
-  h15_19:  0.805,
-  h20_28:  1.208,
-  h29:     1.668,
-}
-
-// 0 for a 1-stroke position (tap-in), ramping to 1 by ~4 expected strokes
-// (a long full shot). Clamped at both ends so the adjustment stays bounded.
-function difficultyShape(scratchStrokes: number): number {
-  return Math.min(Math.max(scratchStrokes - 1, 0) / 3, 1)
+// ─── Skill model ──────────────────────────────────────────────────────────────
+// LEVEL_GAP = strokes per 18 holes the level's average round is worse than the
+// PGA Tour baseline on the same course. Average scores run about 3 + 0.95 × handicap
+// over par, and the tour baseline is about 2.4 under par on a 6,500 yard par 72.
+const LEVEL_GAP: Record<SkillLevel, number> = {
+  tour:    0,
+  scratch: 5.5,
+  h1_4:    7.8,
+  h5_9:    12.0,
+  h10_14:  16.8,
+  h15_19:  21.6,
+  h20_28:  28.0,
+  h29:     35.5,
 }
 
 export function handicapToSkillLevel(handicap: number | null): SkillLevel {
@@ -72,130 +66,100 @@ export function handicapToSkillLevel(handicap: number | null): SkillLevel {
   return 'h29'
 }
 
-// ─── Baseline data ────────────────────────────────────────────────────────────
-// Each entry: [distanceYards, expectedStrokes]
-// Interpolation is used between points
+// ─── PGA Tour baseline ────────────────────────────────────────────────────────
+// Average strokes to hole out, from Mark Broadie's published tour tables
+// (ShotLink 2004–2012). Each entry: [distanceYards, expectedStrokes].
+// A few source rows that dip slightly (short par 3s, mid-range sand) are smoothed
+// so expected strokes never fall as the shot gets longer.
 
-const GREEN_BASELINE: [number, number][] = [
-  [0,   0],
-  [0.3, 1.003],  // ~1 foot
-  [0.7, 1.011],  // ~2 feet
-  [1.0, 1.030],  // 3 feet
-  [1.3, 1.060],  // 4 feet
-  [1.7, 1.100],  // 5 feet
-  [2.0, 1.170],  // 6 feet
-  [2.5, 1.220],  // ~7 feet
-  [3.0, 1.280],  // 9 feet
-  [4.0, 1.430],  // 12 feet
-  [5.0, 1.550],  // 15 feet
-  [7.0, 1.680],  // 21 feet
-  [8.3, 1.780],  // 25 feet
-  [10,  1.860],  // 30 feet
-  [13,  1.950],  // 40 feet
-  [17,  2.020],  // 50 feet
-  [20,  2.080],  // 60 feet
-  [30,  2.180],  // 90 feet
-  [40,  2.260],  // 120 feet
-  [55,  2.360],  // 165 feet
+const ft = (feet: number) => feet / 3
+
+const GREEN_TOUR: [number, number][] = [
+  [0, 1.0],
+  [ft(1), 1.001], [ft(2), 1.009], [ft(3), 1.04], [ft(4), 1.13], [ft(5), 1.23],
+  [ft(6), 1.34], [ft(7), 1.42], [ft(8), 1.50], [ft(9), 1.56], [ft(10), 1.61],
+  [ft(12), 1.70], [ft(15), 1.78], [ft(20), 1.87], [ft(25), 1.93], [ft(30), 1.98],
+  [ft(40), 2.06], [ft(50), 2.14], [ft(60), 2.21], [ft(75), 2.31], [ft(90), 2.40],
+  [ft(120), 2.55], [ft(165), 2.75],
 ]
 
-const FAIRWAY_BASELINE: [number, number][] = [
-  [5,   2.30],
-  [10,  2.40],
-  [20,  2.55],
-  [30,  2.65],
-  [40,  2.72],
-  [50,  2.80],
-  [75,  2.97],
-  [100, 3.18],
-  [125, 3.38],
-  [150, 3.54],
-  [175, 3.68],
-  [200, 3.80],
-  [225, 3.91],
-  [250, 4.01],
-  [275, 4.10],
-  [300, 4.19],
-  [350, 4.38],
-  [400, 4.57],
-  [450, 4.75],
+const TEE_TOUR: [number, number][] = [
+  [60, 2.75], [80, 2.84], [100, 2.92], [120, 2.95], [140, 2.97], [160, 2.99],
+  [180, 3.05], [200, 3.12], [220, 3.17], [240, 3.25], [260, 3.45], [280, 3.65],
+  [300, 3.71], [320, 3.79], [340, 3.86], [360, 3.92], [380, 3.96], [400, 3.99],
+  [420, 4.02], [440, 4.08], [460, 4.17], [480, 4.28], [500, 4.41], [520, 4.54],
+  [540, 4.65], [560, 4.74], [580, 4.79], [600, 4.82],
 ]
 
-// Tee shots — perfect lie and you can tee it up, so easier than the same distance
-// from the fairway. Sits ~0.15–0.25 below FAIRWAY across the driving range.
-// Calibrated so a scratch round's tee-shot expectations sum to ~+4 over par.
-const TEE_BASELINE: [number, number][] = [
-  [100, 3.14],
-  [130, 3.20],
-  [150, 3.40],
-  [175, 3.55],
-  [200, 3.66],
-  [225, 3.76],
-  [250, 3.84],
-  [275, 3.92],
-  [300, 3.99],
-  [350, 4.15],
-  [400, 4.32],
-  [450, 4.49],
-  [500, 4.62],
-  [550, 4.74],
+const FAIRWAY_TOUR: [number, number][] = [
+  [5, 2.10], [10, 2.18], [20, 2.40], [30, 2.50], [40, 2.60], [60, 2.70], [80, 2.75],
+  [100, 2.80], [120, 2.85], [140, 2.91], [160, 2.98], [180, 3.08], [200, 3.19],
+  [220, 3.32], [240, 3.45], [260, 3.58], [280, 3.69], [300, 3.78], [320, 3.84],
+  [340, 3.88], [360, 3.95], [380, 4.03], [400, 4.11], [420, 4.15], [440, 4.20],
+  [460, 4.29], [480, 4.40], [500, 4.53], [520, 4.66], [540, 4.78], [560, 4.86],
+  [580, 4.91], [600, 4.94],
 ]
 
-const ROUGH_BASELINE: [number, number][] = [
-  [5,   2.50],
-  [10,  2.60],
-  [20,  2.75],
-  [30,  2.86],
-  [50,  3.05],
-  [75,  3.24],
-  [100, 3.46],
-  [125, 3.67],
-  [150, 3.85],
-  [175, 4.02],
-  [200, 4.17],
-  [250, 4.38],
-  [300, 4.57],
+const ROUGH_TOUR: [number, number][] = [
+  [5, 2.25], [10, 2.34], [20, 2.59], [30, 2.70], [40, 2.78], [60, 2.91], [80, 2.96],
+  [100, 3.02], [120, 3.08], [140, 3.15], [160, 3.23], [180, 3.31], [200, 3.42],
+  [220, 3.53], [240, 3.64], [260, 3.74], [280, 3.83], [300, 3.90], [320, 3.95],
+  [340, 4.02], [360, 4.11], [380, 4.21], [400, 4.30], [420, 4.34], [440, 4.39],
+  [460, 4.48], [480, 4.59], [500, 4.72], [520, 4.85], [540, 4.97], [560, 5.05],
+  [580, 5.10], [600, 5.13],
 ]
 
-const BUNKER_BASELINE: [number, number][] = [
-  [5,   2.50],
-  [10,  2.60],
-  [20,  2.80],
-  [30,  2.93],
-  [50,  3.15],
-  [75,  3.38],
-  [100, 3.64],
-  [150, 4.08],
-  [200, 4.47],
+const BUNKER_TOUR: [number, number][] = [
+  [5, 2.37], [10, 2.43], [20, 2.53], [30, 2.66], [40, 2.82], [60, 3.15], [80, 3.20],
+  [100, 3.22], [120, 3.23], [140, 3.25], [160, 3.28], [180, 3.40], [200, 3.55],
+  [220, 3.70], [240, 3.84], [260, 3.93], [280, 4.00], [300, 4.04], [320, 4.12],
+  [340, 4.26], [360, 4.41], [380, 4.55], [400, 4.69],
 ]
 
-const FRINGE_BASELINE: [number, number][] = [
-  [1,   1.90],
-  [3,   2.10],
-  [5,   2.25],
-  [10,  2.40],
-  [20,  2.58],
-  [30,  2.70],
+// ─── Share of the level's gap still to come from each kind of spot ────────────
+// Multiplied by LEVEL_GAP. From the tee the whole hole's share is still ahead;
+// from the fairway the drive's share is already spent; on the green only the
+// putting share is left.
+
+// Putting: 15% of the gap, growing with length as three-putts come in.
+const GREEN_SHARE: [number, number][] = [
+  [0, 0],
+  [ft(1), 0.0003], [ft(2), 0.0010], [ft(3), 0.0020], [ft(4), 0.0035], [ft(5), 0.0048],
+  [ft(6), 0.0058], [ft(8), 0.0072], [ft(10), 0.0082], [ft(15), 0.0090], [ft(20), 0.0095],
+  [ft(30), 0.0110], [ft(40), 0.0135], [ft(60), 0.0180], [ft(90), 0.0240], [ft(165), 0.0340],
 ]
 
-const PENALTY_BASELINE: [number, number][] = [
-  [30,  3.20],
-  [75,  3.60],
-  [100, 3.90],
-  [150, 4.25],
-  [200, 4.55],
-  [250, 4.78],
-  [300, 5.00],
+// Off the green: short game plus the putts to follow, then approach play on top
+// as the shot gets longer.
+const OFF_GREEN_SHARE: [number, number][] = [
+  [5, 0.017], [10, 0.020], [20, 0.024], [30, 0.026], [50, 0.028], [75, 0.030],
+  [100, 0.032], [125, 0.036], [150, 0.040], [175, 0.045], [200, 0.050], [225, 0.054],
+  [250, 0.057], [300, 0.060], [400, 0.064], [600, 0.066],
 ]
+
+// Amateurs give up a little more from the rough and noticeably more from sand.
+const ROUGH_SHARE_FACTOR = 1.1
+const BUNKER_SHARE_FACTOR = 1.3
+const FRINGE_SHARE_FACTOR = 1.2
+
+// From the tee the full hole is ahead: about 0.040 of the gap on a 150 yard
+// par 3, 0.058 on a 400 yard par 4, 0.068 on a 520 yard par 5 (18 holes ≈ 1.0).
+function teeShare(distYards: number): number {
+  if (distYards < 100) return interpolate(OFF_GREEN_SHARE, distYards)
+  return (0.028 + 0.00008 * Math.min(distYards, 600)) / 1.03
+}
 
 // ─── Interpolation ────────────────────────────────────────────────────────────
 
 function interpolate(table: [number, number][], distYards: number): number {
-  if (distYards <= 0) return 0
+  const first = table[0]
+  if (distYards <= first[0]) return first[1]
   const last = table[table.length - 1]
   if (distYards >= last[0]) {
-    // Extrapolate beyond max (each extra 50y ≈ +0.19 strokes)
-    return last[1] + ((distYards - last[0]) / 50) * 0.19
+    // Carry the final slope on past the end of the table
+    const prev = table[table.length - 2]
+    const slope = (last[1] - prev[1]) / (last[0] - prev[0])
+    return last[1] + (distYards - last[0]) * slope
   }
   for (let i = 1; i < table.length; i++) {
     const [d1, s1] = table[i - 1]
@@ -205,19 +169,39 @@ function interpolate(table: [number, number][], distYards: number): number {
       return s1 + t * (s2 - s1)
     }
   }
-  return table[0][1]
+  return last[1]
 }
 
-function scratchExpected(distYards: number, lie: LieType): number {
+// The fringe plays like a slightly harder putt, and never harder than a chip
+// from the same distance.
+function fringeTour(distYards: number): number {
+  const putt = interpolate(GREEN_TOUR, distYards)
+  return Math.min(putt + 0.06 + 0.012 * distYards, Math.max(putt + 0.03, interpolate(FAIRWAY_TOUR, distYards) - 0.02))
+}
+
+function tourExpected(distYards: number, lie: LieType): number {
   switch (lie) {
-    case 'green':   return interpolate(GREEN_BASELINE, distYards)
-    case 'fringe':  return interpolate(FRINGE_BASELINE, distYards)
-    case 'fairway': return interpolate(FAIRWAY_BASELINE, distYards)
-    case 'tee':     return interpolate(TEE_BASELINE, distYards)
-    case 'rough':   return interpolate(ROUGH_BASELINE, distYards)
-    case 'bunker':  return interpolate(BUNKER_BASELINE, distYards)
-    case 'penalty': return interpolate(PENALTY_BASELINE, distYards)
-    default:        return interpolate(FAIRWAY_BASELINE, distYards)
+    case 'green':   return interpolate(GREEN_TOUR, distYards)
+    case 'fringe':  return fringeTour(distYards)
+    case 'fairway': return interpolate(FAIRWAY_TOUR, distYards)
+    case 'tee':     return interpolate(TEE_TOUR, distYards)
+    case 'rough':   return interpolate(ROUGH_TOUR, distYards)
+    case 'bunker':  return interpolate(BUNKER_TOUR, distYards)
+    // A penalty row is a stroke already spent: one more than playing from there
+    case 'penalty': return interpolate(ROUGH_TOUR, distYards) + 1
+    default:        return interpolate(FAIRWAY_TOUR, distYards)
+  }
+}
+
+function gapShare(distYards: number, lie: LieType): number {
+  switch (lie) {
+    case 'green':   return interpolate(GREEN_SHARE, distYards)
+    case 'fringe':  return interpolate(GREEN_SHARE, distYards) * FRINGE_SHARE_FACTOR
+    case 'tee':     return teeShare(distYards)
+    case 'rough':   return interpolate(OFF_GREEN_SHARE, distYards) * ROUGH_SHARE_FACTOR
+    case 'bunker':  return interpolate(OFF_GREEN_SHARE, distYards) * BUNKER_SHARE_FACTOR
+    case 'penalty': return interpolate(OFF_GREEN_SHARE, distYards) * ROUGH_SHARE_FACTOR
+    default:        return interpolate(OFF_GREEN_SHARE, distYards)
   }
 }
 
@@ -235,8 +219,7 @@ export function expectedStrokes(
 ): number {
   if (distYards <= 0) return 0
   const lvl = normalizeSkillLevel(level) ?? 'scratch'
-  const scratch = scratchExpected(distYards, lie)
-  const base = scratch + LEVEL_ALPHA[lvl] * difficultyShape(scratch)
+  const base = tourExpected(distYards, lie) + LEVEL_GAP[lvl] * gapShare(distYards, lie)
   return base + LIE_QUALITY_OFFSET[quality]
 }
 
@@ -272,8 +255,9 @@ function shotCategory(
     return 'aroundGreen'
   }
 
-  // Off the tee: first shot on par 4 or par 5 from tee
-  if (shotIndex === 0 && par !== 3 && lieType === 'tee') return 'offTee'
+  // Off the tee: any shot from the tee on a par 4 or par 5 (includes a re-tee
+  // after a lost ball or out of bounds)
+  if (par !== 3 && lieType === 'tee') return 'offTee'
 
   // Everything else is approach
   return 'approach'
@@ -311,8 +295,18 @@ export function calculateHoleSG(
 
     const next = shots[i + 1] ?? null
 
-    const expectedBefore = expectedStrokes(shot.distanceToPin, shot.lieType, level, shot.lieQuality ?? 'good')
-    const expectedAfter = next ? expectedStrokes(next.distanceToPin, next.lieType, level, next.lieQuality ?? 'good') : 0
+    // A penalty stroke is charged to the shot that caused it. The penalty row
+    // itself is worth exactly one more than wherever the ball is played from
+    // next, so it scores 0 and the whole loss lands on the offending shot.
+    const expectedAt = (j: number): number => {
+      const s = shots[j]
+      if (!s) return 0
+      if (s.lieType === 'penalty') return 1 + expectedAt(j + 1)
+      return expectedStrokes(s.distanceToPin, s.lieType, level, s.lieQuality ?? 'good')
+    }
+
+    const expectedBefore = expectedAt(i)
+    const expectedAfter = next ? expectedAt(i + 1) : 0
     const sg = expectedBefore - expectedAfter - 1
 
     sgShots.push({
@@ -324,7 +318,7 @@ export function calculateHoleSG(
       expectedBefore,
       expectedAfter,
       sg,
-      category: shotCategory(shot, i, par),
+      category: shot.lieType === 'penalty' && sgShots.length > 0 ? sgShots[sgShots.length - 1].category : shotCategory(shot, i, par),
     })
   }
 
