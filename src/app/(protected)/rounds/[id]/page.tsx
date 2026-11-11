@@ -11,6 +11,7 @@ import BadRoundWidget from '@/components/rounds/BadRoundWidget'
 import DeleteRoundButton from '@/components/rounds/DeleteRoundButton'
 import { hasPro } from '@/lib/plan'
 import { roundHandicapLevels, fmtHandicapLevel, playedLikePhrase } from '@/lib/handicap-level'
+import { countMistakes } from '@/lib/mistakes'
 
 function scoreColor(diff: number): string {
   if (diff < 0) return '#22C55E'
@@ -125,6 +126,11 @@ export default async function RoundDetailPage({ params }: PageProps) {
     shots: h.shots as ShotEntry[] | null,
   }))
   const sgData = isFullTracking && sgUnlocked ? calculateRoundSG(sgHoles, skillLevel) : null
+
+  // Avoidable mistakes (Pro)
+  const mistakes = isPro
+    ? countMistakes(holeList.map(h => ({ par: h.par, score: h.score, putts: h.putts, shots: h.shots as ShotEntry[] | null })))
+    : null
 
   // The handicap this round played like, overall and for each part of the game
   const levels = sgData ? roundHandicapLevels(sgHoles) : null
@@ -318,6 +324,41 @@ export default async function RoundDetailPage({ params }: PageProps) {
           >
             Go Pro — £4.99/mo
           </Link>
+        </div>
+      )}
+
+      {/* Avoidable mistakes — Pro */}
+      {mistakes && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: '#9A9DB0' }}>
+              Avoidable mistakes
+            </h2>
+            <span
+              className="text-sm font-medium px-2 py-0.5 rounded"
+              style={{ fontFamily: 'var(--font-dm-mono)', backgroundColor: '#22263A', color: mistakes.total === 0 ? '#22C55E' : mistakes.total >= 5 ? '#EF4444' : '#F0F0F0' }}
+            >
+              {mistakes.total}
+            </span>
+          </div>
+          <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+            {mistakes.total === 0 ? (
+              <p className="text-sm" style={{ color: '#F0F0F0' }}>None. A clean card: no doubles, no three putts, nothing given away.</p>
+            ) : (
+              mistakes.items.filter(m => m.count > 0).map(m => (
+                <div key={m.key} className="flex items-center justify-between gap-3 mb-2 last:mb-0">
+                  <div>
+                    <p className="text-sm" style={{ color: '#F0F0F0' }}>{m.label}</p>
+                    <p className="text-xs" style={{ color: '#9A9DB0' }}>{m.detail}</p>
+                  </div>
+                  <span className="text-lg font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#EF4444' }}>{m.count}</span>
+                </div>
+              ))
+            )}
+            {!mistakes.hasShotData && (
+              <p className="text-xs mt-2" style={{ color: '#4A4D60' }}>Full tracking rounds also check short approaches and easy chips.</p>
+            )}
+          </div>
         </div>
       )}
 

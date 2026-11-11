@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
+import GameLevelCard, { type CategoryForm, type BandRank } from '@/components/stats/GameLevelCard'
+import { hasPro } from '@/lib/plan'
+import { pooledHandicapLevels } from '@/lib/handicap-level'
 
 export default async function StatsPage() {
   const supabase = await createClient()
@@ -17,7 +20,7 @@ export default async function StatsPage() {
     .single()
 
   const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
 
   const { data: roundsRaw } = await supabase
     .from('rounds')
@@ -169,6 +172,58 @@ export default async function StatsPage() {
 
   const sgRoundCount = rounds.filter(r => r.sgTotal !== null).length
 
+  // ── Game level (Pro): handicap each part of the game plays like ─────────────
+  // Rounds are newest first. Levels pool the last 20 Strokes Gained rounds.
+  const sgRounds = rounds.filter(r => r.sgTotal !== null).slice(0, 20)
+  const nSg = sgRounds.length
+  const pooled = isPro && nSg > 0
+    ? pooledHandicapLevels(sgRounds.map(r =>
+        (holesMap.get(r.id) ?? []).map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null }))
+      ))
+    : null
+
+  // Trend: recent rounds against the ones before them
+  let recentN = 0
+  let trendNote: string | null = null
+  if (nSg >= 10) { recentN = 5; trendNote = 'Trend compares your last 5 rounds with the 15 before.' }
+  else if (nSg >= 4) { recentN = Math.floor(nSg / 2); trendNote = `Trend compares your last ${recentN} rounds with the ${nSg - recentN} before.` }
+  else if (nSg > 0) { trendNote = 'Trends appear once you have 4 full tracking rounds.' }
+
+  const avg = (rs: RoundDataPoint[], pick: (r: RoundDataPoint) => number | null) =>
+    rs.length > 0 ? rs.reduce((sum, r) => sum + (pick(r) ?? 0), 0) / rs.length : 0
+  const category = (key: CategoryForm['key'], label: string, level: number | null, pick: (r: RoundDataPoint) => number | null): CategoryForm => ({
+    key, label, level,
+    sgPerRound: avg(sgRounds, pick),
+    trend: recentN > 0 ? avg(sgRounds.slice(0, recentN), pick) - avg(sgRounds.slice(recentN), pick) : null,
+  })
+  const gameCategories: CategoryForm[] = [
+    category('offTee', 'Driving', pooled?.offTee ?? null, r => r.sgOffTee),
+    category('approach', 'Approach', pooled?.approach ?? null, r => r.sgApproach),
+    category('aroundGreen', 'Short game', pooled?.aroundGreen ?? null, r => r.sgAroundGreen),
+    category('putting', 'Putting', pooled?.putting ?? null, r => r.sgPutt),
+  ]
+
+  // Distance bands ranked by Strokes Gained per round
+  const BAND_PREFIX: Record<SGBand['category'], string> = { putting: 'Putts', around_green: 'Chips', approach: 'Approach', off_tee: 'Drives' }
+  const bandTotals = new Map<string, BandRank & { sgSum: number }>()
+  for (const r of sgRounds) {
+    for (const b of r.sgBands ?? []) {
+      if (b.count === 0) continue
+      const label = `${BAND_PREFIX[b.category]} ${b.label}`
+      const t = bandTotals.get(label) ?? { label, sgPerRound: 0, shots: 0, sgSum: 0 }
+      t.sgSum += b.sgSum
+      t.shots += b.count
+      bandTotals.set(label, t)
+    }
+  }
+  const rankedBands = [...bandTotals.values()]
+    .filter(b => b.shots >= 3)
+    .map(b => ({ label: b.label, shots: b.shots, sgPerRound: b.sgSum / Math.max(nSg, 1) }))
+    .sort((a, b) => b.sgPerRound - a.sgPerRound)
+  const side = Math.min(3, Math.floor(rankedBands.length / 2))
+  const bestBands = rankedBands.slice(0, side)
+  const worstBands = rankedBands.slice(rankedBands.length - side).reverse()
+
   // Milestones & streaks — all-time, computed from hole-level data
   const chrono = [...roundList].sort((a, b) => a.date.localeCompare(b.date))
   let longestBogeyFreeRun = 0
@@ -204,6 +259,16 @@ export default async function StatsPage() {
           {rounds.length} rounds
         </span>
       </div>
+      <GameLevelCard
+        isPro={isPro}
+        roundsUsed={nSg}
+        handicap={profile?.handicap ?? null}
+        overall={pooled?.total ?? null}
+        categories={gameCategories}
+        best={bestBands}
+        worst={worstBands}
+        trendNote={trendNote}
+      />
       <StatsView
         rounds={rounds}
         skillLevelLabel={SKILL_LEVEL_LABELS[skillLevel]}
