@@ -2,8 +2,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Footer from '@/components/layout/Footer'
 import CookieBanner from '@/components/layout/CookieBanner'
+import ExampleRound from '@/components/dashboard/ExampleRound'
+import { priceFor } from '@/lib/stripe'
 
 export default function LandingPage() {
+  // Elite is shown as opening soon until its Stripe prices are set up
+  const eliteOpen = !!priceFor('elite', 'monthly') && !!priceFor('elite', 'yearly')
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F1117', color: '#F0F0F0' }}>
       {/* Header */}
@@ -48,7 +52,22 @@ export default function LandingPage() {
           >
             Start free — no card needed
           </Link>
-          <p className="text-sm" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99/month.</p>
+          <p className="text-sm" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99 a month, Elite from £8.99.</p>
+        </section>
+
+        {/* What you get back after one round */}
+        <section className="px-6 pb-12 max-w-lg mx-auto w-full">
+          <h2 className="text-xl font-bold mb-2 text-center" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+            One round in, this is what you see
+          </h2>
+          <p className="text-sm text-center mb-4" style={{ color: '#9A9DB0' }}>
+            Your score, the handicap you played like, and the one part of your game that cost you.
+          </p>
+          <ExampleRound
+            ctaHref="/signup"
+            ctaLabel="Get this for your next round"
+            note="Free to start. No card needed."
+          />
         </section>
 
         {/* Track → Analyse → Improve */}
@@ -86,6 +105,8 @@ export default function LandingPage() {
           <div className="space-y-3 mb-12">
             {[
               { title: 'Strokes Gained', desc: 'The same analytics used on tour — see which shots actually cost you' },
+              { title: 'Played like a handicap', desc: 'Every round and every part of your game turned into the handicap it played like. Driving like a 3, approach like a 10: now you know what to work on' },
+              { title: 'Shot patterns', desc: 'One tap per shot for where it finished. See which way you miss from every distance, short or long, left or right' },
               { title: 'AI Coaching', desc: 'Data-driven feedback in 7 different coaching styles, based on your round' },
               { title: 'Built for the course', desc: 'Mobile-first, fast entry, works in any conditions — no hardware needed' },
             ].map(({ title, desc }) => (
@@ -132,7 +153,8 @@ export default function LandingPage() {
                 <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
                   <li>✓ 5 rounds</li>
                   <li>✓ Full stats</li>
-                  <li>✓ Strokes Gained — 1 free round</li>
+                  <li>✓ Strokes Gained on 1 round</li>
+                  <li>✓ Share card for every round</li>
                   <li style={{ color: '#4A4D60' }}>✗ AI coaching &amp; trends</li>
                 </ul>
               </div>
@@ -143,13 +165,32 @@ export default function LandingPage() {
                 </p>
                 <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
                   <li>✓ Unlimited rounds</li>
-                  <li>✓ Full Strokes Gained, every round</li>
-                  <li>✓ AI coaching — 7 styles</li>
+                  <li>✓ Strokes Gained, every round</li>
+                  <li>✓ Handicap level for each part of your game</li>
+                  <li>✓ AI coaching in 7 styles</li>
                   <li>✓ Mental game coach</li>
                 </ul>
               </div>
             </div>
-            <p className="text-center text-xs mt-3" style={{ color: '#4A4D60' }}>Or £50/year — save 16%. Cancel any time.</p>
+            <div className="p-5 rounded-2xl mt-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Elite</p>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: eliteOpen ? '#22C55E20' : '#22263A', color: eliteOpen ? '#22C55E' : '#9A9DB0' }}>
+                  {eliteOpen ? 'New' : 'Opening soon'}
+                </span>
+              </div>
+              <p className="text-2xl font-bold mb-3" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
+                £8.99<span className="text-sm font-normal" style={{ color: '#9A9DB0' }}>/mo</span>
+              </p>
+              <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
+                <li>✓ Everything in Pro</li>
+                <li>✓ Advanced shot tracking: one tap for where each shot finished</li>
+                <li>✓ Shot patterns for every distance, with a plot of your misses</li>
+                <li>✓ Putting miss patterns: short or long, left or right</li>
+                <li>✓ Coaching built on which way you miss</li>
+              </ul>
+            </div>
+            <p className="text-center text-xs mt-3" style={{ color: '#4A4D60' }}>Pro £50 a year, Elite £85 a year. Cancel any time.</p>
           </div>
 
           {/* Social proof placeholder */}
@@ -193,6 +234,10 @@ export default function LandingPage() {
               { '@type': 'Offer', price: '0', priceCurrency: 'GBP', name: 'Free' },
               { '@type': 'Offer', price: '4.99', priceCurrency: 'GBP', name: 'Pro monthly' },
               { '@type': 'Offer', price: '50', priceCurrency: 'GBP', name: 'Pro yearly' },
+              ...(eliteOpen ? [
+                { '@type': 'Offer', price: '8.99', priceCurrency: 'GBP', name: 'Elite monthly' },
+                { '@type': 'Offer', price: '85', priceCurrency: 'GBP', name: 'Elite yearly' },
+              ] : []),
             ],
             author: { '@type': 'Person', name: 'Rob Cull' },
           }),

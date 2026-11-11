@@ -21,7 +21,7 @@ export default function TermsPage() {
       </>)}
 
       {section('3. Pro subscription', <>
-        <p>Pro subscriptions are available at £4.99/month or £50/year (prices may change — existing subscribers notified in advance).</p>
+        <p>Pro subscriptions are available at £4.99/month or £50/year and Elite subscriptions at £8.99/month or £85/year (prices may change — existing subscribers notified in advance).</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Subscriptions renew automatically unless cancelled</li>
           <li>Cancel any time via your Profile page → Manage billing</li>

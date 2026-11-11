@@ -27,17 +27,27 @@ function fmt(n: number): string {
   return n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1)
 }
 
-export default function ExampleRound() {
+interface Props {
+  ctaHref?: string
+  ctaLabel?: string
+  note?: string
+}
+
+export default function ExampleRound({
+  ctaHref = '/rounds/new',
+  ctaLabel = 'Log your first round',
+  note = 'Choose Full tracking to get your own Strokes Gained. Your first one is free.',
+}: Props) {
   return (
     <div className="mb-4 rounded-xl overflow-hidden" style={{ backgroundColor: '#1A1D27', border: '1px dashed #3A3F58' }}>
-      <div className="px-4 py-2 flex items-center justify-between" style={{ backgroundColor: '#22263A' }}>
+      <div className="px-4 py-2 flex items-center justify-between text-left" style={{ backgroundColor: '#22263A' }}>
         <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#F59E0B' }}>
           Example round
         </p>
         <p className="text-xs" style={{ color: '#9A9DB0' }}>Not your data</p>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 text-left">
         <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>
           This is what you get back after one round. A {EXAMPLE.handicap} handicapper shoots {EXAMPLE.score} and wants to know why.
         </p>
@@ -103,14 +113,14 @@ export default function ExampleRound() {
         </div>
 
         <Link
-          href="/rounds/new"
+          href={ctaHref}
           className="block w-full text-center py-4 rounded-xl font-semibold"
           style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}
         >
-          Log your first round
+          {ctaLabel}
         </Link>
         <p className="text-xs text-center mt-2" style={{ color: '#9A9DB0' }}>
-          Choose Full tracking to get your own Strokes Gained. Your first one is free.
+          {note}
         </p>
       </div>
     </div>
