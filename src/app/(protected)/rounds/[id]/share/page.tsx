@@ -1,11 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { HoleRow, ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 import ShareCard, { type ShareData } from '@/components/rounds/ShareCard'
+import { hasPro } from '@/lib/plan'
+import { roundHandicapLevels, playedLikePhrase } from '@/lib/handicap-level'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -24,8 +26,7 @@ export default async function ShareRoundPage({ params }: PageProps) {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
-  if (!isPro) redirect(`/upgrade?reason=share`)
+  const isPro = hasPro(profile?.subscription_status)
 
   const { data: round } = await supabase
     .from('rounds')
@@ -53,12 +54,25 @@ export default async function ShareRoundPage({ params }: PageProps) {
   const birdies = holeList.filter(h => h.score <= h.par - 1).length
 
   const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
-  const sg = round.input_mode === 'full'
-    ? calculateRoundSG(
-        holeList.map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null })),
-        skillLevel
-      )
-    : null
+  // Everyone can share a round. Strokes Gained goes on the card when the golfer
+  // can see it on the round itself: Pro on every round, free on their first
+  // full tracking round.
+  let sgUnlocked = isPro
+  if (!isPro && round.input_mode === 'full') {
+    const { data: firstFull } = await supabase
+      .from('rounds')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('input_mode', 'full')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single()
+    sgUnlocked = firstFull?.id === id
+  }
+
+  const sgHoles = holeList.map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null }))
+  const sg = round.input_mode === 'full' && sgUnlocked ? calculateRoundSG(sgHoles, skillLevel) : null
+  const level = sg ? roundHandicapLevels(sgHoles)?.total ?? null : null
 
   const procShots = holeList
     .flatMap(h => (Array.isArray(h.shots) ? (h.shots as unknown as ShotEntry[]) : []))
@@ -80,6 +94,7 @@ export default async function ShareRoundPage({ params }: PageProps) {
     sgApproach: sg?.sgApproach ?? null,
     sgAroundGreen: sg?.sgAroundGreen ?? null,
     sgPutt: sg?.sgPutt ?? null,
+    playedLike: level !== null ? playedLikePhrase(level) : null,
     processPct: procShots.length > 0 ? Math.round((procShots.filter(s => s.process).length / procShots.length) * 100) : null,
     playerName: profile?.name?.split(' ')[0] ?? null,
   }

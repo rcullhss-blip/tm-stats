@@ -8,6 +8,9 @@ import { calculateRoundSG, handicapToSkillLevel } from '@/lib/sg-engine'
 import PreRoundPlanWidget from '@/components/dashboard/PreRoundPlanWidget'
 import PatternFinderWidget from '@/components/dashboard/PatternFinderWidget'
 import DashboardGuide from '@/components/dashboard/DashboardGuide'
+import ExampleRound from '@/components/dashboard/ExampleRound'
+import ProgressLadder from '@/components/dashboard/ProgressLadder'
+import { hasPro } from '@/lib/plan'
 
 function scoreToPar(score: number | null, par: number | null): string {
   if (!score || !par) return '—'
@@ -65,7 +68,7 @@ export default async function DashboardPage() {
   ])
 
   const name = profile?.name?.split(' ')[0] || 'Golfer'
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
   const roundCount = totalRounds ?? rounds?.length ?? 0
 
   // Quick stats from last 5 rounds
@@ -212,6 +215,9 @@ export default async function DashboardPage() {
       {/* Pattern Finder */}
       <PatternFinderWidget roundCount={patternRoundCount} isPro={isPro} />
 
+      {/* First three rounds: what the next one unlocks */}
+      {roundCount > 0 && <ProgressLadder roundCount={roundCount} isPro={isPro} />}
+
       {/* Summary cards */}
       {roundCount > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -267,31 +273,21 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty state: show what a round looks like instead of a blank screen */}
       {roundCount === 0 && (
-        <div className="text-center py-12">
-          <h2 className="text-lg font-semibold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
-            Log your first round
-          </h2>
-          <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: '#9A9DB0' }}>
-            Enter a round hole by hole and we&apos;ll show you exactly where your shots went.
-          </p>
-          <Link
-            href="/rounds/new"
-            className="inline-block px-6 py-4 rounded-xl font-semibold mb-3"
-            style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
-          >
-            + Log a round
-          </Link>
-          <br />
-          <Link
-            href="/player-guide"
-            className="inline-block px-5 py-3 rounded-xl text-sm font-medium"
-            style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
-          >
-            Player guide
-          </Link>
-        </div>
+        <>
+          <ExampleRound />
+          <ProgressLadder roundCount={roundCount} isPro={isPro} />
+          <div className="text-center mb-6">
+            <Link
+              href="/player-guide"
+              className="inline-block px-5 py-3 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
+            >
+              Player guide
+            </Link>
+          </div>
+        </>
       )}
 
       {/* Recent rounds list */}

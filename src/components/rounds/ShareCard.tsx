@@ -21,6 +21,8 @@ export interface ShareData {
   sgPutt: number | null
   processPct: number | null
   playerName: string | null
+  // "a 6 handicap", "a scratch golfer". Null when the round has no Strokes Gained.
+  playedLike?: string | null
 }
 
 interface Props {
@@ -89,6 +91,13 @@ async function drawStoryImage(data: ShareData): Promise<Blob | null> {
   ctx.font = '40px -apple-system, "Helvetica Neue", Arial, sans-serif'
   ctx.fillText(`Par ${data.par}`, W / 2, 1050)
 
+  // Played like
+  if (data.playedLike) {
+    ctx.fillStyle = '#22C55E'
+    ctx.font = 'bold 42px -apple-system, "Helvetica Neue", Arial, sans-serif'
+    ctx.fillText(`PLAYED LIKE ${data.playedLike.toUpperCase()}`, W / 2, 1118)
+  }
+
   // Stats row
   const stats: { label: string; value: string }[] = []
   if (data.firPct !== null) stats.push({ label: 'FAIRWAYS', value: `${data.firPct}%` })
@@ -101,18 +110,18 @@ async function drawStoryImage(data: ShareData): Promise<Blob | null> {
     const gap = 24
     const totalW = stats.length * boxW + (stats.length - 1) * gap
     let x = (W - totalW) / 2
-    const y = 1140
+    const y = 1150
     for (const s of stats) {
       ctx.fillStyle = '#1A1D27'
       ctx.beginPath()
-      ctx.roundRect(x, y, boxW, 170, 24)
+      ctx.roundRect(x, y, boxW, 160, 24)
       ctx.fill()
       ctx.fillStyle = '#F0F0F0'
       ctx.font = 'bold 64px -apple-system, "Helvetica Neue", Arial, sans-serif'
-      ctx.fillText(s.value, x + boxW / 2, y + 90)
+      ctx.fillText(s.value, x + boxW / 2, y + 85)
       ctx.fillStyle = '#9A9DB0'
       ctx.font = '28px -apple-system, "Helvetica Neue", Arial, sans-serif'
-      ctx.fillText(s.label, x + boxW / 2, y + 140)
+      ctx.fillText(s.label, x + boxW / 2, y + 132)
       x += boxW + gap
     }
   }
@@ -272,7 +281,12 @@ export default function ShareCard({ data }: Props) {
 
         <p className="font-bold leading-none" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor, fontSize: '88px' }}>{data.score}</p>
         <p className="text-3xl font-bold mt-1" style={{ fontFamily: 'var(--font-dm-mono)', color: scoreColor }}>{fmtToPar(data.toPar)}</p>
-        <p className="text-xs mb-6" style={{ color: '#9A9DB0' }}>Par {data.par}</p>
+        <p className="text-xs" style={{ color: '#9A9DB0', marginBottom: data.playedLike ? '10px' : '24px' }}>Par {data.par}</p>
+        {data.playedLike && (
+          <p className="text-sm font-bold tracking-wide mb-5" style={{ color: '#22C55E', textTransform: 'uppercase' }}>
+            Played like {data.playedLike}
+          </p>
+        )}
 
         {stats.length > 0 && (
           <div className="flex justify-center gap-2 mb-4">

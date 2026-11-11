@@ -9,6 +9,8 @@ import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillL
 import AICoachingPanel from '@/components/rounds/AICoachingPanel'
 import BadRoundWidget from '@/components/rounds/BadRoundWidget'
 import DeleteRoundButton from '@/components/rounds/DeleteRoundButton'
+import { hasPro } from '@/lib/plan'
+import { roundHandicapLevels, fmtHandicapLevel, playedLikePhrase } from '@/lib/handicap-level'
 
 function scoreColor(diff: number): string {
   if (diff < 0) return '#22C55E'
@@ -101,7 +103,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
 
   // SG access: Pro sees SG on every round; free users get it on their FIRST
   // full-tracking round only (the free taster), then it locks.
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
   const isFullTracking = round.input_mode === 'full'
   let sgUnlocked = isPro
   if (!isPro && isFullTracking) {
@@ -117,16 +119,15 @@ export default async function RoundDetailPage({ params }: PageProps) {
   }
 
   // SG calculations (full tracking rounds only, when unlocked)
-  const sgData = isFullTracking && sgUnlocked
-    ? calculateRoundSG(
-        holeList.map(h => ({
-          holeNumber: h.hole_number,
-          par: h.par as 3 | 4 | 5,
-          shots: h.shots as ShotEntry[] | null,
-        })),
-        skillLevel
-      )
-    : null
+  const sgHoles = holeList.map(h => ({
+    holeNumber: h.hole_number,
+    par: h.par as 3 | 4 | 5,
+    shots: h.shots as ShotEntry[] | null,
+  }))
+  const sgData = isFullTracking && sgUnlocked ? calculateRoundSG(sgHoles, skillLevel) : null
+
+  // The handicap this round played like, overall and for each part of the game
+  const levels = sgData ? roundHandicapLevels(sgHoles) : null
 
   // Front 9 / Back 9
   const has9s = round.holes === 18 && holeList.length === 18
@@ -223,15 +224,13 @@ export default async function RoundDetailPage({ params }: PageProps) {
           ← Rounds
         </Link>
         <div className="flex items-center gap-2">
-          {isPro && (
-            <Link
-              href={`/rounds/${id}/share`}
-              className="text-sm px-3 py-2 rounded-lg font-medium"
-              style={{ backgroundColor: '#CC222220', color: '#CC2222', border: '1px solid #CC222240' }}
-            >
-              Share
-            </Link>
-          )}
+          <Link
+            href={`/rounds/${id}/share`}
+            className="text-sm px-3 py-2 rounded-lg font-medium"
+            style={{ backgroundColor: '#CC222220', color: '#CC2222', border: '1px solid #CC222240' }}
+          >
+            Share
+          </Link>
           <Link
             href={`/rounds/${id}/edit`}
             className="text-sm px-3 py-2 rounded-lg"
@@ -343,6 +342,16 @@ export default async function RoundDetailPage({ params }: PageProps) {
             </span>
           </div>
           <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+            {/* Played like */}
+            {levels?.total != null && (
+              <div className="pb-3 mb-3" style={{ borderBottom: '1px solid #2E3247' }}>
+                <p className="text-xs uppercase tracking-wide mb-0.5" style={{ color: '#9A9DB0' }}>Played like</p>
+                <p className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+                  {playedLikePhrase(levels.total)}
+                </p>
+              </div>
+            )}
+
             {/* Total */}
             <div
               className="flex items-center justify-between pb-3 mb-3"
@@ -359,16 +368,23 @@ export default async function RoundDetailPage({ params }: PageProps) {
 
             {/* Categories */}
             {[
-              { label: 'Off the tee', value: sgData.sgOffTee },
-              { label: 'Approach', value: sgData.sgApproach },
-              { label: 'Around green', value: sgData.sgAroundGreen },
-              { label: 'Putting', value: sgData.sgPutt },
-            ].map(({ label, value }) => {
+              { label: 'Off the tee', value: sgData.sgOffTee, level: levels?.offTee ?? null },
+              { label: 'Approach', value: sgData.sgApproach, level: levels?.approach ?? null },
+              { label: 'Around green', value: sgData.sgAroundGreen, level: levels?.aroundGreen ?? null },
+              { label: 'Putting', value: sgData.sgPutt, level: levels?.putting ?? null },
+            ].map(({ label, value, level }) => {
               const barWidth = Math.min(Math.abs(value) * 10, 100)
               return (
                 <div key={label} className="mb-3 last:mb-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm" style={{ color: '#9A9DB0' }}>{label}</span>
+                    <span className="text-sm" style={{ color: '#9A9DB0' }}>
+                      {label}
+                      {isPro && level !== null && (
+                        <span className="text-xs ml-2 px-1.5 py-0.5 rounded" style={{ backgroundColor: '#22263A', color: '#F0F0F0' }}>
+                          like {fmtHandicapLevel(level)}
+                        </span>
+                      )}
+                    </span>
                     <span
                       className="text-sm font-medium"
                       style={{ fontFamily: 'var(--font-dm-mono)', color: sgColor(value) }}
