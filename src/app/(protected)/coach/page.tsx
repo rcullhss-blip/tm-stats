@@ -5,8 +5,13 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
-import { calculateRoundSG, handicapToSkillLevel } from '@/lib/sg-engine'
-import type { HoleRow, ShotEntry } from '@/lib/types'
+import type { ShotEntry } from '@/lib/types'
+import TeamLeaderboard, { type LeaderboardRow } from '@/components/coach/TeamLeaderboard'
+import { pooledHandicapLevels } from '@/lib/handicap-level'
+
+function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
 
 export default async function CoachPage() {
   const supabase = await createClient()
@@ -47,6 +52,7 @@ export default async function CoachPage() {
   const memberIds = (membersRaw ?? []).map((m: { user_id: string }) => m.user_id)
 
   // Fetch member profiles
+  let leaderboard: LeaderboardRow[] = []
   let players: { id: string; name: string | null; email: string; handicap: number | null; avgScore: number | null; lastRound: string | null }[] = []
   if (memberIds.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,11 +65,11 @@ export default async function CoachPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: roundsRaw } = await (service as any)
       .from('rounds')
-      .select('id, user_id, date, score_total, par_total')
+      .select('id, user_id, date, score_total, par_total, input_mode')
       .in('user_id', memberIds)
       .order('date', { ascending: false })
 
-    const roundsByPlayer = new Map<string, { score_total: number | null; par_total: number | null; date: string }[]>()
+    const roundsByPlayer = new Map<string, { id: string; score_total: number | null; par_total: number | null; date: string; input_mode: string }[]>()
     for (const r of (roundsRaw ?? [])) {
       if (!roundsByPlayer.has(r.user_id)) roundsByPlayer.set(r.user_id, [])
       roundsByPlayer.get(r.user_id)!.push(r)
@@ -86,8 +92,54 @@ export default async function CoachPage() {
     })
   }
 
-  void calculateRoundSG; void handicapToSkillLevel
-  void (null as unknown as HoleRow); void (null as unknown as ShotEntry)
+  // Leaderboard: handicap levels from each player's last 5 full tracking rounds
+  if (memberIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: lbRounds } = await (service as any)
+      .from('rounds')
+      .select('id, user_id, date, input_mode')
+      .in('user_id', memberIds)
+      .order('date', { ascending: false })
+
+    const cutoff = isoDaysAgo(30)
+    const fullByPlayer = new Map<string, string[]>()
+    const recentCount = new Map<string, number>()
+    for (const r of (lbRounds ?? []) as { id: string; user_id: string; date: string; input_mode: string }[]) {
+      if (r.date >= cutoff) recentCount.set(r.user_id, (recentCount.get(r.user_id) ?? 0) + 1)
+      if (r.input_mode !== 'full') continue
+      const list = fullByPlayer.get(r.user_id) ?? []
+      if (list.length < 5) { list.push(r.id); fullByPlayer.set(r.user_id, list) }
+    }
+
+    const fullIds = [...fullByPlayer.values()].flat()
+    const holesByRound = new Map<string, { holeNumber: number; par: 3 | 4 | 5; shots: ShotEntry[] | null }[]>()
+    if (fullIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: lbHoles } = await (service as any).from('holes').select('round_id, hole_number, par, shots').in('round_id', fullIds)
+      for (const h of lbHoles ?? []) {
+        if (!holesByRound.has(h.round_id)) holesByRound.set(h.round_id, [])
+        holesByRound.get(h.round_id)!.push({ holeNumber: h.hole_number, par: h.par, shots: h.shots })
+      }
+    }
+
+    leaderboard = players.map(p => {
+      const ids = fullByPlayer.get(p.id) ?? []
+      const levels = ids.length > 0 ? pooledHandicapLevels(ids.map(id => holesByRound.get(id) ?? [])) : null
+      return {
+        id: p.id,
+        name: p.name ?? p.email,
+        handicap: p.handicap,
+        avgToPar: p.avgScore,
+        roundsLast30: recentCount.get(p.id) ?? 0,
+        sgRounds: ids.length,
+        level: levels?.total ?? null,
+        offTee: levels?.offTee ?? null,
+        approach: levels?.approach ?? null,
+        aroundGreen: levels?.aroundGreen ?? null,
+        putting: levels?.putting ?? null,
+      }
+    })
+  }
 
   function scoreColor(v: number | null) {
     if (v === null) return '#4A4D60'
@@ -115,6 +167,9 @@ export default async function CoachPage() {
           Players enter this in their Profile → Join a team
         </p>
       </div>
+
+      {/* Leaderboard */}
+      {players.length > 1 && <TeamLeaderboard rows={leaderboard} />}
 
       {/* Players */}
       <div className="flex items-center justify-between mb-3">

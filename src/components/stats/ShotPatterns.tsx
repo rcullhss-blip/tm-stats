@@ -182,7 +182,7 @@ export default function ShotPatterns({ access, buckets, rounds }: Props) {
               type="button"
               disabled={!has}
               onClick={() => { setGroup(g.key); setOpenKey(null) }}
-              className="px-3 rounded-lg text-sm font-medium whitespace-nowrap"
+              className="px-3 rounded-lg text-sm font-medium whitespace-nowrap shrink-0"
               style={{
                 minHeight: '44px',
                 backgroundColor: selected ? '#CC2222' : '#1A1D27',
