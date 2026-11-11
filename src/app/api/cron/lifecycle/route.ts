@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/service'
 import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO } from '@/lib/lifecycle-emails'
+import { hasPro } from '@/lib/plan'
 
 export const maxDuration = 60
 
@@ -94,7 +95,7 @@ export async function GET(request: Request) {
     const fullRounds = userRounds.filter(r => r.input_mode === 'full')
     const lastRoundAge = userRounds.length > 0 ? now - new Date(userRounds[0].date).getTime() : null
     const accountAge = now - new Date(user.created_at).getTime()
-    const isPro = user.subscription_status === 'pro' || user.subscription_status === 'team'
+    const isPro = hasPro(user.subscription_status)
 
     // All emails the user currently qualifies for, in priority order —
     // send the first one they haven't had yet (one email per user per run)

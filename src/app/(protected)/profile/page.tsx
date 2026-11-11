@@ -11,6 +11,7 @@ import type { HoleRow, ShotEntry } from '@/lib/types'
 import PromoRedeemForm from '@/components/profile/PromoRedeemForm'
 import ReferralCard from '@/components/profile/ReferralCard'
 import JoinTeamForm from '@/components/profile/JoinTeamForm'
+import { hasPro, planOf, PLAN_LABEL } from '@/lib/plan'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -24,7 +25,7 @@ export default async function ProfilePage() {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
 
   // Check promo expiry and downgrade if needed
   if (isPro && profile?.promo_expires_at) {
@@ -143,7 +144,7 @@ export default async function ProfilePage() {
               color: isPro ? '#22C55E' : '#9A9DB0',
             }}
           >
-            {isPro ? 'Pro' : 'Free'}
+            {PLAN_LABEL[planOf(profile?.subscription_status)]}
           </span>
         </div>
       </div>
@@ -169,6 +170,19 @@ export default async function ProfilePage() {
         </div>
       ) : (
         <div className="mb-4">
+          {planOf(profile?.subscription_status) === 'pro' && (
+            <a
+              href="/upgrade?tier=elite"
+              className="block p-4 rounded-xl mb-3"
+              style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222230' }}
+            >
+              <p className="font-semibold text-sm mb-1" style={{ color: '#F0F0F0' }}>Elite: see which way you miss</p>
+              <p className="text-xs" style={{ color: '#9A9DB0' }}>
+                One extra tap per shot. A plot of where your shots finish for every distance, and coaching built on the pattern.
+              </p>
+              <p className="text-xs mt-2 font-medium" style={{ color: '#CC2222' }}>See Elite →</p>
+            </a>
+          )}
           <ManageBillingButton />
           {profile?.promo_expires_at && (
             <p className="text-xs mt-2 text-center" style={{ color: '#9A9DB0' }}>

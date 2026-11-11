@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@/lib/supabase/server'
 import MentalGameClient from '@/components/mental/MentalGameClient'
+import { hasPro } from '@/lib/plan'
 
 export default async function MentalGamePage() {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export default async function MentalGamePage() {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">

@@ -15,11 +15,12 @@ interface Props {
   onNext: (data: SetupData) => void
   recentCourses?: RecentCourse[]
   voiceEnabled?: boolean
+  advancedEnabled?: boolean
 }
 
 const today = new Date().toISOString().split('T')[0]
 
-export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = false }: Props) {
+export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = false, advancedEnabled = false }: Props) {
   const [date, setDate] = useState(today)
   const [courseName, setCourseName] = useState('')
   const [holes, setHoles] = useState<9 | 18>(18)
@@ -70,6 +71,7 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
       parsPrefill,
       trackProcess: !voice && inputMode === 'full' ? trackProcess : false,
       voice,
+      advanced: advancedEnabled && !voice && inputMode === 'full',
       yardagesPrefill,
     })
   }

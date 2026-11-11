@@ -4,6 +4,7 @@ import {
   calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS,
   type RoundSGSummary, type SkillLevel,
 } from '@/lib/sg-engine'
+import { hasPro } from '@/lib/plan'
 
 // Everything the round breakdown email and its PDF need, worked out once from
 // the saved round. Same rules as the round page (FIR from shots in full
@@ -138,7 +139,7 @@ export async function loadRoundSummary(sb: any, roundId: string, userId: string)
 
   // Strokes Gained: Pro and team accounts always; free accounts on their first
   // full-tracking round only (the free taster), exactly as on the round page.
-  const isPro = profile.subscription_status === 'pro' || profile.subscription_status === 'team'
+  const isPro = hasPro(profile.subscription_status)
   let sgUnlocked = isPro
   if (!isPro && isFullTracking) {
     const { data: firstFull } = await sb

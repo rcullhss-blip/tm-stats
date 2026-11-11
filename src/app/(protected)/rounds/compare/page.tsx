@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 import CompareClient, { type CompareRound } from '@/components/rounds/CompareClient'
+import { hasPro } from '@/lib/plan'
 
 export default async function CompareRoundsPage() {
   const supabase = await createClient()
@@ -17,7 +18,7 @@ export default async function CompareRoundsPage() {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
   const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
 
   const { data: roundsRaw } = await supabase

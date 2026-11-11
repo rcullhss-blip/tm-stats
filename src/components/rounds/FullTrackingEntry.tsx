@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { HoleData } from '@/lib/types'
-import type { LieType, LieQuality, ShotEntry } from '@/lib/types'
+import type { LieType, LieQuality, ShotEntry, ShotMiss } from '@/lib/types'
 import { deriveShotStats } from '@/lib/shot-stats'
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   onComplete: (data: Omit<HoleData, 'holeNumber'>) => void
   onShotsChange?: (shots: ShotEntry[]) => void  // Live updates so in-progress shots survive a reload
   trackProcess?: boolean  // Mental process tracking — Yes/No per shot
+  advanced?: boolean      // Elite: ask where the last shot finished
 }
 
 const LIE_OPTIONS: { value: LieType; label: string }[] = [
@@ -47,6 +48,18 @@ function displayDist(distYards: number, lie: LieType): string {
   return `${distYards}y`
 }
 
+// Elite advanced tracking: labels for where a shot finished
+const MISS_GRID: { x: ShotMiss['x']; y: ShotMiss['y']; label: string }[] = [
+  { x: -1, y: 1, label: 'Long left' },  { x: 0, y: 1, label: 'Long' },      { x: 1, y: 1, label: 'Long right' },
+  { x: -1, y: 0, label: 'Left' },       { x: 0, y: 0, label: 'On target' }, { x: 1, y: 0, label: 'Right' },
+  { x: -1, y: -1, label: 'Short left' }, { x: 0, y: -1, label: 'Short' },   { x: 1, y: -1, label: 'Short right' },
+]
+const MISS_ROW = MISS_GRID.filter(c => c.y === 0)
+
+export function missLabel(m: ShotMiss): string {
+  return MISS_GRID.find(c => c.x === m.x && c.y === m.y)?.label ?? ''
+}
+
 function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   if (shots.length === 0) return 'tee'
   const prev = shots[shots.length - 1].lieType
@@ -61,7 +74,7 @@ function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   return 'fairway'
 }
 
-export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false }: Props) {
+export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false }: Props) {
   const [shots, setShots] = useState<ShotEntry[]>(initialShots ?? [])
   const [pendingLie, setPendingLie] = useState<LieType>(() => {
     if (initialShots && initialShots.length > 0) {
@@ -72,6 +85,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   const [pendingQuality, setPendingQuality] = useState<LieQuality>('good')
   const [pendingDist, setPendingDist] = useState('')
   const [pendingProcess, setPendingProcess] = useState<boolean | null>(null)
+  const [pendingMiss, setPendingMiss] = useState<ShotMiss | null>(null)
   const [error, setError] = useState('')
   // Voice entry: distances typed into shots that were heard without one
   const [gapInputs, setGapInputs] = useState<Record<number, string>>({})
@@ -100,6 +114,14 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   }
 
   const isPenalty = pendingLie === 'penalty'
+
+  // Advanced tracking asks how the shot just played finished. That shot is the
+  // last real (non-penalty) row. A drive only has a side; everything aimed at
+  // the pin can also be short or long.
+  const lastReal = [...shots].reverse().find(s => s.lieType !== 'penalty') ?? null
+  const askMiss = advanced && !isPenalty && lastReal !== null
+  const lastWasDrive = lastReal?.lieType === 'tee' && par !== 3
+  const lastWasPutt = lastReal?.lieType === 'green'
   const onGreen = pendingLie === 'green' || pendingLie === 'fringe'
   const distUnit = pendingLie === 'green' ? 'feet' : 'yards'
   const distPlaceholder = pendingLie === 'green' ? 'e.g. 12' : 'e.g. 145'
@@ -132,6 +154,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       lieType: pendingLie,
       ...(LIES_WITH_QUALITY.includes(pendingLie) && pendingQuality !== 'good' ? { lieQuality: pendingQuality } : {}),
       ...(trackProcess && !isPenalty && pendingProcess !== null ? { process: pendingProcess } : {}),
+      ...(askMiss && pendingMiss ? { miss: pendingMiss } : {}),
     }
     const newShots = [...shots, newShot]
     setShots(newShots)
@@ -139,6 +162,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     setPendingDist('')
     setPendingQuality('good')
     setPendingProcess(null)
+    setPendingMiss(null)
     setPendingLie(nextLieSuggestion(newShots, par))
   }
 
@@ -151,6 +175,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     setPendingLie(prev.lieType)
     setPendingQuality(prev.lieQuality ?? 'good')
     setPendingProcess(prev.process ?? null)
+    setPendingMiss(prev.miss ?? null)
     // Penalty shots have no user-entered distance — restore blank
     if (prev.lieType === 'penalty' || prev.needsDistance) {
       setPendingDist('')
@@ -242,6 +267,11 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                         }}
                       >
                         {s.lieQuality}
+                      </span>
+                    )}
+                    {s.miss && (s.miss.x !== 0 || s.miss.y !== 0) && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
+                        {missLabel(s.miss).toLowerCase()}
                       </span>
                     )}
                     {typeof s.process === 'boolean' && (
@@ -369,6 +399,42 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                 fontFamily: 'var(--font-dm-mono)',
               }}
             />
+          </div>
+        )}
+
+        {/* Elite advanced tracking — where the shot just played finished */}
+        {askMiss && (
+          <div className="mb-3">
+            <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
+              {lastWasDrive
+                ? 'Where did that drive finish? (optional)'
+                : lastWasPutt
+                  ? 'Where did that putt finish from the hole? (optional)'
+                  : 'Where did that shot finish from the pin? (optional)'}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {(lastWasDrive ? MISS_ROW : MISS_GRID).map(c => {
+                const selected = pendingMiss?.x === c.x && pendingMiss?.y === c.y
+                const centre = c.x === 0 && c.y === 0
+                const color = centre ? '#22C55E' : '#F59E0B'
+                return (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={() => setPendingMiss(selected ? null : { x: c.x, y: c.y })}
+                    className="py-2 rounded-lg text-xs font-medium"
+                    style={{
+                      backgroundColor: selected ? `${color}20` : '#1A1D27',
+                      color: selected ? color : '#9A9DB0',
+                      border: `1px solid ${selected ? `${color}60` : '#2E3247'}`,
+                      minHeight: '44px',
+                    }}
+                  >
+                    {lastWasDrive && centre ? 'On line' : c.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
 

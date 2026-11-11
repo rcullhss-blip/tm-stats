@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newUsers = await count('users', (q: any) => q.gte('created_at', weekAgo))
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proUsers = await count('users', (q: any) => q.in('subscription_status', ['pro', 'team']))
+    const proUsers = await count('users', (q: any) => q.in('subscription_status', ['pro', 'elite', 'team']))
     const totalRounds = await count('rounds')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newRounds = await count('rounds', (q: any) => q.gte('date', weekAgoDate))

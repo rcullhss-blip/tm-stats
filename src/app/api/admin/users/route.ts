@@ -17,7 +17,7 @@ export async function PATCH(request: Request) {
 
   const { userId, plan } = await request.json()
   if (!userId || !plan) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-  if (!['free', 'pro', 'team'].includes(plan)) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+  if (!['free', 'pro', 'elite', 'team'].includes(plan)) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
 
   const service = createServiceClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

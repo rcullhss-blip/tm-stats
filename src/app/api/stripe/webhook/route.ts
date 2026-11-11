@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getStripe } from '@/lib/stripe'
+import { getStripe, tierForPrices } from '@/lib/stripe'
 import { createServiceClient } from '@/lib/supabase/service'
 import type Stripe from 'stripe'
 
@@ -8,7 +8,7 @@ export const config = { api: { bodyParser: false } }
 
 async function updateSubscription(
   supabaseUserId: string,
-  status: 'pro' | 'free',
+  status: 'pro' | 'elite' | 'free',
   customerId?: string,
 ) {
   // Service-role client: a Stripe webhook has no logged-in user, so the
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session
       const userId = getUserId(session)
       if (userId) {
-        await updateSubscription(userId, 'pro', session.customer as string)
+        await updateSubscription(userId, session.metadata?.tier === 'elite' ? 'elite' : 'pro', session.customer as string)
       }
       break
     }
@@ -56,7 +56,10 @@ export async function POST(request: Request) {
       const userId = getUserId(sub)
       if (userId) {
         const active = ['active', 'trialing'].includes(sub.status)
-        await updateSubscription(userId, active ? 'pro' : 'free')
+        // The tier follows the price on the subscription, so a Pro member who
+        // moves up to Elite (or back down) is picked up here.
+        const tier = tierForPrices(sub.items.data.map(i => i.price.id))
+        await updateSubscription(userId, active ? tier : 'free')
       }
       break
     }

@@ -512,6 +512,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             onChangePar={p => updateHole({ par: p, score: p })}
             onShotsChange={shots => updateHole({ shots })}
             trackProcess={setup.trackProcess}
+            advanced={setup.advanced}
             onComplete={(data) => {
               const updatedHoles = holes.map((h, i) =>
                 i === current ? { ...h, ...data } : h

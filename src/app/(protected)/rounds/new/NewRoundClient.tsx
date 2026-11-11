@@ -49,9 +49,10 @@ function clearDraft() {
 interface Props {
   recentCourses?: RecentCourse[]
   voiceEnabled?: boolean
+  advancedEnabled?: boolean
 }
 
-export default function NewRoundClient({ recentCourses = [], voiceEnabled = false }: Props) {
+export default function NewRoundClient({ recentCourses = [], voiceEnabled = false, advancedEnabled = false }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'setup' | 'voice' | 'holes' | 'summary'>('setup')
   // Per-hole notes from voice entry: what the golfer still needs to check or add
@@ -214,6 +215,7 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
       <RoundSetup
         recentCourses={recentCourses}
         voiceEnabled={voiceEnabled}
+        advancedEnabled={advancedEnabled}
         onNext={(data) => {
           setSetup(data)
           setResumePos(null)

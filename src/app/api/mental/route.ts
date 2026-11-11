@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { hasPro } from '@/lib/plan'
 
 const SYSTEM_PROMPT = `You are a calm, experienced golf mentor — like a trusted playing partner who has seen it all.
 You help golfers with the mental side of their game. Your tone is warm, grounded, and practical — never clinical, never preachy, never like a therapist.
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
   if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
 
   let body: { message?: string; sessionId?: string }
@@ -114,7 +115,7 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
   if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
 
   const { searchParams } = new URL(request.url)

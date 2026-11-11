@@ -23,7 +23,7 @@ export type Database = {
           name: string | null
           handicap: number | null
           created_at: string
-          subscription_status: 'free' | 'pro' | 'team'
+          subscription_status: 'free' | 'pro' | 'elite' | 'team'
           feedback_level: 'simple' | 'intermediate' | 'advanced'
           coach_persona: string
           sg_baseline: string | null
@@ -35,7 +35,7 @@ export type Database = {
           name?: string | null
           handicap?: number | null
           created_at?: string
-          subscription_status?: 'free' | 'pro' | 'team'
+          subscription_status?: 'free' | 'pro' | 'elite' | 'team'
           feedback_level?: 'simple' | 'intermediate' | 'advanced'
           coach_persona?: string
           sg_baseline?: string | null
@@ -44,7 +44,7 @@ export type Database = {
         Update: {
           name?: string | null
           handicap?: number | null
-          subscription_status?: 'free' | 'pro' | 'team'
+          subscription_status?: 'free' | 'pro' | 'elite' | 'team'
           feedback_level?: 'simple' | 'intermediate' | 'advanced'
           coach_persona?: string
           sg_baseline?: string | null
@@ -176,7 +176,7 @@ export type HoleRow = Database['public']['Tables']['holes']['Row']
 
 export type RoundType = 'practice' | 'tournament' | 'competition'
 export type InputMode = 'quick' | 'full'
-export type SubscriptionStatus = 'free' | 'pro' | 'team'
+export type SubscriptionStatus = 'free' | 'pro' | 'elite' | 'team'
 export type MoodTag = 'tough' | 'average' | 'good' | 'great'
 export type EnergyTag = 'fresh' | 'normal' | 'tired' | 'niggly'
 export type ConditionTag = 'sunny' | 'windy' | 'rainy' | 'cold' | 'hot'
@@ -184,6 +184,11 @@ export type ConditionTag = 'sunny' | 'windy' | 'rainy' | 'cold' | 'hot'
 export type LieType = 'tee' | 'fairway' | 'rough' | 'bunker' | 'fringe' | 'green' | 'penalty'
 
 export type LieQuality = 'good' | 'awkward' | 'severe'
+
+export interface ShotMiss {
+  x: -1 | 0 | 1
+  y: -1 | 0 | 1
+}
 
 export interface ShotEntry {
   shotNumber: number
@@ -193,6 +198,12 @@ export interface ShotEntry {
   // Mental process tracking (optional, chosen at round setup): true = golfer fully
   // committed to their pre-shot process on this shot, regardless of the result.
   process?: boolean
+  // Elite advanced tracking (optional): where the ball finished compared with
+  // where the shot BEFORE this row was aimed. Stored on the row the ball ended
+  // up at, so "shot 2: fairway, 150y, miss x:1" means the drive finished right.
+  //   x: -1 left, 0 on line, 1 right      y: -1 short, 0 pin high, 1 long
+  // Drives only use x. Rows without it simply have no miss recorded.
+  miss?: ShotMiss
   // Entry-screen only, never saved: voice entry heard this shot but not its
   // distance. The golfer fills it in on the hole screen before the hole can be completed.
   needsDistance?: boolean
@@ -208,6 +219,8 @@ export interface SetupData {
   trackProcess?: boolean
   // Voice entry: the golfer talks through the round and checks the result.
   voice?: boolean
+  // Elite: ask where each shot finished (left, right, short, long)
+  advanced?: boolean
   // Tee yardage per hole from the last full-tracking round at this course, where known.
   yardagesPrefill?: (number | null)[]
 }

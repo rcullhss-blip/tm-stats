@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import type { ShotEntry, HoleRow } from '@/lib/types'
+import { hasPro, hasElite } from '@/lib/plan'
+import { buildShotPatterns, describePattern } from '@/lib/shot-patterns'
 
 // Map legacy DB values to new keys (backward compatibility)
 const LEGACY_MAP: Record<string, string> = {
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
     .single()
 
   if (!playerId) {
-    const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+    const isPro = hasPro(profile?.subscription_status)
     if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
   }
 
@@ -528,6 +530,35 @@ No intro, no labels, no extra text.`
   If process % is low in a category, address the mental side (commitment, routine, distraction) — not just technique.`
       : ''
 
+    // Elite: miss patterns from where shots finished, across this round and the
+    // player's recent full tracking rounds (one round alone is too few shots).
+    let missBlock = ''
+    if (hasElite(profile?.subscription_status) && round.input_mode === 'full') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: recent } = await (service as any)
+        .from('rounds').select('id').eq('user_id', targetUserId).eq('input_mode', 'full')
+        .order('date', { ascending: false }).limit(10)
+      const ids: string[] = (recent ?? []).map((r: { id: string }) => r.id)
+      if (ids.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: recentHoles } = await (service as any).from('holes').select('round_id, hole_number, par, shots').in('round_id', ids)
+        const byRound = new Map<string, { holeNumber: number; par: 3 | 4 | 5; shots: ShotEntry[] | null }[]>()
+        for (const h of recentHoles ?? []) {
+          if (!byRound.has(h.round_id)) byRound.set(h.round_id, [])
+          byRound.get(h.round_id)!.push({ holeNumber: h.hole_number, par: h.par, shots: h.shots })
+        }
+        const lines = buildShotPatterns(ids.filter(id => byRound.has(id)).map(id => ({ holes: byRound.get(id)! })), skillLevel)
+          .map(describePattern)
+          .filter((l): l is string => !!l)
+          .slice(0, 6)
+        if (lines.length > 0) {
+          missBlock = `\nMiss patterns over the last ${ids.length} full tracking rounds (where shots finished from the target):
+  ${lines.join('\n  ')}
+  Where a pattern is one-sided, say so with its number and give one aim point or club change that allows for it (for example "aim at the left half of the green from 150"). Do not invent a pattern that is not listed.`
+        }
+      }
+    }
+
     const notesBlock = round.notes ? `\nPlayer notes: "${round.notes}"` : ''
     const conditionParts = [
       round.mood ? `Mood: ${round.mood}` : null,
@@ -538,7 +569,7 @@ No intro, no labels, no extra text.`
     const pName = profile?.name?.split(' ')[0] ?? 'this player'
     userPrompt = `Here is the round data for ${pName} (handicap ${profile?.handicap ?? 'unknown'}):
 
-${statsLines}${sgBlock}${processBlock}${notesBlock}${conditionParts.length ? '\n' + conditionParts.join(' | ') : ''}
+${statsLines}${sgBlock}${missBlock}${processBlock}${notesBlock}${conditionParts.length ? '\n' + conditionParts.join(' | ') : ''}
 
 Give ${pName} specific coaching feedback based on these exact numbers.`
   }

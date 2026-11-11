@@ -9,6 +9,13 @@ import { gc } from '@/lib/gocardless'
 
 async function setStatus(userId: string, status: 'pro' | 'free') {
   const service = createServiceClient()
+  if (status === 'pro') {
+    // Direct Debit only ever pays for Pro. An account already on Elite or a
+    // coach account keeps what it has.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: current } = await (service as any).from('users').select('subscription_status').eq('id', userId).single()
+    if (current?.subscription_status === 'elite' || current?.subscription_status === 'team') return
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (service as any).from('users').update({ subscription_status: status }).eq('id', userId)
 }

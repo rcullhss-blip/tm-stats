@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewRoundClient from './NewRoundClient'
+import { hasPro, hasElite } from '@/lib/plan'
 
 export default async function NewRoundPage() {
   const supabase = await createClient()
@@ -15,7 +16,7 @@ export default async function NewRoundPage() {
     .eq('id', user.id)
     .single()
 
-  const isPro = profile?.subscription_status === 'pro' || profile?.subscription_status === 'team'
+  const isPro = hasPro(profile?.subscription_status)
 
   if (!isPro) {
     const { count } = await supabase
@@ -50,5 +51,8 @@ export default async function NewRoundPage() {
   // account only while it is being tested.
   const voiceEnabled = profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
 
-  return <NewRoundClient recentCourses={recentCourses} voiceEnabled={voiceEnabled} />
+  // Elite: advanced shot tracking (where each shot finished)
+  const advancedEnabled = hasElite(profile?.subscription_status)
+
+  return <NewRoundClient recentCourses={recentCourses} voiceEnabled={voiceEnabled} advancedEnabled={advancedEnabled} />
 }

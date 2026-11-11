@@ -5,7 +5,9 @@ import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
 import GameLevelCard, { type CategoryForm, type BandRank } from '@/components/stats/GameLevelCard'
-import { hasPro } from '@/lib/plan'
+import { hasPro, hasElite } from '@/lib/plan'
+import ShotPatterns from '@/components/stats/ShotPatterns'
+import { buildShotPatterns } from '@/lib/shot-patterns'
 import { pooledHandicapLevels } from '@/lib/handicap-level'
 
 export default async function StatsPage() {
@@ -21,6 +23,7 @@ export default async function StatsPage() {
 
   const skillLevel: SkillLevel = normalizeSkillLevel(profile?.sg_baseline) ?? handicapToSkillLevel(profile?.handicap ?? null)
   const isPro = hasPro(profile?.subscription_status)
+  const isElite = hasElite(profile?.subscription_status)
 
   const { data: roundsRaw } = await supabase
     .from('rounds')
@@ -224,6 +227,16 @@ export default async function StatsPage() {
   const bestBands = rankedBands.slice(0, side)
   const worstBands = rankedBands.slice(rankedBands.length - side).reverse()
 
+  // ── Shot patterns (Elite): every distance band, with where shots finished ───
+  const patternBuckets = isElite
+    ? buildShotPatterns(
+        sgRounds.map(r => ({
+          holes: (holesMap.get(r.id) ?? []).map(h => ({ holeNumber: h.hole_number, par: h.par as 3 | 4 | 5, shots: h.shots as ShotEntry[] | null })),
+        })),
+        skillLevel,
+      )
+    : []
+
   // Milestones & streaks — all-time, computed from hole-level data
   const chrono = [...roundList].sort((a, b) => a.date.localeCompare(b.date))
   let longestBogeyFreeRun = 0
@@ -269,6 +282,7 @@ export default async function StatsPage() {
         worst={worstBands}
         trendNote={trendNote}
       />
+      <ShotPatterns access={isElite ? 'elite' : isPro ? 'pro' : 'free'} buckets={patternBuckets} rounds={nSg} />
       <StatsView
         rounds={rounds}
         skillLevelLabel={SKILL_LEVEL_LABELS[skillLevel]}

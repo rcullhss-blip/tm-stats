@@ -8,7 +8,7 @@ interface Props {
   currentPlan: string
 }
 
-const PLANS = ['free', 'pro', 'team']
+const PLANS = ['free', 'pro', 'elite', 'team']
 
 export default function AdminUserActions({ userId, currentPlan }: Props) {
   const [plan, setPlan] = useState(currentPlan)
