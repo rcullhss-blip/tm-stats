@@ -8,6 +8,7 @@ import GameLevelCard, { type CategoryForm, type BandRank } from '@/components/st
 import { hasPro, hasElite } from '@/lib/plan'
 import ShotPatterns from '@/components/stats/ShotPatterns'
 import { buildShotPatterns } from '@/lib/shot-patterns'
+import { bandForLevel } from '@/lib/seo-stats'
 import { pooledHandicapLevels } from '@/lib/handicap-level'
 
 export default async function StatsPage() {
@@ -291,6 +292,7 @@ export default async function StatsPage() {
       <StatsView
         rounds={rounds}
         skillLevelLabel={SKILL_LEVEL_LABELS[skillLevel]}
+        benchmark={(() => { const b = bandForLevel(skillLevel); return { fir: b.fir, gir: b.gir, putts: b.puttsPerHole } })()}
         isPro={isPro}
         coachPersona={profile?.coach_persona ?? 'club_pro'}
         sgRoundCount={sgRoundCount}

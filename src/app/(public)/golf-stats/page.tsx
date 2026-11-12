@@ -55,7 +55,7 @@ export default function GolfStatsIndexPage() {
                 className="px-3 py-2 rounded-lg text-xs"
                 style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
               >
-                {band.range} handicap
+                {band.label}
               </Link>
             ))}
           </div>

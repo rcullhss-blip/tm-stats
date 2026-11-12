@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { allSeoPages, findSeoPage, BANDS } from '@/lib/seo-stats'
+import { allSeoPages, findSeoPage, legacySeoRedirect, BANDS } from '@/lib/seo-stats'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -25,7 +25,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function GolfStatPage({ params }: Props) {
   const { slug } = await params
   const page = findSeoPage(slug)
-  if (!page) notFound()
+  if (!page) {
+    // Pages from before the bands matched Strokes Gained move to their new band
+    const moved = legacySeoRedirect(slug)
+    if (moved) permanentRedirect(`/golf-stats/${moved}`)
+    notFound()
+  }
 
   const { band, stat } = page
   const url = `https://www.tmstatsgolf.com/golf-stats/${slug}`
@@ -77,6 +82,9 @@ export default async function GolfStatPage({ params }: Props) {
       <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
         {stat.name} by handicap
       </h2>
+      <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+        These are the same handicap bands TM Stats uses for Strokes Gained, so your benchmarks and your Strokes Gained always compare you with the same golfers.
+      </p>
       <div className="rounded-xl overflow-hidden mb-8" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
         {BANDS.map((b, i) => (
           <div
@@ -134,7 +142,7 @@ export default async function GolfStatPage({ params }: Props) {
               className="px-3 py-2 rounded-lg text-xs"
               style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247' }}
             >
-              {p.stat.name} — {p.band.range}
+              {p.stat.name}: {p.band.label}
             </Link>
           ))}
       </div>

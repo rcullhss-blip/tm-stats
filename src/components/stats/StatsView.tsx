@@ -59,6 +59,8 @@ export interface Milestones {
 export interface StatsViewProps {
   rounds: RoundDataPoint[]
   skillLevelLabel: string
+  // Benchmarks for the same band as the Strokes Gained baseline
+  benchmark: { fir: number; gir: number; putts: number }
   isPro: boolean
   coachPersona: string
   sgRoundCount: number
@@ -92,25 +94,6 @@ const HOLES_OPTIONS: { value: HolesFilter; label: string }[] = [
   { value: '18',  label: '18H' },
   { value: '9',   label: '9H'  },
 ]
-
-// Benchmark data by handicap band
-function getBenchmarks(handicap: number | null): { fir: number; gir: number; putts: number } {
-  const h = handicap ?? 20
-  if (h <= 5)  return { fir: 62, gir: 65, putts: 1.75 }
-  if (h <= 12) return { fir: 52, gir: 48, putts: 1.82 }
-  if (h <= 18) return { fir: 42, gir: 35, putts: 1.88 }
-  if (h <= 24) return { fir: 35, gir: 22, putts: 1.95 }
-  return { fir: 28, gir: 15, putts: 2.00 }
-}
-
-function handicapBandLabel(handicap: number | null): string {
-  const h = handicap ?? 20
-  if (h <= 5)  return '0–5'
-  if (h <= 12) return '6–12'
-  if (h <= 18) return '13–18'
-  if (h <= 24) return '19–24'
-  return '25+'
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -270,7 +253,7 @@ function AICoachingSection({ isPro, coachPersona, statsPayload }: { isPro: boole
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona, sgRoundCount, handicapHistory, handicap, milestones }: StatsViewProps) {
+export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, coachPersona, sgRoundCount, handicapHistory, handicap, milestones }: StatsViewProps) {
   const [range, setRange] = useState<RangeFilter>('last10')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [holesFilter, setHolesFilter] = useState<HolesFilter>('all')
@@ -751,8 +734,7 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
 
           {/* ── Benchmark layer ───────────────────────────────────────────── */}
           {agg.avgGir !== null && (() => {
-            const bm = getBenchmarks(handicap)
-            const band = handicapBandLabel(handicap)
+            const bm = benchmark
             const rows: { label: string; yours: string; bench: string; better: boolean }[] = [
               {
                 label: 'GIR%',
@@ -778,7 +760,7 @@ export default function StatsView({ rounds, skillLevelLabel, isPro, coachPersona
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9A9DB0' }}>How you compare</h2>
                   <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
-                    Hcp {band} avg
+                    vs {skillLevelLabel}
                   </span>
                 </div>
                 <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>

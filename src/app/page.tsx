@@ -128,7 +128,7 @@ export default function LandingPage() {
               What&apos;s a good number for your handicap?
             </h2>
             <p className="text-sm text-center mb-4" style={{ color: '#9A9DB0' }}>
-              GIR%, fairways hit, putts per round, scrambling, sand saves — see what golfers at your level actually record, from scratch to 25+.
+              GIR%, fairways hit, putts per round, scrambling, sand saves — see what golfers at your level actually record, from scratch to 29+.
             </p>
             <div className="text-center">
               <Link
