@@ -86,6 +86,8 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   const [pendingDist, setPendingDist] = useState('')
   const [pendingProcess, setPendingProcess] = useState<boolean | null>(null)
   const [pendingMiss, setPendingMiss] = useState<ShotMiss | null>(null)
+  // Advanced tracking: index of an entered shot whose finish is being set or changed
+  const [editMiss, setEditMiss] = useState<number | null>(null)
   const [error, setError] = useState('')
   // Voice entry: distances typed into shots that were heard without one
   const [gapInputs, setGapInputs] = useState<Record<number, string>>({})
@@ -114,6 +116,26 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
   }
 
   const isPenalty = pendingLie === 'penalty'
+
+  // Set, change or clear where the ball at row `index` finished (advanced tracking)
+  function setRowMiss(index: number, miss: ShotMiss | null) {
+    const updated = shots.map((s, i) => {
+      if (i !== index) return s
+      const { miss: _old, ...rest } = s
+      void _old
+      return miss ? { ...rest, miss } : rest
+    })
+    setShots(updated)
+    onShotsChange?.(updated)
+    setEditMiss(null)
+  }
+  // A row can carry a finish when a real shot was played to get the ball there
+  const rowCanHaveMiss = (index: number) =>
+    advanced && index > 0 && shots[index].lieType !== 'penalty' && shots.slice(0, index).some(s => s.lieType !== 'penalty')
+  const rowShotWasDrive = (index: number) => {
+    const before = [...shots.slice(0, index)].reverse().find(s => s.lieType !== 'penalty')
+    return before?.lieType === 'tee' && par !== 3
+  }
 
   // Advanced tracking asks how the shot just played finished. That shot is the
   // last real (non-penalty) row. A drive only has a side; everything aimed at
@@ -209,6 +231,36 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     }
   }
 
+  // Finish the hole. With advanced tracking the entry form is taller, so once a
+  // putt is in, Next hole sits straight under the shot list instead of below the form.
+  const finishButtons = (
+    <>
+      {/* Hole Out — chip-in / holed from off the green (no green shots yet) */}
+      {shots.length > 0 && !shots.some(s => s.lieType === 'green') && (
+        <button
+          type="button"
+          onClick={() => finalise(shots)}
+          className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
+          style={{ backgroundColor: '#22263A', color: '#F59E0B', border: '1px solid #F59E0B40', minHeight: '48px' }}
+        >
+          Hole Out (chip-in)
+        </button>
+      )}
+
+      {/* Next hole — appears after at least one putt on the green is recorded */}
+      {shots.some(s => s.lieType === 'green') && (
+        <button
+          type="button"
+          onClick={() => finalise(shots)}
+          className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
+          style={{ backgroundColor: '#22263A', color: '#22C55E', border: '1px solid #22C55E40', minHeight: '48px' }}
+        >
+          ✓ Next hole
+        </button>
+      )}
+    </>
+  )
+
   return (
     <div className="space-y-6">
       {/* Par selector */}
@@ -243,11 +295,8 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
             {shots.map((s, i) => {
               const { text } = lieColor(s.lieType, true)
               return (
-                <div
-                  key={i}
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: i < shots.length - 1 ? '1px solid #2E3247' : 'none' }}
-                >
+                <div key={i} style={{ borderBottom: i < shots.length - 1 ? '1px solid #2E3247' : 'none' }}>
+                <div className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0', width: '20px' }}>
                       {s.shotNumber}
@@ -269,10 +318,21 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                         {s.lieQuality}
                       </span>
                     )}
-                    {s.miss && (s.miss.x !== 0 || s.miss.y !== 0) && (
-                      <span className="text-xs px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
-                        {missLabel(s.miss).toLowerCase()}
-                      </span>
+                    {rowCanHaveMiss(i) && (
+                      <button
+                        type="button"
+                        onClick={() => setEditMiss(editMiss === i ? null : i)}
+                        className="text-xs px-2 rounded-full font-medium"
+                        style={{
+                          minHeight: '32px',
+                          backgroundColor: s.miss ? '#22263A' : 'transparent',
+                          color: s.miss ? '#F0F0F0' : '#9A9DB0',
+                          border: `1px ${s.miss ? 'solid' : 'dashed'} ${editMiss === i ? '#CC2222' : '#3A3F58'}`,
+                        }}
+                        aria-label={`Where the shot before row ${s.shotNumber} finished`}
+                      >
+                        {s.miss ? (rowShotWasDrive(i) && s.miss.x === 0 ? 'on line' : missLabel(s.miss).toLowerCase()) : '+ finish'}
+                      </button>
                     )}
                     {typeof s.process === 'boolean' && (
                       <span
@@ -314,9 +374,49 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
                     </span>
                   )}
                 </div>
+                {editMiss === i && (
+                  <div className="px-4 pb-3">
+                    <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
+                      {rowShotWasDrive(i) ? 'Which side did the drive finish?' : 'Where is this from the hole?'}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(rowShotWasDrive(i) ? MISS_ROW : MISS_GRID).map(c => {
+                        const selected = s.miss?.x === c.x && s.miss?.y === c.y
+                        const centre = c.x === 0 && c.y === 0
+                        const color = centre ? '#22C55E' : '#F59E0B'
+                        return (
+                          <button
+                            key={c.label}
+                            type="button"
+                            onClick={() => setRowMiss(i, selected ? null : { x: c.x, y: c.y })}
+                            className="py-2 rounded-lg text-xs font-medium"
+                            style={{
+                              backgroundColor: selected ? `${color}20` : '#22263A',
+                              color: selected ? color : '#9A9DB0',
+                              border: `1px solid ${selected ? `${color}60` : '#2E3247'}`,
+                              minHeight: '44px',
+                            }}
+                          >
+                            {rowShotWasDrive(i) && centre ? 'On line' : c.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                </div>
               )
             })}
           </div>
+        </div>
+      )}
+
+      {advanced && shots.some(sh => sh.lieType === 'green') && (
+        <div>
+          {finishButtons}
+          <p className="text-xs mt-2 text-center" style={{ color: '#9A9DB0' }}>
+            Holed the last putt? Tap Next hole. Missed it? Add where the ball is now below.
+          </p>
         </div>
       )}
 
@@ -407,10 +507,10 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           <div className="mb-3">
             <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>
               {lastWasDrive
-                ? 'Where did that drive finish? (optional)'
+                ? 'Which side did the drive finish? (optional)'
                 : lastWasPutt
-                  ? 'Where did that putt finish from the hole? (optional)'
-                  : 'Where did that shot finish from the pin? (optional)'}
+                  ? 'Where is the ball from the hole? (optional)'
+                  : 'Where is the ball from the pin? (optional)'}
             </p>
             <div className="grid grid-cols-3 gap-2">
               {(lastWasDrive ? MISS_ROW : MISS_GRID).map(c => {
@@ -482,29 +582,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           </button>
         </div>
 
-        {/* Hole Out — chip-in / holed from off the green (no green shots yet) */}
-        {shots.length > 0 && !shots.some(s => s.lieType === 'green') && (
-          <button
-            type="button"
-            onClick={() => finalise(shots)}
-            className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
-            style={{ backgroundColor: '#22263A', color: '#F59E0B', border: '1px solid #F59E0B40', minHeight: '48px' }}
-          >
-            Hole Out (chip-in)
-          </button>
-        )}
-
-        {/* Next hole — appears after at least one putt on the green is recorded */}
-        {shots.some(s => s.lieType === 'green') && (
-          <button
-            type="button"
-            onClick={() => finalise(shots)}
-            className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
-            style={{ backgroundColor: '#22263A', color: '#22C55E', border: '1px solid #22C55E40', minHeight: '48px' }}
-          >
-            ✓ Next hole
-          </button>
-        )}
+        {(!advanced || !shots.some(sh => sh.lieType === 'green')) && finishButtons}
       </div>
 
       {/* Undo */}

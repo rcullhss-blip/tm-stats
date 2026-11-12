@@ -28,6 +28,14 @@ LIES
 - tee, fairway, rough (also first cut, semi, trees, pine straw, waste area, long grass), bunker (sand, trap), fringe (apron, collar, fringe of the green), green, penalty.
 - lie_quality is "good" unless they say otherwise. "awkward" for things like thick rough, a bad stance, blocked by a tree. "severe" for plugged, buried, unplayable-looking, deep in the trees.
 
+WHERE A SHOT FINISHED (finish_side and finish_depth)
+These two fields sit on the entry for where the ball ended up, and describe how the stroke BEFORE it missed its target.
+- finish_side: "left" or "right" if the golfer said the shot went left or right (pulled, hooked, pushed, sliced, blocked, missed left, right of the pin, left rough, right bunker). "on_line" only if they said it was straight or on line. Otherwise "not_said".
+- finish_depth: "short" or "long" if they said so (came up short, left it short, through the back, over the green, long, past the hole). "pin_high" only if they said pin high or hole high. Otherwise "not_said".
+- For a drive only finish_side matters. Leave finish_depth "not_said".
+- For a missed putt: "left it short" is short, "ran it past" is long, "missed left" or "missed right" is the side.
+- The tee entry of each hole always has both "not_said". Never guess: if they did not say which way it went, both are "not_said".
+
 THE MOST IMPORTANT RULE: NEVER INVENT A NUMBER
 - If the golfer did not say the distance for a stroke, set that entry's distance to null. Do not estimate it.
 - "Two putts from 20 feet" means two green entries: the first at 20 feet, the second with distance null unless they said its length.
@@ -49,8 +57,8 @@ GENERAL
 
 EXAMPLE
 Transcript: "Hole one, par four, 380 yards. Driver into the fairway, 150 left. Hit it on to 20 feet. Two putts, second one from three feet. Hole two, par three, 165. Missed the green right in the bunker, about 15 yards. Splashed out to 6 feet and holed it."
-Hole 1 shots: tee 380 yards; fairway 150 yards; green 20 feet; green 3 feet. Score null (not stated), problem null.
-Hole 2 shots: tee 165 yards; bunker 15 yards; green 6 feet. Problem null.`
+Hole 1 shots: tee 380 yards; fairway 150 yards; green 20 feet; green 3 feet. Score null (not stated), problem null. No finishes were said, so every finish_side and finish_depth is "not_said".
+Hole 2 shots: tee 165 yards; bunker 15 yards (finish_side "right", because the tee shot missed right); green 6 feet. Problem null.`
 
 const nullable = (type: string) => ({ type: [type, 'null'] })
 
@@ -77,8 +85,10 @@ const SCHEMA = {
                 distance: nullable('number'),
                 unit: { type: 'string', enum: ['yards', 'feet'] },
                 lie_quality: { type: 'string', enum: ['good', 'awkward', 'severe'] },
+                finish_side: { type: 'string', enum: ['left', 'right', 'on_line', 'not_said'] },
+                finish_depth: { type: 'string', enum: ['short', 'long', 'pin_high', 'not_said'] },
               },
-              required: ['lie', 'distance', 'unit', 'lie_quality'],
+              required: ['lie', 'distance', 'unit', 'lie_quality', 'finish_side', 'finish_depth'],
               additionalProperties: false,
             },
           },

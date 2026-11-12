@@ -9,6 +9,10 @@ export interface VoiceShot {
   distance: number | null
   unit: 'yards' | 'feet'
   lie_quality: 'good' | 'awkward' | 'severe'
+  // Where the stroke that got the ball here finished compared with its target.
+  // Only set when the golfer said it. Older results do not have these.
+  finish_side?: 'left' | 'right' | 'on_line' | 'not_said'
+  finish_depth?: 'short' | 'long' | 'pin_high' | 'not_said'
 }
 
 export interface VoiceHole {

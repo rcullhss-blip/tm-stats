@@ -1,4 +1,4 @@
-import type { HoleData, InputMode, LieQuality, ShotEntry } from '@/lib/types'
+import type { HoleData, InputMode, LieQuality, ShotEntry, ShotMiss } from '@/lib/types'
 import type { VoiceHole, VoiceShot } from '@/lib/voice-types'
 import { deriveShotStats } from '@/lib/shot-stats'
 
@@ -41,10 +41,12 @@ function buildShots(voiceShots: VoiceShot[]): { shots: ShotEntry[]; complete: bo
   const shots: ShotEntry[] = []
   for (const v of voiceShots) {
     const quality = v.lie_quality as LieQuality
+    const miss = spokenMiss(v, shots.length === 0)
     const base = {
       shotNumber: shots.length + 1,
       lieType: v.lie,
       ...(LIES_WITH_QUALITY.includes(v.lie) && quality !== 'good' ? { lieQuality: quality } : {}),
+      ...(miss ? { miss } : {}),
     }
     if (v.lie === 'penalty') {
       // A penalty has no distance of its own: it sits where the shot before it was played from
@@ -56,6 +58,18 @@ function buildShots(voiceShots: VoiceShot[]): { shots: ShotEntry[]; complete: bo
     shots.push(yards === null ? { ...base, distanceToPin: 0, needsDistance: true } : { ...base, distanceToPin: yards })
   }
   return { shots, complete: !shots.some(s => s.needsDistance) }
+}
+
+// What the golfer said about where a shot finished, as a miss on the row the
+// ball ended up at. Null when they said nothing about it.
+function spokenMiss(v: VoiceShot, isFirst: boolean): ShotMiss | null {
+  if (isFirst || v.lie === 'penalty') return null
+  const side = v.finish_side && v.finish_side !== 'not_said' ? v.finish_side : null
+  const depth = v.finish_depth && v.finish_depth !== 'not_said' ? v.finish_depth : null
+  if (!side && !depth) return null
+  const x = side === 'left' ? -1 : side === 'right' ? 1 : 0
+  const y = depth === 'short' ? -1 : depth === 'long' ? 1 : 0
+  return { x, y }
 }
 
 function gapList(shots: ShotEntry[]): string {

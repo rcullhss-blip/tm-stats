@@ -71,7 +71,7 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
       parsPrefill,
       trackProcess: !voice && inputMode === 'full' ? trackProcess : false,
       voice,
-      advanced: advancedEnabled && !voice && inputMode === 'full',
+      advanced: advancedEnabled && (voice || inputMode === 'full'),
       yardagesPrefill,
     })
   }
@@ -256,6 +256,11 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
                   <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>
                     Enter each shot with distance + lie. Unlocks Strokes Gained.
                   </p>
+                  {advancedEnabled && (
+                    <p className="text-xs mt-1" style={{ color: '#22C55E' }}>
+                      Elite: one extra tap per shot for where it finished. Skip any you like.
+                    </p>
+                  )}
                 </div>
                 <span
                   className="text-xs px-2 py-0.5 rounded ml-2 shrink-0"
