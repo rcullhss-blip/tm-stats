@@ -133,10 +133,11 @@ export default async function CoachPage() {
         roundsLast30: recentCount.get(p.id) ?? 0,
         sgRounds: ids.length,
         level: levels?.total ?? null,
-        offTee: levels?.offTee ?? null,
-        approach: levels?.approach ?? null,
-        aroundGreen: levels?.aroundGreen ?? null,
-        putting: levels?.putting ?? null,
+        // Parts of the game need 3 rounds before a handicap level means anything
+        offTee: ids.length >= 3 ? levels?.offTee ?? null : null,
+        approach: ids.length >= 3 ? levels?.approach ?? null : null,
+        aroundGreen: ids.length >= 3 ? levels?.aroundGreen ?? null : null,
+        putting: ids.length >= 3 ? levels?.putting ?? null : null,
       }
     })
   }

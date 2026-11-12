@@ -199,11 +199,16 @@ export default async function StatsPage() {
     sgPerRound: avg(sgRounds, pick),
     trend: recentN > 0 ? avg(sgRounds.slice(0, recentN), pick) - avg(sgRounds.slice(recentN), pick) : null,
   })
+  // One part of the game over one or two rounds is too few shots to put a
+  // handicap on (a hot putting day reads as a plus handicap), so the four
+  // levels wait for three rounds. The overall level is steady from round one.
+  const partLevels = nSg >= 3 ? pooled : null
+  if (nSg > 0 && nSg < 3) trendNote = `Handicap levels for each part of your game appear after 3 full tracking rounds. You have ${nSg}.`
   const gameCategories: CategoryForm[] = [
-    category('offTee', 'Driving', pooled?.offTee ?? null, r => r.sgOffTee),
-    category('approach', 'Approach', pooled?.approach ?? null, r => r.sgApproach),
-    category('aroundGreen', 'Short game', pooled?.aroundGreen ?? null, r => r.sgAroundGreen),
-    category('putting', 'Putting', pooled?.putting ?? null, r => r.sgPutt),
+    category('offTee', 'Driving', partLevels?.offTee ?? null, r => r.sgOffTee),
+    category('approach', 'Approach', partLevels?.approach ?? null, r => r.sgApproach),
+    category('aroundGreen', 'Short game', partLevels?.aroundGreen ?? null, r => r.sgAroundGreen),
+    category('putting', 'Putting', partLevels?.putting ?? null, r => r.sgPutt),
   ]
 
   // Distance bands ranked by Strokes Gained per round

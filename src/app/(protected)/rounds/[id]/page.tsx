@@ -10,7 +10,7 @@ import AICoachingPanel from '@/components/rounds/AICoachingPanel'
 import BadRoundWidget from '@/components/rounds/BadRoundWidget'
 import DeleteRoundButton from '@/components/rounds/DeleteRoundButton'
 import { hasPro } from '@/lib/plan'
-import { roundHandicapLevels, fmtHandicapLevel, playedLikePhrase } from '@/lib/handicap-level'
+import { roundHandicapLevels, playedLikePhrase } from '@/lib/handicap-level'
 import { countMistakes } from '@/lib/mistakes'
 
 function scoreColor(diff: number): string {
@@ -409,22 +409,17 @@ export default async function RoundDetailPage({ params }: PageProps) {
 
             {/* Categories */}
             {[
-              { label: 'Off the tee', value: sgData.sgOffTee, level: levels?.offTee ?? null },
-              { label: 'Approach', value: sgData.sgApproach, level: levels?.approach ?? null },
-              { label: 'Around green', value: sgData.sgAroundGreen, level: levels?.aroundGreen ?? null },
-              { label: 'Putting', value: sgData.sgPutt, level: levels?.putting ?? null },
-            ].map(({ label, value, level }) => {
+              { label: 'Off the tee', value: sgData.sgOffTee },
+              { label: 'Approach', value: sgData.sgApproach },
+              { label: 'Around green', value: sgData.sgAroundGreen },
+              { label: 'Putting', value: sgData.sgPutt },
+            ].map(({ label, value }) => {
               const barWidth = Math.min(Math.abs(value) * 10, 100)
               return (
                 <div key={label} className="mb-3 last:mb-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm" style={{ color: '#9A9DB0' }}>
                       {label}
-                      {isPro && level !== null && (
-                        <span className="text-xs ml-2 px-1.5 py-0.5 rounded" style={{ backgroundColor: '#22263A', color: '#F0F0F0' }}>
-                          like {fmtHandicapLevel(level)}
-                        </span>
-                      )}
                     </span>
                     <span
                       className="text-sm font-medium"

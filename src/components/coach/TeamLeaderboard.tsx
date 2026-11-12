@@ -29,10 +29,10 @@ type Tab = 'avgToPar' | 'level' | 'offTee' | 'approach' | 'aroundGreen' | 'putti
 const TABS: { key: Tab; label: string; note: string }[] = [
   { key: 'avgToPar', label: 'Scoring', note: 'Average score to par, last 5 rounds' },
   { key: 'level', label: 'Playing like', note: 'Handicap their last 5 full tracking rounds played like' },
-  { key: 'offTee', label: 'Driving', note: 'Handicap level off the tee' },
-  { key: 'approach', label: 'Approach', note: 'Handicap level on approach shots' },
-  { key: 'aroundGreen', label: 'Short game', note: 'Handicap level around the green' },
-  { key: 'putting', label: 'Putting', note: 'Handicap level on the greens' },
+  { key: 'offTee', label: 'Driving', note: 'Handicap level off the tee (needs 3 full tracking rounds)' },
+  { key: 'approach', label: 'Approach', note: 'Handicap level on approach shots (needs 3 full tracking rounds)' },
+  { key: 'aroundGreen', label: 'Short game', note: 'Handicap level around the green (needs 3 full tracking rounds)' },
+  { key: 'putting', label: 'Putting', note: 'Handicap level on the greens (needs 3 full tracking rounds)' },
   { key: 'roundsLast30', label: 'Rounds logged', note: 'Rounds logged in the last 30 days' },
 ]
 
