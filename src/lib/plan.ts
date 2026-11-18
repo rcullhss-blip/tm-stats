@@ -34,5 +34,5 @@ export const PLAN_LABEL: Record<Plan, string> = {
 
 export const PRICES = {
   pro: { monthly: '£4.99', yearly: '£50' },
-  elite: { monthly: '£8.99', yearly: '£85' },
+  elite: { monthly: '£6.99', yearly: '£70' },
 } as const

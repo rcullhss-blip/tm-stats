@@ -52,7 +52,7 @@ export default function LandingPage() {
           >
             Start free — no card needed
           </Link>
-          <p className="text-sm" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99 a month, Elite from £8.99.</p>
+          <p className="text-sm" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99 a month, Elite from £6.99.</p>
         </section>
 
         {/* What you get back after one round */}
@@ -180,7 +180,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-2xl font-bold mb-3" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
-                £8.99<span className="text-sm font-normal" style={{ color: '#9A9DB0' }}>/mo</span>
+                £6.99<span className="text-sm font-normal" style={{ color: '#9A9DB0' }}>/mo</span>
               </p>
               <ul className="space-y-2 text-xs" style={{ color: '#9A9DB0' }}>
                 <li>✓ Everything in Pro</li>
@@ -190,7 +190,7 @@ export default function LandingPage() {
                 <li>✓ Coaching built on which way you miss</li>
               </ul>
             </div>
-            <p className="text-center text-xs mt-3" style={{ color: '#4A4D60' }}>Pro £50 a year, Elite £85 a year. Cancel any time.</p>
+            <p className="text-center text-xs mt-3" style={{ color: '#4A4D60' }}>Pro £50 a year, Elite £70 a year. Cancel any time.</p>
           </div>
 
           {/* Social proof placeholder */}
@@ -235,8 +235,8 @@ export default function LandingPage() {
               { '@type': 'Offer', price: '4.99', priceCurrency: 'GBP', name: 'Pro monthly' },
               { '@type': 'Offer', price: '50', priceCurrency: 'GBP', name: 'Pro yearly' },
               ...(eliteOpen ? [
-                { '@type': 'Offer', price: '8.99', priceCurrency: 'GBP', name: 'Elite monthly' },
-                { '@type': 'Offer', price: '85', priceCurrency: 'GBP', name: 'Elite yearly' },
+                { '@type': 'Offer', price: '6.99', priceCurrency: 'GBP', name: 'Elite monthly' },
+                { '@type': 'Offer', price: '70', priceCurrency: 'GBP', name: 'Elite yearly' },
               ] : []),
             ],
             author: { '@type': 'Person', name: 'Rob Cull' },

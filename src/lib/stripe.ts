@@ -15,7 +15,7 @@ export const PRICES = {
   yearly: process.env.STRIPE_PRICE_YEARLY!,
 }
 
-// Elite tier (£8.99 a month, £85 a year). Until these two price ids are set in
+// Elite tier (£6.99 a month, £70 a year). Until these two price ids are set in
 // the environment, Elite checkout answers "not set up yet" and nothing else changes.
 export const ELITE_PRICES = {
   monthly: process.env.STRIPE_PRICE_ELITE_MONTHLY,

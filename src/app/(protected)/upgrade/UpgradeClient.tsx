@@ -40,8 +40,8 @@ const TIERS: Record<Tier, {
     name: 'TM Stats Elite',
     headline: <>See the pattern,<br />not just the number.</>,
     blurb: 'Everything in Pro, plus where every shot finishes. For golfers who want to know which way they miss and from where.',
-    monthly: 8.99,
-    yearly: 85,
+    monthly: 6.99,
+    yearly: 70,
     features: [
       { label: 'Everything in Pro', sub: 'Unlimited rounds, Strokes Gained, AI coaching' },
       { label: 'Advanced shot tracking', sub: 'One tap per shot: left or right, short or long' },
