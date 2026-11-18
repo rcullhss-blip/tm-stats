@@ -5,7 +5,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { HoleRow, ShotEntry } from '@/lib/types'
-import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
+import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
+import { bandsForRound, rankBands, biggestLeaks, type SGBand } from '@/lib/sg-bands'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -68,6 +69,7 @@ export default async function CoachPlayerPage({ params }: PageProps) {
   const skillLevel: SkillLevel = normalizeSkillLevel(player.sg_baseline) ?? handicapToSkillLevel(player.handicap ?? null)
 
   let sgOffTee = 0, sgApproach = 0, sgAroundGreen = 0, sgPutt = 0, sgCount = 0
+  const roundBands: SGBand[][] = []
 
   for (const round of rounds) {
     if (round.input_mode !== 'full') continue
@@ -88,9 +90,11 @@ export default async function CoachPlayerPage({ params }: PageProps) {
     sgAroundGreen += sg.sgAroundGreen
     sgPutt += sg.sgPutt
     sgCount++
+    roundBands.push(bandsForRound(sg))
   }
 
   const hasSG = sgCount > 0
+  const leaks = biggestLeaks(rankBands(roundBands))
   const avgSG = hasSG ? {
     offTee: sgOffTee / sgCount,
     approach: sgApproach / sgCount,
@@ -141,6 +145,27 @@ export default async function CoachPlayerPage({ params }: PageProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Biggest leaks */}
+      {leaks.length > 0 && (
+        <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #EF444440' }}>
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#EF4444' }}>Biggest leaks</p>
+          <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+            Shots lost a round over the last {sgCount} full tracking round{sgCount !== 1 ? 's' : ''}, against {SKILL_LEVEL_LABELS[skillLevel]}.
+          </p>
+          {leaks.map((l, i) => (
+            <div key={l.label} className="flex items-center justify-between py-2" style={{ borderTop: i > 0 ? '1px solid #22263A' : 'none' }}>
+              <div>
+                <p className="text-sm" style={{ color: '#F0F0F0' }}>{i + 1}. {l.label}</p>
+                <p className="text-xs" style={{ color: '#4A4D60' }}>{l.shots} shots</p>
+              </div>
+              <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#EF4444' }}>
+                {Math.abs(l.sgPerRound).toFixed(1)} <span className="text-xs font-normal" style={{ color: '#9A9DB0' }}>a round</span>
+              </p>
+            </div>
+          ))}
         </div>
       )}
 

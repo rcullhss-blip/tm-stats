@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { calculateHoleSG, SKILL_LEVEL_LABELS, type SkillLevel, type SGCategory } from '@/lib/sg-engine'
+import { calculateHoleSG, SKILL_LEVEL_LABELS, isCollegeLevel, type SkillLevel, type SGCategory } from '@/lib/sg-engine'
 import type { LieType, LieQuality, ShotEntry } from '@/lib/types'
 
 // Public Strokes Gained calculator. The entry flow is the same as the app's
@@ -24,7 +24,7 @@ const QUALITY_OPTIONS: { value: LieQuality; label: string; color: string }[] = [
   { value: 'severe', label: 'Severe', color: '#EF4444' },
 ]
 const LIES_WITH_QUALITY: LieType[] = ['fairway', 'rough', 'bunker', 'fringe']
-const LEVELS = (Object.keys(SKILL_LEVEL_LABELS) as SkillLevel[]).filter(l => l !== 'tour')
+const LEVELS = (Object.keys(SKILL_LEVEL_LABELS) as SkillLevel[]).filter(l => l !== 'tour' && !isCollegeLevel(l))
 const CATEGORY_LABEL: Record<SGCategory, string> = { offTee: 'Off the tee', approach: 'Approach', aroundGreen: 'Around the green', putting: 'Putting' }
 
 const card = { backgroundColor: '#1A1D27', border: '1px solid #2E3247' } as const

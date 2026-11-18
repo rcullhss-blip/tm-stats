@@ -17,11 +17,8 @@ export interface CategoryForm {
   trend: number | null
 }
 
-export interface BandRank {
-  label: string
-  sgPerRound: number
-  shots: number
-}
+import type { BandRank } from '@/lib/sg-bands'
+export type { BandRank }
 
 interface Props {
   isPro: boolean
@@ -31,6 +28,11 @@ interface Props {
   categories: CategoryForm[]
   best: BandRank[]
   worst: BandRank[]
+  // Bands losing shots over the last few rounds, worst first
+  leaks?: BandRank[]
+  leakRounds?: number
+  // What the Strokes Gained numbers are measured against
+  benchmarkLabel?: string
   trendNote: string | null
 }
 
@@ -56,7 +58,7 @@ function levelColor(level: number, handicap: number | null): string {
   return '#F0F0F0'
 }
 
-export default function GameLevelCard({ isPro, roundsUsed, handicap, overall, categories, best, worst, trendNote }: Props) {
+export default function GameLevelCard({ isPro, roundsUsed, handicap, overall, categories, best, worst, leaks = [], leakRounds = 0, benchmarkLabel, trendNote }: Props) {
   if (!isPro) {
     return (
       <div className="mb-6 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222240' }}>
@@ -96,6 +98,29 @@ export default function GameLevelCard({ isPro, roundsUsed, handicap, overall, ca
           <p className="leading-none font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: levelColor(overall, handicap), fontSize: '40px' }}>
             {fmtHandicapLevel(overall)}
           </p>
+        </div>
+      )}
+
+      {leaks.length > 0 && (
+        <div className="p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #EF444440' }}>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#EF4444' }}>Your biggest leaks</p>
+          <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
+            Where your shots have gone over your last {leakRounds} full tracking round{leakRounds !== 1 ? 's' : ''}{benchmarkLabel ? `, against ${benchmarkLabel}` : ''}. Practise the top one first.
+          </p>
+          {leaks.map((l, i) => (
+            <div key={l.label} className="flex items-center justify-between py-2" style={{ borderTop: i > 0 ? '1px solid #22263A' : 'none' }}>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>{i + 1}</span>
+                <div>
+                  <p className="text-sm" style={{ color: '#F0F0F0' }}>{l.label}</p>
+                  <p className="text-xs" style={{ color: '#4A4D60' }}>{l.shots} shots</p>
+                </div>
+              </div>
+              <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#EF4444' }}>
+                {Math.abs(l.sgPerRound).toFixed(1)} <span className="text-xs font-normal" style={{ color: '#9A9DB0' }}>a round</span>
+              </p>
+            </div>
+          ))}
         </div>
       )}
 

@@ -122,3 +122,36 @@ export const LIFECYCLE_EMAILS: Record<string, LifecycleEmail> = {
       'Log a round', `${SITE}/rounds/new`, para('If something about the app made you stop, I would like to know. Just reply.')),
   },
 }
+
+// ─── Team reminders ───────────────────────────────────────────────────────────
+// Sent to players on a coach's team who have not logged a round for a week.
+// Not in LIFECYCLE_EMAILS because it repeats (weekly, with a cap) and names the team.
+
+/** email_log key for a team nudge: one per ISO week, e.g. team_nudge_2026w47. */
+export function teamNudgeKey(d: Date = new Date()): string {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+  const dayNum = t.getUTCDay() || 7
+  t.setUTCDate(t.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1))
+  const week = Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
+  return `team_nudge_${t.getUTCFullYear()}w${String(week).padStart(2, '0')}`
+}
+
+export const TEAM_NUDGE_SUBJECT = 'Played this week?'
+
+export function teamNudgeHtml(userId: string, firstName: string, teamName: string, everLogged: boolean): string {
+  const body = everLogged
+    ? para(`No rounds from you on ${teamName} in the last week. If you have played, it takes a couple of minutes to put the round in while you still remember the shots.`) +
+      para('Your coach sees who has logged and who has not, and your Strokes Gained only gets useful with rounds in it.')
+    : para(`You are on ${teamName} in TM Stats but have not logged a round yet. If you have played this week, put it in while you still remember the shots. Quick mode is score, fairways, greens and putts.`) +
+      para('Your coach sees who has logged and who has not.')
+  return personalNote({
+    userId,
+    greeting: `Hi ${firstName},`,
+    bodyHtml: body,
+    linkLabel: 'Log a round',
+    linkUrl: `${SITE}/rounds/new`,
+    afterLinkHtml: para('If you have not played, ignore this one.'),
+    footerReason: `You are getting this because you are on ${teamName} in TM Stats.`,
+  })
+}

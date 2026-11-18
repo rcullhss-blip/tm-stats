@@ -7,7 +7,11 @@ import Link from 'next/link'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
 import type { ShotEntry } from '@/lib/types'
 import TeamLeaderboard, { type LeaderboardRow } from '@/components/coach/TeamLeaderboard'
+import TeamSettings from '@/components/coach/TeamSettings'
 import { pooledHandicapLevels } from '@/lib/handicap-level'
+
+// Squad settings appear once the player leaderboard and the college benchmarks are switched on.
+const SQUAD_SETTINGS_LIVE = false
 
 function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -168,6 +172,8 @@ export default async function CoachPage() {
           Players enter this in their Profile → Join a team
         </p>
       </div>
+
+      {SQUAD_SETTINGS_LIVE && <TeamSettings benchmark={team.benchmark ?? null} playersSeeLeaderboard={team.players_see_leaderboard !== false} />}
 
       {/* Leaderboard */}
       {players.length > 1 && <TeamLeaderboard rows={leaderboard} />}

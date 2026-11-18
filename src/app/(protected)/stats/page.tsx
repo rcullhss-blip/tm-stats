@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
-import GameLevelCard, { type CategoryForm, type BandRank } from '@/components/stats/GameLevelCard'
+import GameLevelCard, { type CategoryForm } from '@/components/stats/GameLevelCard'
+import { bandsForRound, rankBands, bestAndWorst, biggestLeaks } from '@/lib/sg-bands'
 import { hasPro, hasElite } from '@/lib/plan'
 import ShotPatterns from '@/components/stats/ShotPatterns'
 import { buildShotPatterns } from '@/lib/shot-patterns'
@@ -86,55 +87,7 @@ export default async function StatsPage() {
           )
         : null
 
-      const sgBands: SGBand[] | null = sgResult ? (() => {
-        const bands: SGBand[] = [
-          // Putting — stored in yards, labels shown in feet (1yd = 3ft)
-          { label: '0–3ft',    category: 'putting',       minY: 0,       maxY: 1.0,       sgSum: 0, count: 0 },
-          { label: '3–5ft',    category: 'putting',       minY: 1.001,   maxY: 1.666,     sgSum: 0, count: 0 },
-          { label: '5–8ft',    category: 'putting',       minY: 1.667,   maxY: 2.666,     sgSum: 0, count: 0 },
-          { label: '8–12ft',   category: 'putting',       minY: 2.667,   maxY: 3.999,     sgSum: 0, count: 0 },
-          { label: '12–20ft',  category: 'putting',       minY: 4.0,     maxY: 6.666,     sgSum: 0, count: 0 },
-          { label: '20–30ft',  category: 'putting',       minY: 6.667,   maxY: 9.999,     sgSum: 0, count: 0 },
-          { label: '30–40ft',  category: 'putting',       minY: 10.0,    maxY: 13.332,    sgSum: 0, count: 0 },
-          { label: '40ft+',    category: 'putting',       minY: 13.333,  maxY: Infinity,  sgSum: 0, count: 0 },
-          // Around green (non-putting, inside 30y)
-          { label: '0–10y',    category: 'around_green',  minY: 0,   maxY: 9.9,       sgSum: 0, count: 0 },
-          { label: '10–20y',   category: 'around_green',  minY: 10,  maxY: 19.9,      sgSum: 0, count: 0 },
-          { label: '20–30y',   category: 'around_green',  minY: 20,  maxY: 29.9,      sgSum: 0, count: 0 },
-          // Approach & off tee (non-putting, 30y+)
-          { label: '30–50y',   category: 'approach',      minY: 30,  maxY: 49.9,      sgSum: 0, count: 0 },
-          { label: '50–75y',   category: 'approach',      minY: 50,  maxY: 74.9,      sgSum: 0, count: 0 },
-          { label: '75–100y',  category: 'approach',      minY: 75,  maxY: 99.9,      sgSum: 0, count: 0 },
-          { label: '100–125y', category: 'approach',      minY: 100, maxY: 124.9,     sgSum: 0, count: 0 },
-          { label: '125–150y', category: 'approach',      minY: 125, maxY: 149.9,     sgSum: 0, count: 0 },
-          { label: '150–175y', category: 'approach',      minY: 150, maxY: 174.9,     sgSum: 0, count: 0 },
-          { label: '175–200y', category: 'approach',      minY: 175, maxY: 199.9,     sgSum: 0, count: 0 },
-          { label: '175–200y', category: 'off_tee',       minY: 175, maxY: 199.9,     sgSum: 0, count: 0 },
-          { label: '200–225y', category: 'off_tee',       minY: 200, maxY: 224.9,     sgSum: 0, count: 0 },
-          { label: '225–250y', category: 'off_tee',       minY: 225, maxY: 249.9,     sgSum: 0, count: 0 },
-          { label: '250–275y', category: 'off_tee',       minY: 250, maxY: 274.9,     sgSum: 0, count: 0 },
-          { label: '275–300y', category: 'off_tee',       minY: 275, maxY: 299.9,     sgSum: 0, count: 0 },
-          { label: '300y+',    category: 'off_tee',       minY: 300, maxY: Infinity,  sgSum: 0, count: 0 },
-        ]
-        for (const holeResult of sgResult.holes) {
-          for (const sgShot of holeResult.shots) {
-            if (sgShot.distBefore === 0) continue
-            const isPutt = sgShot.lie === 'green'
-            const isAroundGreen = !isPutt && sgShot.distBefore < 30
-            const isOffTee = !isPutt && !isAroundGreen && sgShot.lie === 'tee' && holeResult.par !== 3
-            const distForBand = isOffTee ? (sgShot.distBefore - sgShot.distAfter) : sgShot.distBefore
-            const band = bands.find(b => {
-              if (isPutt && b.category !== 'putting') return false
-              if (isAroundGreen && b.category !== 'around_green') return false
-              if (isOffTee && b.category !== 'off_tee') return false
-              if (!isPutt && !isAroundGreen && !isOffTee && b.category !== 'approach') return false
-              return distForBand >= b.minY && distForBand <= b.maxY
-            })
-            if (band) { band.sgSum += sgShot.sg; band.count++ }
-          }
-        }
-        return bands
-      })() : null
+      const sgBands: SGBand[] | null = sgResult ? bandsForRound(sgResult) : null
 
       const eagles = holes.filter(h => h.score <= h.par - 2).length
       const birdies = holes.filter(h => h.score === h.par - 1).length
@@ -213,25 +166,11 @@ export default async function StatsPage() {
   ]
 
   // Distance bands ranked by Strokes Gained per round
-  const BAND_PREFIX: Record<SGBand['category'], string> = { putting: 'Putts', around_green: 'Chips', approach: 'Approach', off_tee: 'Drives' }
-  const bandTotals = new Map<string, BandRank & { sgSum: number }>()
-  for (const r of sgRounds) {
-    for (const b of r.sgBands ?? []) {
-      if (b.count === 0) continue
-      const label = `${BAND_PREFIX[b.category]} ${b.label}`
-      const t = bandTotals.get(label) ?? { label, sgPerRound: 0, shots: 0, sgSum: 0 }
-      t.sgSum += b.sgSum
-      t.shots += b.count
-      bandTotals.set(label, t)
-    }
-  }
-  const rankedBands = [...bandTotals.values()]
-    .filter(b => b.shots >= 3)
-    .map(b => ({ label: b.label, shots: b.shots, sgPerRound: b.sgSum / Math.max(nSg, 1) }))
-    .sort((a, b) => b.sgPerRound - a.sgPerRound)
-  const side = Math.min(3, Math.floor(rankedBands.length / 2))
-  const bestBands = rankedBands.slice(0, side)
-  const worstBands = rankedBands.slice(rankedBands.length - side).reverse()
+  const rankedBands = rankBands(sgRounds.map(r => r.sgBands))
+  const { best: bestBands, worst: worstBands } = bestAndWorst(rankedBands)
+  // Biggest leaks look at the last 10 rounds only: what is costing shots now
+  const leaks = biggestLeaks(rankBands(sgRounds.slice(0, 10).map(r => r.sgBands)))
+  const leakRounds = Math.min(nSg, 10)
 
   // ── Shot patterns (Elite): every distance band, with where shots finished ───
   const patternBuckets = isElite
@@ -286,6 +225,9 @@ export default async function StatsPage() {
         categories={gameCategories}
         best={bestBands}
         worst={worstBands}
+        leaks={leaks}
+        leakRounds={leakRounds}
+        benchmarkLabel={SKILL_LEVEL_LABELS[skillLevel]}
         trendNote={trendNote}
       />
       <ShotPatterns access={isElite ? 'elite' : isPro ? 'pro' : 'free'} buckets={patternBuckets} rounds={nSg} />

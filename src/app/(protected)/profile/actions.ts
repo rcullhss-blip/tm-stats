@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { SkillLevel } from '@/lib/sg-engine'
+import { normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 
 export async function saveProfile(_prevState: unknown, formData: FormData) {
   const supabase = await createClient()
@@ -56,9 +56,13 @@ export async function saveSGBaseline(level: SkillLevel | null) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
+  // Only ever store a level the engine knows
+  const clean = level === null ? null : normalizeSkillLevel(level)
+  if (level !== null && !clean) return
+
   await supabase
     .from('users')
-    .update({ sg_baseline: level })
+    .update({ sg_baseline: clean })
     .eq('id', user.id)
 
   revalidatePath('/profile')

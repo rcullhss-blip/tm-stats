@@ -43,7 +43,15 @@ export const TOUR_BAND: Band = {
 /** The benchmark band for a Strokes Gained baseline level. */
 export function bandForLevel(level: SkillLevel): Band {
   if (level === 'tour') return TOUR_BAND
-  return BANDS.find(b => b.level === level) ?? BANDS[2]
+  const nearest = COLLEGE_NEAREST_BAND[level] ?? level
+  return BANDS.find(b => b.level === nearest) ?? BANDS[2]
+}
+
+// College benchmarks have no fairways, greens and putts figures of their own,
+// so those three read from the handicap band nearest to the division's level.
+const COLLEGE_NEAREST_BAND: Partial<Record<SkillLevel, SkillLevel>> = {
+  d1_men: 'scratch', d2_men: 'scratch', naia_men: 'h1_4', d3_men: 'h1_4', njcaa_men: 'h1_4',
+  d1_women: 'scratch', d2_women: 'h5_9', naia_women: 'h5_9', d3_women: 'h10_14',
 }
 
 // Benchmark pages published before the bands were matched to Strokes Gained.

@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition } from 'react'
-import { SKILL_LEVEL_LABELS, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
+import { SKILL_LEVEL_LABELS, COLLEGE_LEVELS, COLLEGE_BENCHMARKS_LIVE, normalizeSkillLevel, type SkillLevel } from '@/lib/sg-engine'
 import { saveSGBaseline } from '@/app/(protected)/profile/actions'
 
 interface Props {
@@ -78,6 +78,37 @@ export default function SGBaselinePicker({ currentLevel, savedBaseline, handicap
           )
         })}
       </div>
+      {COLLEGE_BENCHMARKS_LIVE && (
+        <>
+          <p className="text-sm font-medium mt-4 mb-1" style={{ color: '#9A9DB0' }}>College benchmarks</p>
+          <p className="text-xs mb-3" style={{ color: '#4A4D60' }}>
+            The average player in each division. These are estimates built from scoring averages.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {COLLEGE_LEVELS.map(level => {
+              const isActive = level === normalizedSaved
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => handleSelect(level)}
+                  className="px-3 py-2.5 rounded-xl text-sm font-medium text-left"
+                  style={{
+                    backgroundColor: isActive ? '#CC222220' : '#22263A',
+                    color: isActive ? '#CC2222' : '#9A9DB0',
+                    border: `1px solid ${isActive ? '#CC222260' : '#2E3247'}`,
+                    opacity: pending ? 0.5 : 1,
+                    minHeight: '44px',
+                  }}
+                >
+                  {SKILL_LEVEL_LABELS[level].replace('College ', '')}
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
       {!savedBaseline && (
         <p className="text-xs mt-2" style={{ color: '#4A4D60' }}>
           Tap a level to override. Tap again to go back to auto.

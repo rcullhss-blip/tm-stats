@@ -16,6 +16,28 @@ import type { LieType, LieQuality, ShotEntry } from './types'
 
 export type SkillLevel =
   | 'tour' | 'scratch' | 'h1_4' | 'h5_9' | 'h10_14' | 'h15_19' | 'h20_28' | 'h29'
+  | CollegeLevel
+
+// College benchmarks: the average player in that division. ESTIMATES, built
+// from typical scoring averages and turned into a gap to tour the same way the
+// handicap bands are. There is no public shot-by-shot college data, so the
+// split between driving, approach, short game and putting is the model's.
+export type CollegeLevel =
+  | 'd1_men' | 'd2_men' | 'd3_men' | 'naia_men' | 'njcaa_men'
+  | 'd1_women' | 'd2_women' | 'd3_women' | 'naia_women'
+
+export const COLLEGE_LEVELS: CollegeLevel[] = [
+  'd1_men', 'd2_men', 'd3_men', 'naia_men', 'njcaa_men',
+  'd1_women', 'd2_women', 'd3_women', 'naia_women',
+]
+
+// Off until Rob has checked the numbers below. While false the college levels
+// work everywhere in the engine but are not offered in any picker.
+export const COLLEGE_BENCHMARKS_LIVE = false
+
+export function isCollegeLevel(level: string | null | undefined): level is CollegeLevel {
+  return !!level && (COLLEGE_LEVELS as string[]).includes(level)
+}
 
 export const SKILL_LEVEL_LABELS: Record<SkillLevel, string> = {
   tour:    'PGA Tour',
@@ -26,6 +48,15 @@ export const SKILL_LEVEL_LABELS: Record<SkillLevel, string> = {
   h15_19:  'Handicap 15–19',
   h20_28:  'Handicap 20–28',
   h29:     'Handicap 29+',
+  d1_men:     'College D1 men',
+  d2_men:     'College D2 men',
+  d3_men:     'College D3 men',
+  naia_men:   'College NAIA men',
+  njcaa_men:  'Junior college men',
+  d1_women:   'College D1 women',
+  d2_women:   'College D2 women',
+  d3_women:   'College D3 women',
+  naia_women: 'College NAIA women',
 }
 
 // Baseline keys stored before the band refresh → map to the nearest new band so
@@ -54,6 +85,20 @@ const LEVEL_GAP: Record<SkillLevel, number> = {
   h15_19:  21.6,
   h20_28:  28.0,
   h29:     35.5,
+  // College (estimates). Men: the handicap the average player in the division
+  // plays to, through the same formula as the bands (5.5 + 0.95 × handicap):
+  // D1 about +2.5, D2 about +0.5, NAIA about 1, D3 about 2.5, junior college about 3.
+  d1_men:     3.1,
+  d2_men:     5.0,
+  naia_men:   6.5,
+  d3_men:     7.9,
+  njcaa_men:  8.4,
+  // Women, from scoring average over par on the shorter set-ups they play:
+  // D1 about +3.5, D2 about +8, NAIA about +10, D3 about +14.
+  d1_women:   6.3,
+  d2_women:   10.8,
+  naia_women: 12.8,
+  d3_women:   16.8,
 }
 
 export function handicapToSkillLevel(handicap: number | null): SkillLevel {

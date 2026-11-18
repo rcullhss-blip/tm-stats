@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/service'
-import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO } from '@/lib/lifecycle-emails'
+import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO, TEAM_NUDGE_SUBJECT, teamNudgeHtml, teamNudgeKey } from '@/lib/lifecycle-emails'
 import { hasPro } from '@/lib/plan'
 
 export const maxDuration = 60
@@ -85,6 +85,16 @@ export async function GET(request: Request) {
     .order('date', { ascending: false })
   const rounds: { user_id: string; date: string; input_mode: string }[] = roundsRaw ?? []
 
+  // Team memberships, for the weekly "played this week?" reminder
+  const { data: memberRaw } = await sb.from('team_members').select('user_id, joined_at, teams(name)')
+  const membership = new Map<string, { teamName: string; joinedAt: number }>()
+  for (const m of (memberRaw ?? []) as { user_id: string; joined_at: string; teams: { name: string } | null }[]) {
+    if (!membership.has(m.user_id)) {
+      membership.set(m.user_id, { teamName: m.teams?.name ?? 'your team', joinedAt: new Date(m.joined_at).getTime() })
+    }
+  }
+  const nudgeKey = teamNudgeKey()
+
   const now = Date.now()
   const day = 24 * 60 * 60 * 1000
   const sent: string[] = []
@@ -116,8 +126,43 @@ export async function GET(request: Request) {
     if (!isPro && userRounds.length >= 4) candidates.push('upgrade_push')
     if (lastRoundAge !== null && lastRoundAge >= 30 * day && lastRoundAge <= 90 * day) candidates.push('winback')
 
+    // Team players: a weekly reminder when a week has gone by with no round.
+    // It stops after three reminders in a row with no round logged, so a player
+    // who has left the game alone is not chased for ever.
+    const team = membership.get(user.id)
+    let teamNudge = false
+    // Only players who are still around: joined the team or logged a round in
+    // the last 90 days. Someone who joined in spring and went quiet is left alone.
+    const recentlyActive = (team ? now - team.joinedAt <= 90 * day : false) || (lastRoundAge !== null && lastRoundAge <= 90 * day)
+    if (team && recentlyActive && now - team.joinedAt >= 7 * day && (lastRoundAge === null || lastRoundAge >= 7 * day)) {
+      const lastRoundAt = userRounds.length > 0 ? new Date(userRounds[0].date).getTime() : 0
+      const nudgeTimes: number[] = []
+      for (const [key, at] of sentAt) {
+        if (key.startsWith(`${user.id}:team_nudge_`)) nudgeTimes.push(at)
+      }
+      const sinceLastRound = nudgeTimes.filter(at => at > lastRoundAt).length
+      const lastNudge = nudgeTimes.length > 0 ? Math.max(...nudgeTimes) : 0
+      teamNudge = sinceLastRound < 3 && now - lastNudge >= 7 * day
+    }
+
     const emailType = candidates.find(c => !alreadySent.has(`${user.id}:${c}`))
+      ?? (teamNudge && !alreadySent.has(`${user.id}:${nudgeKey}`) ? nudgeKey : undefined)
     if (!emailType) continue
+
+    if (emailType === nudgeKey && team) {
+      const { error: nudgeError } = await resend.emails.send({
+        from: PERSONAL_FROM,
+        replyTo: REPLY_TO,
+        to: [user.email],
+        subject: TEAM_NUDGE_SUBJECT,
+        html: teamNudgeHtml(user.id, user.name?.split(' ')[0] || 'golfer', team.teamName, userRounds.length > 0),
+      })
+      if (nudgeError) { failures++; continue }
+      await sb.from('email_log').insert({ user_id: user.id, email_type: nudgeKey })
+      sent.push(`${nudgeKey}:${user.email}`)
+      if (sent.length >= 50) break
+      continue
+    }
 
     const template = LIFECYCLE_EMAILS[emailType]
     if (!template) continue

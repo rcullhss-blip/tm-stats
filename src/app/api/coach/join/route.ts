@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: team } = await (service as any)
     .from('teams')
-    .select('id, name, coach_user_id')
+    .select('*')
     .eq('join_code', joinCode.trim().toUpperCase())
     .single()
 
@@ -46,5 +46,13 @@ export async function POST(request: Request) {
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // The squad's Strokes Gained benchmark applies to a new player straight away,
+  // unless they have already picked one of their own.
+  if (team.benchmark) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (service as any).from('users').update({ sg_baseline: team.benchmark }).eq('id', user.id).is('sg_baseline', null)
+  }
+
   return NextResponse.json({ ok: true, teamName: team.name })
 }

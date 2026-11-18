@@ -38,7 +38,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/icon-only-logo.png',
+    apple: '/apple-touch-icon.png',
   },
+  appleWebApp: { capable: true, title: 'TM Stats', statusBarStyle: 'black-translucent' },
 }
 
 export const viewport: Viewport = {
