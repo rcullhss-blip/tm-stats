@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import RoundsView from '@/components/rounds/RoundsView'
+import StatsPendingCard from '@/components/rounds/StatsPendingCard'
 import type { RoundRow } from '@/lib/types'
 
 export default async function RoundsPage() {
@@ -43,6 +44,10 @@ export default async function RoundsPage() {
           </Link>
         </div>
       </div>
+
+      {roundList.filter(r => r.stats_pending).map(r => (
+        <StatsPendingCard key={r.id} roundId={r.id} title={r.notes || r.course_name} subtitle={r.notes ? r.course_name : undefined} score={r.score_total} />
+      ))}
 
       {roundList.length === 0 ? (
         <div className="text-center py-16">

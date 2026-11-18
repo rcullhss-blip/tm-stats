@@ -17,6 +17,10 @@ interface Props {
   // Voice entry: one note per hole (null = heard in full). Presence of the list
   // means the holes were filled in from a recording and need checking.
   voiceNotes?: (string | null)[]
+  // Pars and scores are already known (qualifying or an uploaded result) and
+  // cannot be changed here: the golfer is only adding stats.
+  cardLocked?: boolean
+  stepLabel?: string
 }
 
 function defaultHole(holeNumber: number, par: 3 | 4 | 5 = 4): HoleData {
@@ -141,7 +145,7 @@ function PillToggle({
   )
 }
 
-export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, initialHighest, editingFromSummary = false, onProgress, voiceNotes }: Props) {
+export default function HoleEntry({ setup, onBack, onComplete, initialHoles, initialHole = 0, initialHighest, editingFromSummary = false, onProgress, voiceNotes, cardLocked = false, stepLabel }: Props) {
   const holeCount = setup.holes
   const [current, setCurrent] = useState(initialHole)
   const [highestReached, setHighestReached] = useState(
@@ -270,7 +274,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
         </button>
         <div className="text-center">
           <p className="text-sm font-medium" style={{ color: '#9A9DB0' }}>
-            Step 2 of 3
+            {stepLabel ?? 'Step 2 of 3'}
           </p>
           <p className="text-xs" style={{ color: '#9A9DB0' }}>
             {setup.courseName}
@@ -392,7 +396,14 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
 
       <div className="space-y-6">
         {/* Par selector — quick mode only (full tracking has its own) */}
-        {setup.inputMode === 'quick' && (
+        {setup.inputMode === 'quick' && cardLocked && (
+          <div className="px-4 py-3 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+            <p className="text-sm" style={{ color: '#9A9DB0' }}>
+              From your card: par <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{hole.par}</span>, score <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{hole.score}</span>. Just add the stats.
+            </p>
+          </div>
+        )}
+        {setup.inputMode === 'quick' && !cardLocked && (
           <div>
             <p className="text-sm font-medium mb-3" style={{ color: '#9A9DB0' }}>Par</p>
             <div className="grid grid-cols-3 gap-2">
@@ -419,7 +430,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
         )}
 
         {/* Score stepper — quick mode only; full tracking auto-counts shots */}
-        {setup.inputMode === 'quick' && (
+        {setup.inputMode === 'quick' && !cardLocked && (
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium" style={{ color: '#9A9DB0' }}>Score</p>
             <Stepper
@@ -465,7 +476,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
                 value={hole.putts ?? 2}
                 onChange={putts => updateHole({ putts })}
                 min={0}
-                max={6}
+                max={cardLocked ? Math.min(6, hole.score) : 6}
               />
             </div>
 
@@ -509,7 +520,8 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             holeNumber={hole.holeNumber}
             par={hole.par}
             initialShots={hole.shots ?? []}
-            onChangePar={p => updateHole({ par: p, score: p })}
+            onChangePar={p => { if (!cardLocked) updateHole({ par: p, score: p }) }}
+            cardScore={cardLocked ? hole.score : undefined}
             onShotsChange={shots => updateHole({ shots })}
             trackProcess={setup.trackProcess}
             advanced={setup.advanced}

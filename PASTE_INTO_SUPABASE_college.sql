@@ -57,3 +57,19 @@ ALTER TABLE public.qualifier_scores ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS qualifier_scores_qualifier_idx ON public.qualifier_scores (qualifier_id);
 CREATE INDEX IF NOT EXISTS qualifiers_team_idx ON public.qualifiers (team_id);
+
+-- One hole on one card, changed in a single step. Several groups enter scores
+-- from different phones at once, so a save must never overwrite another save.
+CREATE OR REPLACE FUNCTION public.set_qualifier_score(p_card UUID, p_hole INTEGER, p_score INTEGER)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  UPDATE public.qualifier_scores
+     SET scores = jsonb_set(scores, ARRAY[(p_hole - 1)::text], COALESCE(to_jsonb(p_score), 'null'::jsonb), true),
+         updated_at = NOW()
+   WHERE id = p_card AND round_id IS NULL;
+$$;
+REVOKE ALL ON FUNCTION public.set_qualifier_score(UUID, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.set_qualifier_score(UUID, INTEGER, INTEGER) TO service_role;

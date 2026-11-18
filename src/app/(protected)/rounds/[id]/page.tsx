@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import StatsPendingCard from '@/components/rounds/StatsPendingCard'
 import type { HoleRow } from '@/lib/types'
 import type { ShotEntry } from '@/lib/types'
 import { calculateRoundSG, fmtSG, sgColor, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
@@ -246,6 +247,10 @@ export default async function RoundDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      {(round as { stats_pending?: boolean }).stats_pending && (
+        <StatsPendingCard roundId={id} title="This round is waiting for your stats" subtitle="Fairways, greens and putts below are blank until you add them" score={null} />
+      )}
 
       {/* Round header */}
       <div className="mb-6">

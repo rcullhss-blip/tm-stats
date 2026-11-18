@@ -69,6 +69,9 @@ export type Database = {
           conditions: string | null
           energy_level: 'fresh' | 'normal' | 'tired' | 'niggly' | null
           created_at: string
+          // Scores came from qualifying or an uploaded result; stats still to add
+          stats_pending?: boolean
+          qualifier_id?: string | null
         }
         Insert: {
           id?: string

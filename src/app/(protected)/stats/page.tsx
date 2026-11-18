@@ -34,7 +34,9 @@ export default async function StatsPage() {
     .order('date', { ascending: false })
     .limit(50)
 
-  const roundList: RoundRow[] = roundsRaw ?? []
+  // A round still waiting for its stats has scores but no fairways, greens or
+  // putts, so it is left out of every average here until the stats are added.
+  const roundList: RoundRow[] = (roundsRaw ?? []).filter((r: RoundRow) => !r.stats_pending)
 
   if (roundList.length === 0) {
     return (

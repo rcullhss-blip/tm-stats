@@ -155,3 +155,33 @@ export function teamNudgeHtml(userId: string, firstName: string, teamName: strin
     footerReason: `You are getting this because you are on ${teamName} in TM Stats.`,
   })
 }
+
+// ─── "Your scores are in" ─────────────────────────────────────────────────────
+// Sent when a coach finishes a qualifying round or uploads a tournament result:
+// the golfer's round is already in their account with pars and scores filled in.
+
+export function statsReadySubject(eventName: string): string {
+  return `${eventName}: your scores are in, add your stats`
+}
+
+export function statsReadyHtml(opts: {
+  userId: string; firstName: string; eventName: string; courseName: string; score: number; toPar: string; roundId: string; teamName: string
+  // For a player whose account has not been opened yet: a one-tap sign-in link.
+  // They choose a password, then the round is waiting on their dashboard.
+  claimLink?: string
+}): string {
+  return personalNote({
+    userId: opts.userId,
+    greeting: `Hi ${opts.firstName},`,
+    bodyHtml:
+      para(`Your ${opts.eventName} round at ${opts.courseName} is already in TM Stats: <strong>${opts.score} (${opts.toPar})</strong>, with every hole's par and score filled in.`) +
+      para('All that is left is your stats. Quick mode is fairways, greens and putts, about two minutes. Full tracking is each shot, and gives you Strokes Gained for the round.') +
+      para('Do it while you still remember the shots.'),
+    linkLabel: opts.claimLink ? 'Open your account and add your stats' : 'Add your stats',
+    linkUrl: opts.claimLink ?? `${SITE}/rounds/${opts.roundId}/finish`,
+    afterLinkHtml: opts.claimLink
+      ? para('Your coach set this account up for you. The link signs you straight in and asks you to choose a password. Your round is waiting on the first screen.')
+      : undefined,
+    footerReason: `You are getting this because you are on ${opts.teamName} in TM Stats.`,
+  })
+}

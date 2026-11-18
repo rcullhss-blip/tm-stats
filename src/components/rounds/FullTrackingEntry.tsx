@@ -14,6 +14,9 @@ interface Props {
   onShotsChange?: (shots: ShotEntry[]) => void  // Live updates so in-progress shots survive a reload
   trackProcess?: boolean  // Mental process tracking — Yes/No per shot
   advanced?: boolean      // Elite: ask where the last shot finished
+  // The hole's score is already known (from qualifying or an uploaded result).
+  // Par cannot be changed and the shots entered must add up to this score.
+  cardScore?: number
 }
 
 const LIE_OPTIONS: { value: LieType; label: string }[] = [
@@ -74,7 +77,7 @@ function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   return 'fairway'
 }
 
-export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false }: Props) {
+export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false, cardScore }: Props) {
   const [shots, setShots] = useState<ShotEntry[]>(initialShots ?? [])
   const [pendingLie, setPendingLie] = useState<LieType>(() => {
     if (initialShots && initialShots.length > 0) {
@@ -215,6 +218,15 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       setError('Add the missing distance in the amber box above first.')
       return
     }
+    if (cardScore !== undefined && finalShots.length !== cardScore) {
+      const n = finalShots.length
+      setError(
+        n < cardScore
+          ? `Your card says ${cardScore} on this hole and you have entered ${n} shot${n !== 1 ? 's' : ''}. Add the missing ${cardScore - n === 1 ? 'shot' : 'shots'} (a penalty counts as a shot).`
+          : `Your card says ${cardScore} on this hole and you have entered ${n} shots. Use "Undo last shot" to take ${n - cardScore === 1 ? 'one' : 'some'} off.`
+      )
+      return
+    }
     onComplete({ ...deriveShotStats(finalShots, par), par, shots: finalShots })
   }
 
@@ -263,7 +275,17 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
 
   return (
     <div className="space-y-6">
-      {/* Par selector */}
+      {/* Par selector, or the fixed card when the score is already known */}
+      {cardScore !== undefined ? (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+          <p className="text-sm" style={{ color: '#9A9DB0' }}>
+            From your card: par <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{par}</span>, score <span style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{cardScore}</span>
+          </p>
+          <p className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: shots.length === cardScore ? '#22C55E' : '#9A9DB0' }}>
+            {shots.length}/{cardScore} shots
+          </p>
+        </div>
+      ) : (
       <div>
         <p className="text-sm font-medium mb-3" style={{ color: '#9A9DB0' }}>Par</p>
         <div className="grid grid-cols-3 gap-2">
@@ -286,6 +308,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           ))}
         </div>
       </div>
+      )}
 
       {/* Shot history */}
       {shots.length > 0 && (

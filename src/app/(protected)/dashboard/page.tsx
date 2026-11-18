@@ -5,6 +5,9 @@ import Link from 'next/link'
 import type { RoundRow, HoleRow } from '@/lib/types'
 import type { ShotEntry } from '@/lib/types'
 import { calculateRoundSG, handicapToSkillLevel } from '@/lib/sg-engine'
+import StatsPendingCard from '@/components/rounds/StatsPendingCard'
+import { teamFor } from '@/lib/qualifying-server'
+import { isFinished } from '@/lib/qualifying'
 import PreRoundPlanWidget from '@/components/dashboard/PreRoundPlanWidget'
 import PatternFinderWidget from '@/components/dashboard/PatternFinderWidget'
 import DashboardGuide from '@/components/dashboard/DashboardGuide'
@@ -66,6 +69,20 @@ export default async function DashboardPage() {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id),
   ])
+
+  // Rounds whose scores came in from qualifying and still need stats, and any
+  // qualifying that is open for this golfer's team right now.
+  const pendingRounds = (rounds ?? []).filter(r => r.stats_pending)
+  let openQualifiers: { id: string; name: string; course_name: string }[] = []
+  let onTeam = false
+  try {
+    const team = await teamFor(user.id)
+    if (team) {
+      onTeam = true
+      const { data: quals } = await team.service.from('qualifiers').select('id, name, course_name, round_count, rounds_finished').eq('team_id', team.teamId).order('created_at', { ascending: false }).limit(10)
+      openQualifiers = (quals ?? []).filter((q: { round_count: number; rounds_finished: number }) => !isFinished(q))
+    }
+  } catch {}
 
   const name = profile?.name?.split(' ')[0] || 'Golfer'
   const isPro = hasPro(profile?.subscription_status)
@@ -160,6 +177,23 @@ export default async function DashboardPage() {
             : `${roundCount} round${roundCount !== 1 ? 's' : ''} logged`}
         </p>
       </div>
+
+      {pendingRounds.map(r => (
+        <StatsPendingCard key={r.id} roundId={r.id} title={r.notes || r.course_name} subtitle={r.notes ? r.course_name : undefined} score={r.score_total} />
+      ))}
+      {openQualifiers.map(q => (
+        <Link key={q.id} href={`/qualifying/${q.id}`} className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222260', minHeight: '64px' }}>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#CC2222' }}>Qualifying is open</p>
+            <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>{q.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>{q.course_name} · leaderboard and score entry</p>
+          </div>
+          <span className="text-lg" style={{ color: '#CC2222' }}>→</span>
+        </Link>
+      ))}
+      {onTeam && openQualifiers.length === 0 && pendingRounds.length === 0 && (
+        <Link href="/qualifying" className="inline-block text-xs mb-4" style={{ color: '#9A9DB0', minHeight: '32px' }}>Team qualifying →</Link>
+      )}
 
       {/* Training focus + One Shot Fix */}
       {trainingFocus && (

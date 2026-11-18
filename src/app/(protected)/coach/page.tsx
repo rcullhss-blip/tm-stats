@@ -173,6 +173,14 @@ export default async function CoachPage() {
         </p>
       </div>
 
+      <Link href="/qualifying" className="flex items-center justify-between p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222260', minHeight: '64px' }}>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Qualifying and live scoring</p>
+          <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Players enter scores on their phones. When the round ends, their stats are half done.</p>
+        </div>
+        <span className="text-lg" style={{ color: '#CC2222' }}>→</span>
+      </Link>
+
       {SQUAD_SETTINGS_LIVE && <TeamSettings benchmark={team.benchmark ?? null} playersSeeLeaderboard={team.players_see_leaderboard !== false} />}
 
       {/* Leaderboard */}
