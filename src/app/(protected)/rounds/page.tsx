@@ -5,6 +5,7 @@ import Link from 'next/link'
 import RoundsView from '@/components/rounds/RoundsView'
 import StatsPendingCard from '@/components/rounds/StatsPendingCard'
 import type { RoundRow } from '@/lib/types'
+import UnfinishedRoundBanner from '@/components/rounds/UnfinishedRoundBanner'
 
 export default async function RoundsPage() {
   const supabase = await createClient()
@@ -21,6 +22,7 @@ export default async function RoundsPage() {
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
+      <UnfinishedRoundBanner />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
           Rounds

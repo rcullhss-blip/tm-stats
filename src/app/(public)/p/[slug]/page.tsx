@@ -6,7 +6,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import type { ShotEntry } from '@/lib/types'
 import { calculateRoundSG, fmtSG, sgColor } from '@/lib/sg-engine'
 import { pooledHandicapLevels, fmtHandicapLevel } from '@/lib/handicap-level'
-import { parseProfileInfo, scoringSummary, type ProfileRound } from '@/lib/recruit-profile'
+import { parseProfileInfo, scoringSummary, type ProfileRound, roundShown } from '@/lib/recruit-profile'
 
 interface PageProps { params: Promise<{ slug: string }> }
 
@@ -47,8 +47,9 @@ export default async function RecruitingProfilePage({ params }: PageProps) {
 
   const { data: roundsRaw } = await service.from('rounds')
     .select('id, date, course_name, holes, round_type, input_mode, par_total, score_total, stats_pending, qualifier_id, notes')
-    .eq('user_id', user.id).order('date', { ascending: false }).limit(40)
-  const all: { id: string; date: string; course_name: string; holes: number; round_type: string; input_mode: string; par_total: number | null; score_total: number | null; stats_pending: boolean; qualifier_id: string | null; notes: string | null }[] = roundsRaw ?? []
+    .eq('user_id', user.id).order('date', { ascending: false }).order('created_at', { ascending: false }).limit(60)
+  // Only the rounds the golfer has chosen to show (practice rounds can be left out, any round hidden)
+  const all: { id: string; date: string; course_name: string; holes: number; round_type: string; input_mode: string; par_total: number | null; score_total: number | null; stats_pending: boolean; qualifier_id: string | null; notes: string | null }[] = (roundsRaw ?? []).filter((r: { id: string; round_type: string }) => roundShown(info, r))
 
   const rounds: (ProfileRound & { id: string })[] = all
     .filter(r => r.score_total != null && r.par_total != null)

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
+import BecomeCoach from '@/components/coach/BecomeCoach'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
 import TeamLeaderboard, { type LeaderboardRow } from '@/components/coach/TeamLeaderboard'
 import TeamSettings from '@/components/coach/TeamSettings'
@@ -22,13 +23,13 @@ export default async function CoachPage() {
 
   const { data: profile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
   if (profile?.subscription_status !== 'team') {
-    // Not a coach account: explain how coaches get set up instead of a bare 404
+    // Not a coach yet: a coach sets up their own team here
     return (
-      <div className="px-4 py-10 max-w-lg mx-auto text-center">
-        <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Coach tools</h1>
-        <p className="text-sm mb-2" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Team qualifying, selection and squad stats are for team coaches. We set up coach accounts for you, usually the same day.</p>
-        <p className="text-sm mb-6" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Playing on a team? Ask your coach for the team code and enter it in Profile.</p>
-        <Link href="/contact" className="inline-block px-5 py-3 rounded-xl text-sm font-semibold" style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}>Set up my team</Link>
+      <div className="px-4 py-8 max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Set up your team</h1>
+        <p className="text-sm mb-1" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Live team qualifying, groups and tee times, selection and every player&apos;s Strokes Gained side by side. Free for your first year, and players who join get Pro for that year too.</p>
+        <p className="text-sm mb-5" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Playing on a team? You don&apos;t need this: ask your coach for the team code and enter it in Profile.</p>
+        <BecomeCoach />
       </div>
     )
   }

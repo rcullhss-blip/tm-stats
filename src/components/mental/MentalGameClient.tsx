@@ -48,8 +48,21 @@ export default function MentalGameClient({ isPro }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (isPro) loadSessions()
-  }, [isPro])
+    loadSessions()
+  }, [])
+
+  // Free plan: one sample conversation of 3 messages
+  const FREE_MESSAGES = 3
+  const userSent = messages.filter(m => m.role === 'user').length
+  const sampleLeft = isPro ? Infinity : Math.max(0, FREE_MESSAGES - userSent)
+  const [sampleUsed, setSampleUsed] = useState(false)
+  const proCard = (
+    <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222240' }}>
+      <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>That was your free sample</p>
+      <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>Pro has unlimited mental game sessions, plus AI coaching on every round.</p>
+      <a href="/upgrade" className="inline-block px-4 py-2 rounded-lg text-sm font-semibold" style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}>See Pro</a>
+    </div>
+  )
 
   useEffect(() => {
     if (view === 'chat') {
@@ -111,6 +124,7 @@ export default function MentalGameClient({ isPro }: Props) {
         body: JSON.stringify({ message: msg, sessionId: activeSessionId }),
       })
       const data = await res.json()
+      if (data.sampleUsed) setSampleUsed(true)
       if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
 
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
@@ -133,28 +147,6 @@ export default function MentalGameClient({ isPro }: Props) {
     setSessions(prev => prev.filter(s => s.id !== id))
   }
 
-  if (!isPro) {
-    return (
-      <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222230' }}>
-        <div className="flex items-start gap-3">
-          <div>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Mental Game — Pro feature</p>
-            <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>
-              Talk through the mental side of your game with an experienced golf mentor.
-            </p>
-            <a
-              href="/upgrade"
-              className="inline-block px-4 py-2 rounded-lg text-sm font-semibold"
-              style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
-            >
-              Go Pro
-            </a>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   // ── Chat view ──────────────────────────────────────────────────────────────
   if (view === 'chat') {
     return (
@@ -173,6 +165,11 @@ export default function MentalGameClient({ isPro }: Props) {
             {activeSessionId ? 'Continuing chat' : 'New chat'}
           </p>
         </div>
+        {!isPro && sampleLeft > 0 && !sampleUsed && (
+          <p className="text-xs mb-3 px-3 py-2 rounded-lg" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
+            Free sample: {sampleLeft} of {FREE_MESSAGES} message{sampleLeft !== 1 ? 's' : ''} left.
+          </p>
+        )}
 
         {/* Message thread */}
         <div className="space-y-3 mb-4">
@@ -255,7 +252,8 @@ export default function MentalGameClient({ isPro }: Props) {
           <div ref={bottomRef} />
         </div>
 
-        {/* Input */}
+        {/* Input, or Pro once the free sample is used */}
+        {!isPro && (sampleLeft === 0 || sampleUsed) && !loading ? proCard : (
         <div className="sticky bottom-28">
           <div
             className="flex gap-2 p-2 rounded-2xl"
@@ -288,6 +286,7 @@ export default function MentalGameClient({ isPro }: Props) {
             </button>
           </div>
         </div>
+        )}
 
         <p className="text-xs mt-4 leading-relaxed" style={{ color: '#4A4D60' }}>
           TM Stats Mental Game is a golf-specific thinking tool, not a substitute for professional mental health support.
@@ -306,14 +305,19 @@ export default function MentalGameClient({ isPro }: Props) {
   // ── Sessions list view ─────────────────────────────────────────────────────
   return (
     <div>
-      <button
-        type="button"
-        onClick={startNewChat}
-        className="w-full py-3.5 rounded-xl font-semibold text-sm mb-5"
-        style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '52px' }}
-      >
-        + Start new chat
-      </button>
+      {isPro || (!sessionsLoading && sessions.length === 0) ? (
+        <>
+          {!isPro && <p className="text-xs mb-2" style={{ color: '#9A9DB0' }}>Try it free: one conversation, {FREE_MESSAGES} messages.</p>}
+          <button
+            type="button"
+            onClick={startNewChat}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm mb-5"
+            style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '52px' }}
+          >
+            {isPro ? '+ Start new chat' : 'Start my free sample'}
+          </button>
+        </>
+      ) : !isPro && !sessionsLoading ? <div className="mb-5">{proCard}</div> : null}
 
       {sessionsLoading ? (
         <div className="space-y-3">
@@ -351,8 +355,8 @@ export default function MentalGameClient({ isPro }: Props) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs" style={{ color: '#9A9DB0' }}>Continue →</span>
-                  <button
+                  <span className="text-xs" style={{ color: '#9A9DB0' }}>{isPro ? 'Continue →' : 'Open →'}</span>
+                  {isPro && <button
                     type="button"
                     onClick={(e) => deleteSession(s.id, e)}
                     className="flex items-center justify-center rounded-lg"
@@ -360,7 +364,7 @@ export default function MentalGameClient({ isPro }: Props) {
                     aria-label="Delete chat"
                   >
                     ✕
-                  </button>
+                  </button>}
                 </div>
               </button>
             ))}

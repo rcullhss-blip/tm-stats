@@ -18,12 +18,14 @@ export default async function NewRoundPage() {
 
   const isPro = hasPro(profile?.subscription_status)
 
+  let freeRoundsLeft: number | null = null
   if (!isPro) {
     const { count } = await supabase
       .from('rounds')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
 
+    freeRoundsLeft = Math.max(0, 5 - (count ?? 0))
     if ((count ?? 0) >= 5) {
       redirect('/upgrade?reason=round_limit')
     }
@@ -54,5 +56,5 @@ export default async function NewRoundPage() {
   // Elite: advanced shot tracking (where each shot finished)
   const advancedEnabled = hasElite(profile?.subscription_status)
 
-  return <NewRoundClient recentCourses={recentCourses} voiceEnabled={voiceEnabled} advancedEnabled={advancedEnabled} />
+  return <NewRoundClient recentCourses={recentCourses} voiceEnabled={voiceEnabled} advancedEnabled={advancedEnabled} freeRoundsLeft={freeRoundsLeft} />
 }

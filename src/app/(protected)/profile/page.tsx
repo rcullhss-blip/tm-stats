@@ -57,6 +57,17 @@ export default async function ProfilePage() {
     .map((m: { teams: { name: string } | null }) => m.teams?.name)
     .filter(Boolean)
 
+  // Recent rounds, so the golfer can choose which appear on their recruiting page
+  const { data: recruitRaw } = await supabase
+    .from('rounds')
+    .select('id, date, course_name, holes, score_total, par_total, round_type')
+    .eq('user_id', user.id)
+    .order('date', { ascending: false }).order('created_at', { ascending: false })
+    .limit(20)
+  const recruitRounds = ((recruitRaw ?? []) as { id: string; date: string; course_name: string; holes: number; score_total: number | null; par_total: number | null; round_type: string }[])
+    .filter(r => r.score_total != null && r.par_total != null)
+    .map(r => ({ id: r.id, date: r.date, course: r.course_name, holes: r.holes, score: r.score_total as number, toPar: (r.score_total as number) - (r.par_total as number), type: r.round_type }))
+
   // Golf DNA — SG averages across last 10 full-tracking rounds
   let golfDNA: { strength: string; opportunity: string; strengthVal: string; opportunityVal: string } | null = null
   if (isPro) {
@@ -220,6 +231,7 @@ export default async function ProfilePage() {
       {profile?.subscription_status !== 'team' && (
         <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
           <JoinTeamForm teamNames={teamNames} />
+          <Link href="/coach" className="text-xs mt-3 inline-block" style={{ color: '#9A9DB0', minHeight: '44px' }}>Coach a team? Set up your team →</Link>
         </div>
       )}
 
@@ -237,7 +249,7 @@ export default async function ProfilePage() {
       {/* Recruiting profile: the page a golfer sends to college coaches */}
       {profile?.subscription_status !== 'team' && (
         <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
-          <RecruitingProfileSettings isPublic={profile?.profile_public === true} slug={profile?.profile_slug ?? null} info={parseProfileInfo(profile?.profile_info)} />
+          <RecruitingProfileSettings isPublic={profile?.profile_public === true} slug={profile?.profile_slug ?? null} info={parseProfileInfo(profile?.profile_info)} rounds={recruitRounds} />
         </div>
       )}
 

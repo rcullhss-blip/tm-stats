@@ -14,6 +14,7 @@ import DashboardGuide from '@/components/dashboard/DashboardGuide'
 import ExampleRound from '@/components/dashboard/ExampleRound'
 import ProgressLadder from '@/components/dashboard/ProgressLadder'
 import { hasPro } from '@/lib/plan'
+import UnfinishedRoundBanner from '@/components/rounds/UnfinishedRoundBanner'
 
 function scoreToPar(score: number | null, par: number | null): string {
   if (!score || !par) return '—'
@@ -181,6 +182,8 @@ export default async function DashboardPage() {
             : `${roundCount} round${roundCount !== 1 ? 's' : ''} logged`}
         </p>
       </div>
+
+      <UnfinishedRoundBanner />
 
       {pendingRounds.map(r => (
         <StatsPendingCard key={r.id} roundId={r.id} title={r.notes || r.course_name} subtitle={r.notes ? r.course_name : undefined} score={r.score_total} />

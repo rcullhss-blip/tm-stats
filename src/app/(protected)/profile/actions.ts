@@ -120,7 +120,7 @@ export async function saveGoal(input: { metric: GoalMetric; target: number; by: 
   return { error: null }
 }
 
-export async function saveRecruitingProfile(input: { isPublic: boolean; gradYear: number | null; homeClub: string; bio: string; contact: string }) {
+export async function saveRecruitingProfile(input: { isPublic: boolean; gradYear: number | null; homeClub: string; bio: string; contact: string; showPractice?: boolean; hiddenRounds?: string[] }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not signed in', slug: null }
@@ -130,7 +130,7 @@ export async function saveRecruitingProfile(input: { isPublic: boolean; gradYear
   const { data: me } = await sb.from('users').select('name, profile_slug').eq('id', user.id).single()
   if (input.isPublic && !me?.name?.trim()) return { error: 'Add your name in Settings first, so the profile has a name on it', slug: null }
 
-  const info = parseProfileInfo({ gradYear: input.gradYear, homeClub: input.homeClub, bio: input.bio, contact: input.contact })
+  const info = parseProfileInfo({ gradYear: input.gradYear, homeClub: input.homeClub, bio: input.bio, contact: input.contact, showPractice: input.showPractice, hiddenRounds: input.hiddenRounds })
 
   // The address is made once, the first time the profile is switched on, and
   // then never changes, so a link already sent to a coach keeps working.

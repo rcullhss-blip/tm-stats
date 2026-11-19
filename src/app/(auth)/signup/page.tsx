@@ -129,7 +129,8 @@ export default function SignupPage() {
       }
     } catch {}
 
-    window.location.href = '/dashboard'
+    // Coaches who came from "set up your team" go straight to it
+    window.location.href = new URLSearchParams(window.location.search).get('coach') === '1' ? '/coach' : '/dashboard'
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)

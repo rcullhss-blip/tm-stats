@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { hasPro } from '@/lib/plan'
 
+// Free golfers get one sample conversation with this many messages
+const FREE_MENTAL_MESSAGES = 3
+
 const SYSTEM_PROMPT = `You are a calm, experienced golf mentor — like a trusted playing partner who has seen it all.
 You help golfers with the mental side of their game. Your tone is warm, grounded, and practical — never clinical, never preachy, never like a therapist.
 You speak from experience on the course. Keep responses concise: 2-4 short paragraphs. Focus on perspective, simple cues, and next steps on the course.
@@ -28,7 +31,6 @@ export async function POST(request: Request) {
     .single()
 
   const isPro = hasPro(profile?.subscription_status)
-  if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
 
   let body: { message?: string; sessionId?: string }
   try {
@@ -57,6 +59,17 @@ export async function POST(request: Request) {
       .single()
     if (session) {
       existingMessages = (session.messages as MentalMessage[]) ?? []
+    }
+  }
+
+  // Free plan: one sample conversation of FREE_MENTAL_MESSAGES messages
+  if (!isPro) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: mine } = await (supabase as any).from('mental_sessions').select('id').eq('user_id', user.id)
+    const others = (mine ?? []).filter((s: { id: string }) => s.id !== sessionId)
+    const used = existingMessages.filter(m => m.role === 'user').length
+    if (others.length > 0 || (!sessionId && (mine ?? []).length > 0) || used >= FREE_MENTAL_MESSAGES) {
+      return NextResponse.json({ error: 'Your free sample is used up. Pro has unlimited mental game sessions.', sampleUsed: true }, { status: 403 })
     }
   }
 
@@ -115,8 +128,8 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single()
 
-  const isPro = hasPro(profile?.subscription_status)
-  if (!isPro) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
+  // Free users can read back their own sample conversation, so no plan check here
+  void profile
 
   const { searchParams } = new URL(request.url)
   const sessionId = searchParams.get('sessionId')
@@ -153,6 +166,11 @@ export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url)
   const sessionId = searchParams.get('sessionId')
   if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 })
+
+  // The free sample conversation stays (deleting it would start a new sample)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: me } = await (supabase as any).from('users').select('subscription_status').eq('id', user.id).single()
+  if (!hasPro(me?.subscription_status)) return NextResponse.json({ error: 'Pro feature' }, { status: 403 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase as any)

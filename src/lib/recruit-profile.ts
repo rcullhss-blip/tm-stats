@@ -9,13 +9,23 @@ export interface ProfileInfo {
   homeClub: string | null
   bio: string | null
   contact: string | null      // how a coach should get in touch (agency, coach, email)
+  showPractice: boolean       // include practice rounds (on unless the golfer turns it off)
+  hiddenRounds: string[]      // round ids the golfer has chosen to leave off the page
 }
 
 export function parseProfileInfo(raw: unknown): ProfileInfo {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const text = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null)
   const year = typeof r.gradYear === 'number' && Number.isInteger(r.gradYear) && r.gradYear >= 2024 && r.gradYear <= 2040 ? r.gradYear : null
-  return { gradYear: year, homeClub: text(r.homeClub, 80), bio: text(r.bio, 400), contact: text(r.contact, 120) }
+  const hidden = Array.isArray(r.hiddenRounds) ? r.hiddenRounds.filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 200) : []
+  return { gradYear: year, homeClub: text(r.homeClub, 80), bio: text(r.bio, 400), contact: text(r.contact, 120), showPractice: r.showPractice !== false, hiddenRounds: [...new Set(hidden)] }
+}
+
+/** Should this round appear on the golfer's recruiting page? */
+export function roundShown(info: Pick<ProfileInfo, 'showPractice' | 'hiddenRounds'>, round: { id: string; round_type: string }): boolean {
+  if (info.hiddenRounds.includes(round.id)) return false
+  if (!info.showPractice && round.round_type === 'practice') return false
+  return true
 }
 
 /** "Sam O'Neil-Jones" -> "sam-oneil-jones". Empty for a name with no letters. */

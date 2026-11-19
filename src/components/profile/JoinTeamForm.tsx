@@ -12,6 +12,7 @@ export default function JoinTeamForm({ teamNames }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newTeam, setNewTeam] = useState<string | null>(null)
+  const [proUntil, setProUntil] = useState<string | null>(null)
   const router = useRouter()
 
   async function join(e: React.FormEvent) {
@@ -27,6 +28,7 @@ export default function JoinTeamForm({ teamNames }: Props) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to join')
       setNewTeam(data.teamName)
+      setProUntil(data.proUntil ?? null)
       setCode('')
       router.refresh()
     } catch (e) {
@@ -55,7 +57,10 @@ export default function JoinTeamForm({ teamNames }: Props) {
       )}
 
       {newTeam && (
-        <p className="text-xs mb-3" style={{ color: '#22C55E' }}>Joined {newTeam} — your coach can now view your stats.</p>
+        <p className="text-xs mb-3" style={{ color: '#22C55E' }}>
+          Joined {newTeam}. Your coach can now see your stats.
+          {proUntil ? ` Being on the team gives you Pro until ${new Date(proUntil).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}
+        </p>
       )}
 
       <form onSubmit={join}>

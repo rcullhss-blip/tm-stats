@@ -4,17 +4,23 @@ import { useState, useTransition } from 'react'
 import { saveRecruitingProfile } from '@/app/(protected)/profile/actions'
 import type { ProfileInfo } from '@/lib/recruit-profile'
 
+interface RecentRound { id: string; date: string; course: string; holes: number; score: number; toPar: number; type: string }
+
 interface Props {
   isPublic: boolean
   slug: string | null
   info: ProfileInfo
+  rounds?: RecentRound[]
 }
 
 const field = { backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3247', outline: 'none', minHeight: '48px' } as const
 const SITE = 'https://www.tmstatsgolf.com'
 
 /** The page a golfer sends to college coaches. Off until they switch it on. */
-export default function RecruitingProfileSettings({ isPublic, slug, info }: Props) {
+export default function RecruitingProfileSettings({ isPublic, slug, info, rounds = [] }: Props) {
+  const [showPractice, setShowPractice] = useState(info.showPractice)
+  const [hidden, setHidden] = useState<string[]>(info.hiddenRounds)
+  const [showList, setShowList] = useState(false)
   const [on, setOn] = useState(isPublic)
   const [gradYear, setGradYear] = useState(info.gradYear ? String(info.gradYear) : '')
   const [homeClub, setHomeClub] = useState(info.homeClub ?? '')
@@ -30,7 +36,7 @@ export default function RecruitingProfileSettings({ isPublic, slug, info }: Prop
   function save() {
     setNote(null)
     start(async () => {
-      const res = await saveRecruitingProfile({ isPublic: on, gradYear: gradYear ? Number(gradYear) : null, homeClub, bio, contact })
+      const res = await saveRecruitingProfile({ isPublic: on, gradYear: gradYear ? Number(gradYear) : null, homeClub, bio, contact, showPractice, hiddenRounds: hidden })
       if (res?.error) { setNote({ text: res.error, ok: false }); return }
       setLink(on && res?.slug ? `${SITE}/p/${res.slug}` : null)
       setNote({ text: on ? 'Saved. Your profile is live.' : 'Saved. Your profile is switched off.', ok: true })
@@ -77,6 +83,45 @@ export default function RecruitingProfileSettings({ isPublic, slug, info }: Prop
       <label className="text-xs mb-1 block" style={{ color: '#9A9DB0' }}>How a coach should contact you</label>
       <input value={contact} onChange={e => setContact(e.target.value)} maxLength={120} placeholder="e.g. through my coach, or an email address" className="w-full px-3 rounded-lg text-sm mb-1" style={field} />
       <p className="text-xs mb-4" style={{ color: '#4A4D60' }}>Shown on the page exactly as typed. Leave blank to show nothing.</p>
+
+      {/* Which rounds coaches see */}
+      <label className="flex items-start gap-3 mb-2" style={{ minHeight: '44px' }}>
+        <input type="checkbox" checked={showPractice} onChange={e => setShowPractice(e.target.checked)} style={{ width: '22px', height: '22px', accentColor: '#CC2222', marginTop: '2px', flexShrink: 0 }} />
+        <span>
+          <span className="text-sm block" style={{ color: '#F0F0F0' }}>Include practice rounds</span>
+          <span className="text-xs" style={{ color: '#9A9DB0' }}>Turn off to show only competition, qualifying and tournament rounds.</span>
+        </span>
+      </label>
+      {rounds.length > 0 && (
+        <div className="mb-4">
+          <button type="button" onClick={() => setShowList(v => !v)} className="text-sm" style={{ color: '#CC2222', minHeight: '44px' }}>
+            {showList ? 'Done choosing rounds' : `Choose which rounds to show${hidden.length > 0 ? ` (${hidden.length} hidden)` : ''}`}
+          </button>
+          {showList && (
+            <div className="rounded-xl overflow-hidden mt-1" style={{ backgroundColor: '#22263A' }}>
+              {rounds.map((r, i) => {
+                const off = hidden.includes(r.id) || (!showPractice && r.type === 'practice')
+                const lockedOff = !showPractice && r.type === 'practice'
+                return (
+                  <button key={r.id} type="button" disabled={lockedOff}
+                    onClick={() => setHidden(h => (h.includes(r.id) ? h.filter(x => x !== r.id) : [...h, r.id]))}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left" style={{ borderTop: i > 0 ? '1px solid #2E3247' : 'none', minHeight: '48px', opacity: lockedOff ? 0.5 : 1 }}>
+                    <span className="min-w-0 pr-2">
+                      <span className="text-sm block truncate" style={{ color: off ? '#4A4D60' : '#F0F0F0', textDecoration: off ? 'line-through' : 'none' }}>{r.course}</span>
+                      <span className="text-xs" style={{ color: '#9A9DB0' }}>{new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · {r.holes} holes · {r.type}</span>
+                    </span>
+                    <span className="flex items-center gap-3 flex-shrink-0">
+                      <span className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: off ? '#4A4D60' : '#F0F0F0' }}>{r.score}</span>
+                      <span className="text-xs w-12 text-right" style={{ color: off ? '#9A9DB0' : '#22C55E' }}>{off ? 'Hidden' : 'Shown'}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {showList && <p className="text-xs mt-1" style={{ color: '#4A4D60' }}>Tap a round to hide or show it, then Save. Hidden rounds also leave your averages on the page.</p>}
+        </div>
+      )}
 
       <button type="button" onClick={save} disabled={pending} className="w-full rounded-xl font-semibold text-sm" style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3247', minHeight: '48px', opacity: pending ? 0.6 : 1 }}>
         {pending ? 'Saving…' : 'Save'}

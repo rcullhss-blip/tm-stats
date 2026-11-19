@@ -150,7 +150,7 @@ export default function LandingPage() {
             </div>
             <div className="text-center">
               <Link
-                href="/contact"
+                href="/signup?coach=1"
                 className="inline-block px-6 py-3 rounded-xl text-sm font-semibold"
                 style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
               >

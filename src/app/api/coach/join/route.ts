@@ -54,5 +54,21 @@ export async function POST(request: Request) {
     await (service as any).from('users').update({ sg_baseline: team.benchmark }).eq('id', user.id).is('sg_baseline', null)
   }
 
-  return NextResponse.json({ ok: true, teamName: team.name })
+  // Team players get Pro for the team's first year (the free year for teams).
+  // Never downgrades anyone, never shortens Pro they already have.
+  let proUntil: string | null = null
+  const yearEnd = new Date(new Date(team.created_at).getTime() + 365 * 24 * 60 * 60 * 1000)
+  if (yearEnd.getTime() > Date.now()) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: me } = await (service as any).from('users').select('subscription_status, promo_expires_at').eq('id', user.id).maybeSingle()
+    const status = me?.subscription_status ?? 'free'
+    const promoPro = status === 'pro' && me?.promo_expires_at && new Date(me.promo_expires_at) < yearEnd
+    if (status === 'free' || promoPro) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (service as any).from('users').update({ subscription_status: 'pro', promo_expires_at: yearEnd.toISOString() }).eq('id', user.id)
+      proUntil = yearEnd.toISOString().slice(0, 10)
+    }
+  }
+
+  return NextResponse.json({ ok: true, teamName: team.name, proUntil })
 }

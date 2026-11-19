@@ -244,3 +244,18 @@ test('hole scores a results sheet never printed are thrown away', () => {
   assert.equal(sheet(true, made, 72).players[0].rounds[0].scores.length, 18)         // printed and adds up: kept
   assert.equal(sheet(false, made, 72).players[0].rounds[0].total, 72)
 })
+
+test('recruiting page: practice rounds can be left out, and any round hidden', async () => {
+  const { parseProfileInfo: p, roundShown } = await import('../src/lib/recruit-profile.ts')
+  const id = '11111111-1111-4111-8111-111111111111'
+  const base = p({})
+  assert.equal(base.showPractice, true)
+  assert.deepEqual(base.hiddenRounds, [])
+  assert.equal(roundShown(base, { id, round_type: 'practice' }), true)
+  const noPractice = p({ showPractice: false })
+  assert.equal(roundShown(noPractice, { id, round_type: 'practice' }), false)
+  assert.equal(roundShown(noPractice, { id, round_type: 'competition' }), true)
+  const hid = p({ hiddenRounds: [id, id, 'not-an-id', 5] })
+  assert.deepEqual(hid.hiddenRounds, [id])
+  assert.equal(roundShown(hid, { id, round_type: 'competition' }), false)
+})

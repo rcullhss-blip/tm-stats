@@ -50,9 +50,11 @@ interface Props {
   recentCourses?: RecentCourse[]
   voiceEnabled?: boolean
   advancedEnabled?: boolean
+  // Free plan: rounds still to log before the limit (null on paid plans)
+  freeRoundsLeft?: number | null
 }
 
-export default function NewRoundClient({ recentCourses = [], voiceEnabled = false, advancedEnabled = false }: Props) {
+export default function NewRoundClient({ recentCourses = [], voiceEnabled = false, advancedEnabled = false, freeRoundsLeft = null }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'setup' | 'voice' | 'holes' | 'summary'>('setup')
   // Each step starts at the top of the page, not where the last one was scrolled to
@@ -67,6 +69,37 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
   const [draftChecked, setDraftChecked] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  // Where the golfer tried to go mid-round; set while the "leave this round?" box is open
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  const midRound = step === 'holes' || step === 'summary' || step === 'voice'
+
+  // Mid-round, tapping a link elsewhere in the app (bottom bar, top bar) asks first.
+  // The round is kept on this phone either way, so leaving never loses it.
+  useEffect(() => {
+    if (!midRound) return
+    function onClick(e: MouseEvent) {
+      const a = (e.target as HTMLElement | null)?.closest?.('a') as HTMLAnchorElement | null
+      if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey) return
+      const url = new URL(a.href, window.location.href)
+      if (url.origin !== window.location.origin || url.pathname === '/rounds/new') return
+      e.preventDefault()
+      e.stopPropagation()
+      setLeaveTo(url.pathname + url.search)
+    }
+    // The phone's back gesture / browser back: stay, and ask
+    history.pushState({ tmRound: true }, '')
+    function onPop() {
+      history.pushState({ tmRound: true }, '')
+      setLeaveTo('back')
+    }
+    document.addEventListener('click', onClick, true)
+    window.addEventListener('popstate', onPop)
+    return () => {
+      document.removeEventListener('click', onClick, true)
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [midRound])
 
   // Look for an unfinished round from a previous session
   useEffect(() => {
@@ -171,6 +204,19 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
     router.push(`/rounds/${round.id}`)
   }
 
+  const leaveBox = leaveTo && (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-8" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      <div className="w-full max-w-sm p-5 rounded-2xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+        <p className="text-base font-semibold mb-1" style={{ color: '#F0F0F0' }}>Leave this round?</p>
+        <p className="text-sm mb-4" style={{ color: '#9A9DB0', lineHeight: 1.5 }}>It is not saved to your account yet. It stays on this phone, so you can carry on from Log round later.</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button type="button" onClick={() => setLeaveTo(null)} className="rounded-xl font-semibold text-sm" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '48px' }}>Keep going</button>
+          <button type="button" onClick={() => { const to = leaveTo; setLeaveTo(null); router.push(to === 'back' ? '/dashboard' : to) }} className="rounded-xl text-sm" style={{ backgroundColor: 'transparent', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '48px' }}>Leave</button>
+        </div>
+      </div>
+    </div>
+  )
+
   // Wait for the draft check so the resume prompt doesn't flash in after setup renders
   if (!draftChecked) return null
 
@@ -201,12 +247,15 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
           </button>
           <button
             type="button"
-            onClick={discardDraft}
+            onClick={() => (confirmDiscard ? discardDraft() : setConfirmDiscard(true))}
             className="w-full py-3 rounded-xl text-sm font-medium"
-            style={{ backgroundColor: 'transparent', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '48px' }}
+            style={{ backgroundColor: confirmDiscard ? '#EF4444' : 'transparent', color: confirmDiscard ? '#F0F0F0' : '#9A9DB0', border: `1px solid ${confirmDiscard ? '#EF4444' : '#2E3247'}`, minHeight: '48px' }}
           >
-            Discard and start fresh
+            {confirmDiscard ? 'Yes, delete this round' : 'Discard and start fresh'}
           </button>
+          {confirmDiscard && (
+            <p className="text-xs mt-2 text-center" style={{ color: '#9A9DB0' }}>The holes you have entered will be gone. Tap again to confirm, or Resume above.</p>
+          )}
         </div>
       </div>
     )
@@ -214,6 +263,16 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
 
   if (step === 'setup') {
     return (
+      <>
+      {freeRoundsLeft !== null && freeRoundsLeft <= 2 && (
+        <div className="px-4 pt-4 max-w-lg mx-auto">
+          <div className="px-4 py-3 rounded-xl" style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}>
+            <p className="text-sm" style={{ color: '#F59E0B', lineHeight: 1.5 }}>
+              {freeRoundsLeft === 1 ? 'This is your last free round.' : '2 free rounds left.'} The free plan has 5 rounds in total, 9-hole rounds included. Pro has no limit.
+            </p>
+          </div>
+        </div>
+      )}
       <RoundSetup
         recentCourses={recentCourses}
         voiceEnabled={voiceEnabled}
@@ -225,11 +284,14 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
           setStep(data.voice ? 'voice' : 'holes')
         }}
       />
+      </>
     )
   }
 
   if (step === 'voice' && setup) {
     return (
+      <>
+      {leaveBox}
       <VoiceRoundEntry
         setup={setup}
         onBack={() => setStep('setup')}
@@ -243,11 +305,14 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
           setStep('holes')
         }}
       />
+      </>
     )
   }
 
   if (step === 'holes' && setup) {
     return (
+      <>
+      {leaveBox}
       <HoleEntry
         setup={setup}
         onBack={() => {
@@ -268,11 +333,14 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
         onProgress={handleProgress}
         voiceNotes={voiceNotes ?? undefined}
       />
+      </>
     )
   }
 
   if (step === 'summary' && setup) {
     return (
+      <>
+      {leaveBox}
       <RoundSummary
         setup={setup}
         holes={holeData}
@@ -284,6 +352,7 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
         }}
         onSave={handleSave}
       />
+      </>
     )
   }
 
