@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { DM_Sans, Inter, DM_Mono } from 'next/font/google'
 import './globals.css'
 import { Analytics } from '@vercel/analytics/next'
+import ServiceWorker from '@/components/layout/ServiceWorker'
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -60,6 +61,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />
+        <ServiceWorker />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

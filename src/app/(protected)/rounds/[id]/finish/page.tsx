@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { hasElite } from '@/lib/plan'
+import { createServiceClient } from '@/lib/supabase/service'
 import FinishStatsClient from './FinishStatsClient'
 
 interface PageProps { params: Promise<{ id: string }> }
@@ -26,6 +27,28 @@ export default async function FinishStatsPage({ params }: PageProps) {
 
   const { data: profile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
 
+  // Tee yardages: from this golfer's last shot-by-shot round at the course, or
+  // else from a teammate who has already added full stats in the same event.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const service = createServiceClient() as any
+  let yardages: (number | null)[] | undefined
+  const sources: string[] = []
+  const { data: mine } = await sb.from('rounds').select('id').eq('user_id', user.id).eq('input_mode', 'full').ilike('course_name', round.course_name).neq('id', id).order('date', { ascending: false }).limit(1)
+  if (mine?.[0]) sources.push(mine[0].id)
+  if (round.qualifier_id) {
+    const { data: mates } = await service.from('rounds').select('id').eq('qualifier_id', round.qualifier_id).eq('input_mode', 'full').eq('stats_pending', false).limit(3)
+    for (const m of mates ?? []) sources.push(m.id)
+  }
+  for (const rid of sources) {
+    const { data: hs } = await service.from('holes').select('hole_number, shots').eq('round_id', rid).order('hole_number')
+    if (!hs || hs.length !== holes.length) continue
+    const ys = hs.map((h: { shots: unknown }) => {
+      const first = Array.isArray(h.shots) ? (h.shots[0] as { lieType?: string; distanceToPin?: number } | undefined) : undefined
+      return first?.lieType === 'tee' && typeof first.distanceToPin === 'number' ? first.distanceToPin : null
+    })
+    if (ys.some((y: number | null) => y !== null)) { yardages = ys; break }
+  }
+
   return (
     <FinishStatsClient
       roundId={id}
@@ -35,6 +58,7 @@ export default async function FinishStatsPage({ params }: PageProps) {
       roundType={round.round_type}
       holes={holes.map((h: { hole_number: number; par: 3 | 4 | 5; score: number }) => ({ holeNumber: h.hole_number, par: h.par, score: h.score }))}
       advancedEnabled={hasElite(profile?.subscription_status)}
+      yardages={yardages}
     />
   )
 }

@@ -16,6 +16,7 @@ interface Props {
   roundType: RoundType
   holes: CardHole[]
   advancedEnabled: boolean
+  yardages?: (number | null)[]
 }
 
 interface Draft { mode: InputMode; holes: HoleData[]; current: number; highest: number; step: 'holes' | 'summary' }
@@ -27,7 +28,7 @@ function fmtToPar(n: number): string {
   return n > 0 ? `+${n}` : `${n}`
 }
 
-export default function FinishStatsClient({ roundId, courseName, eventName, date, roundType, holes, advancedEnabled }: Props) {
+export default function FinishStatsClient({ roundId, courseName, eventName, date, roundType, holes, advancedEnabled, yardages }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'choose' | 'holes' | 'summary'>('choose')
   const [mode, setMode] = useState<InputMode>('quick')
@@ -60,6 +61,7 @@ export default function FinishStatsClient({ roundId, courseName, eventName, date
     inputMode: mode,
     parsPrefill: holes.map(h => h.par),
     advanced: mode === 'full' && advanced,
+    yardagesPrefill: yardages,
   }
 
   function blankHoles(): HoleData[] {

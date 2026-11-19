@@ -17,6 +17,8 @@ interface Props {
   // The hole's score is already known (from qualifying or an uploaded result).
   // Par cannot be changed and the shots entered must add up to this score.
   cardScore?: number
+  // Tee yardage for this hole from an earlier shot-by-shot round here, if known
+  teeYards?: number | null
 }
 
 const LIE_OPTIONS: { value: LieType; label: string }[] = [
@@ -77,7 +79,7 @@ function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   return 'fairway'
 }
 
-export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false, cardScore }: Props) {
+export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false, cardScore, teeYards = null }: Props) {
   const [shots, setShots] = useState<ShotEntry[]>(initialShots ?? [])
   const [pendingLie, setPendingLie] = useState<LieType>(() => {
     if (initialShots && initialShots.length > 0) {
@@ -86,7 +88,8 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     return 'tee'
   })
   const [pendingQuality, setPendingQuality] = useState<LieQuality>('good')
-  const [pendingDist, setPendingDist] = useState('')
+  // Start the tee shot at this hole's yardage when it is known (the golfer can change it)
+  const [pendingDist, setPendingDist] = useState(() => (!initialShots || initialShots.length === 0) && teeYards ? String(teeYards) : '')
   const [pendingProcess, setPendingProcess] = useState<boolean | null>(null)
   const [pendingMiss, setPendingMiss] = useState<ShotMiss | null>(null)
   // Advanced tracking: index of an entered shot whose finish is being set or changed

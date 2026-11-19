@@ -322,12 +322,41 @@ export default function QualifyingClient({ initial, userId }: Props) {
               </div>
               <p className="text-xs mb-4" style={{ color: '#4A4D60' }}>Tap the middle for par, or + and − for anything else. Scores save as you tap.</p>
 
+              {/* Last hole: check every card before leaving */}
+              {hole === q.holes && (
+                <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
+                  <p className="text-sm font-semibold mb-2" style={{ color: '#F0F0F0' }}>Check the cards</p>
+                  {groupRows.map(row => {
+                    const rd = roundOf(row)
+                    const missing = rd.scores.map((sc, i) => (sc === null ? i + 1 : null)).filter((n): n is number => n !== null)
+                    return (
+                      <div key={row.userId} className="flex items-start justify-between py-2" style={{ borderTop: '1px solid #22263A' }}>
+                        <div className="min-w-0 pr-2">
+                          <p className="text-sm truncate" style={{ color: '#F0F0F0' }}>{row.name}</p>
+                          {missing.length > 0 ? (
+                            <button type="button" onClick={() => setHole(missing[0])} className="text-xs text-left" style={{ color: '#F59E0B' }}>
+                              No score on {missing.length === 1 ? 'hole' : 'holes'} {missing.join(', ')}. Tap to fix.
+                            </button>
+                          ) : (
+                            <p className="text-xs" style={{ color: '#22C55E' }}>All {q.holes} holes in</p>
+                          )}
+                        </div>
+                        <p className="text-base font-medium flex-shrink-0" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
+                          {rd.strokes || '–'} <span className="text-xs" style={{ color: '#9A9DB0' }}>{rd.thru > 0 ? fmtToPar(rd.toPar) : ''}</span>
+                        </p>
+                      </div>
+                    )
+                  })}
+                  <p className="text-xs mt-2" style={{ color: '#9A9DB0' }}>Check these against the paper cards. Your coach finishes the round when every group is in.</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <button type="button" disabled={hole === 1} onClick={() => setHole(h => Math.max(1, h - 1))} className="rounded-xl text-sm font-medium" style={{ backgroundColor: 'transparent', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '56px', opacity: hole === 1 ? 0.4 : 1 }}>← Hole {Math.max(1, hole - 1)}</button>
                 {hole < q.holes ? (
                   <button type="button" onClick={() => setHole(h => Math.min(q.holes, h + 1))} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}>Hole {hole + 1} →</button>
                 ) : (
-                  <button type="button" onClick={() => setTab('board')} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}>Leaderboard →</button>
+                  <button type="button" onClick={() => setTab('board')} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}>Cards are right →</button>
                 )}
               </div>
             </>

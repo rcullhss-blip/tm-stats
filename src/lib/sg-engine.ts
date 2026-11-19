@@ -31,9 +31,8 @@ export const COLLEGE_LEVELS: CollegeLevel[] = [
   'd1_women', 'd2_women', 'd3_women',
 ]
 
-// Off until Rob has checked the numbers below. While false the college levels
-// work everywhere in the engine but are not offered in any picker.
-export const COLLEGE_BENCHMARKS_LIVE = false
+// Switched on 19 Nov 2026 after Rob checked the D1-D3 numbers.
+export const COLLEGE_BENCHMARKS_LIVE = true
 
 export function isCollegeLevel(level: string | null | undefined): level is CollegeLevel {
   return !!level && (COLLEGE_LEVELS as string[]).includes(level)

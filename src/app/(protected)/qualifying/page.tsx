@@ -57,7 +57,13 @@ export default async function QualifyingListPage() {
           </div>
         )}
       </div>
-      <p className="text-sm mb-6" style={{ color: '#9A9DB0' }}>{team.teamName}</p>
+      <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>{team.teamName}</p>
+      {team.role === 'coach' && list.length > 0 && (
+        <Link href="/coach/selection" className="flex items-center justify-between p-3 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #22C55E40', minHeight: '52px' }}>
+          <span className="text-sm" style={{ color: '#F0F0F0' }}>Picking a travel team? See every round in Selection</span>
+          <span style={{ color: '#22C55E' }}>→</span>
+        </Link>
+      )}
 
       {list.length === 0 && (
         <div className="p-5 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>

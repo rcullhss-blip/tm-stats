@@ -172,3 +172,45 @@ test('college levels sit between tour and the handicap bands they should', () =>
   assert.ok(at('d1_women') < at('d2_women') && at('d2_women') < at('d3_women'))
   assert.equal(isCollegeLevel('h5_9'), false)
 })
+
+// ── Travel team selection ────────────────────────────────────────────────────
+import { rankSquad, parseSaved, standingsCsv, passesFilters } from '../src/lib/selection.ts'
+test('selection: filters, leaving rounds out, best of, ranking and ties', () => {
+  const R = (userId, q, roundNo, date, toPar, kind = 'qualifying', sg = null) => ({ key: `${q}:${roundNo}:${userId}`, userId, qualifierId: q, event: q, kind, roundNo, date, course: 'C', par: 72, score: 72 + toPar, toPar, sg })
+  const players = [{ id: 'a', name: 'Al' }, { id: 'b', name: 'Bo' }, { id: 'c', name: 'Cy' }, { id: 'd', name: 'Di' }]
+  const rounds = [
+    R('a', 'q1', 1, '2026-09-01', 2), R('a', 'q1', 2, '2026-09-02', 0), R('a', 't1', 1, '2026-10-01', 6, 'tournament', -1.5),
+    R('b', 'q1', 1, '2026-09-01', 1), R('b', 'q1', 2, '2026-09-02', 1), R('b', 't1', 1, '2026-10-01', 1, 'tournament', 0.5),
+    R('c', 'q1', 1, '2026-09-01', 10),
+  ]
+  const none = { from: null, to: null, kind: 'all', events: null, bestOf: null }
+  let s = rankSquad(players, rounds, none, new Set())
+  assert.deepEqual(s.map(x => [x.name, x.avgToPar, x.position]), [['Bo', 1, 1], ['Al', 2.7, 2], ['Cy', 10, 3], ['Di', null, null]])
+  // Leave out Al's bad tournament round: Al and Bo tie on +1.0, Bo has more rounds
+  s = rankSquad(players, rounds, none, new Set(['t1:1:a']))
+  assert.deepEqual(s.slice(0, 2).map(x => [x.name, x.avgToPar, x.position]), [['Bo', 1, 1], ['Al', 1, 1]])
+  // Qualifying only: both +1.0 on two rounds, so name order
+  s = rankSquad(players, rounds, { ...none, kind: 'qualifying' }, new Set())
+  assert.deepEqual(s.slice(0, 2).map(x => [x.name, x.avgToPar]), [['Al', 1], ['Bo', 1]])
+  // Date range
+  s = rankSquad(players, rounds, { ...none, from: '2026-09-02', to: '2026-09-30' }, new Set())
+  assert.deepEqual(s.filter(x => x.avgToPar !== null).map(x => [x.name, x.avgToPar]), [['Al', 0], ['Bo', 1]])
+  // Best 2 of the last 3
+  s = rankSquad(players, rounds, { ...none, bestOf: { best: 2, of: 3 } }, new Set())
+  const al = s.find(x => x.name === 'Al')
+  assert.equal(al.avgToPar, 1); assert.equal(al.counted.length, 2); assert.equal(al.available, 3)
+  assert.equal(s.find(x => x.name === 'Cy').counted.length, 1)       // fewer rounds than "best": uses what there is
+  // Strokes Gained only from rounds that have it
+  s = rankSquad(players, rounds, none, new Set())
+  assert.equal(s.find(x => x.name === 'Bo').sgAvg, 0.5); assert.equal(s.find(x => x.name === 'Bo').sgRounds, 1)
+  assert.equal(s.find(x => x.name === 'Cy').sgAvg, null)
+  assert.equal(passesFilters(rounds[0], { ...none, events: ['t1'] }), false)
+})
+test('selection: saved picks are cleaned, and the spreadsheet escapes commas and quotes', () => {
+  const saved = parseSaved({ excluded: ['x', 3, null], squad: 'nope', notes: { a: 'Strong, "steady"', b: '   ', c: 5 } })
+  assert.deepEqual(saved, { excluded: ['x'], squad: [], notes: { a: 'Strong, "steady"' } })
+  assert.deepEqual(parseSaved(null), { excluded: [], squad: [], notes: {} })
+  const csv = standingsCsv([{ userId: 'a', name: 'Al, Jr', counted: [], available: 0, avgToPar: null, avgScore: null, best: null, worst: null, sgAvg: null, sgRounds: 0, position: null }], new Set(['a']), saved.notes)
+  assert.match(csv, /"Al, Jr",Yes,0/)
+  assert.match(csv, /"Strong, ""steady"""/)
+})

@@ -537,6 +537,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             initialShots={hole.shots ?? []}
             onChangePar={p => { if (!cardLocked) updateHole({ par: p, score: p }) }}
             cardScore={cardLocked ? hole.score : undefined}
+            teeYards={setup.yardagesPrefill?.[current] ?? null}
             onShotsChange={shots => updateHole({ shots })}
             trackProcess={setup.trackProcess}
             advanced={setup.advanced}

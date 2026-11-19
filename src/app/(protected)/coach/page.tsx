@@ -125,6 +125,14 @@ export default async function CoachPage() {
         </p>
       </div>
 
+      <Link href="/coach/selection" className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #22C55E40', minHeight: '64px' }}>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Selection</p>
+          <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Rank the squad on the qualifying rounds you choose and pick your travel team.</p>
+        </div>
+        <span className="text-lg" style={{ color: '#22C55E' }}>→</span>
+      </Link>
+
       <Link href="/qualifying" className="flex items-center justify-between p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222260', minHeight: '64px' }}>
         <div>
           <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Qualifying and live scoring</p>

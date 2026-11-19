@@ -31,6 +31,10 @@ export default function UploadResultClient({ teamName }: Props) {
 
   async function read() {
     setError(null)
+    if (!file && /^\s*https?:\/\/\S+\s*$/.test(pasted)) {
+      setError('That is a link. We cannot open results websites for you, but you can copy the page: open the link, select everything on the page, copy it and paste it here.')
+      return
+    }
     if (!file && pasted.trim().length < 40) { setError('Choose a file, or paste the result.'); return }
     if (file && file.size > 4 * 1024 * 1024) { setError('That file is over 4 MB. Upload one round at a time, or paste the scores as text.'); return }
     setStep('reading')
@@ -105,8 +109,15 @@ export default function UploadResultClient({ teamName }: Props) {
 
         {!file && (
           <>
-            <label className="text-sm font-medium block mb-2" style={{ color: '#9A9DB0' }}>Or paste the scores</label>
-            <textarea value={pasted} onChange={e => setPasted(e.target.value)} disabled={busy} rows={5} placeholder="Copy the scorecards from the results page and paste them here." className="w-full px-3 py-3 rounded-xl text-sm mb-4" style={{ ...field, resize: 'vertical' }} />
+            <label className="text-sm font-medium block mb-2" style={{ color: '#9A9DB0' }}>Or paste the results page</label>
+            <div className="p-3 rounded-xl mb-2 text-xs" style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', lineHeight: 1.6 }}>
+              <p className="mb-1" style={{ color: '#F0F0F0' }}>From a results website (Clippd Scoreboard, Golfstat, a school site):</p>
+              <p>1. Open the event and go to the player scores, with every round&apos;s hole-by-hole scores showing.</p>
+              <p>2. Select everything on the page (Cmd+A on a Mac, Ctrl+A on a PC) and copy it.</p>
+              <p>3. Paste it below. Menus and adverts are ignored.</p>
+              <p className="mt-1">Or use Print, then Save as PDF, and upload that file above.</p>
+            </div>
+            <textarea value={pasted} onChange={e => setPasted(e.target.value)} disabled={busy} rows={5} placeholder="Paste the copied page here" className="w-full px-3 py-3 rounded-xl text-sm mb-4" style={{ ...field, resize: 'vertical' }} />
           </>
         )}
 
