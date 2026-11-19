@@ -7,6 +7,7 @@ import { currentRound, fmtToPar, groupOf, groupsFor, isFinished, missingHoles, r
 import Scorecard from './Scorecard'
 import GroupsEditor from './GroupsEditor'
 import type { QualifierState } from '@/lib/qualifying-server'
+import { tapHaptic } from '@/lib/haptics'
 
 interface Props {
   initial: QualifierState
@@ -135,6 +136,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
   }
 
   async function setScore(playerId: string, holeNo: number, score: number | null) {
+    tapHaptic()
     const key = `${playerId}:${openRound}:${holeNo}`
     pending.current.set(key, score)
     setState(s => applyPending(s))

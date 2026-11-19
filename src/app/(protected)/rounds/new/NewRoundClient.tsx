@@ -8,6 +8,7 @@ import RoundSetup, { type RecentCourse } from '@/components/rounds/RoundSetup'
 import HoleEntry from '@/components/rounds/HoleEntry'
 import RoundSummary from '@/components/rounds/RoundSummary'
 import VoiceRoundEntry from '@/components/rounds/VoiceRoundEntry'
+import { queueRound, uploadRound, type PendingRound } from '@/lib/round-outbox'
 
 const DRAFT_KEY = 'tmstats_round_draft'
 
@@ -132,8 +133,10 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
     setError('')
     setSaving(true)
 
+    // The signed-in user from this phone (works with no signal, unlike asking the server)
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (!user) { router.push('/login'); return }
 
     // Voice entry safety net: a shot still waiting for its distance must never be saved
@@ -146,11 +149,11 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
 
     const parTotal = holeData.reduce((sum, h) => sum + h.par, 0)
     const scoreTotal = holeData.reduce((sum, h) => sum + h.score, 0)
-
-    // Insert round
-    const { data: round, error: roundError } = await supabase
-      .from('rounds')
-      .insert({
+    // The round's id is made here, so a retry with no signal can never save it twice
+    const roundId = crypto.randomUUID()
+    const pending: PendingRound = {
+      round: {
+        id: roundId,
         user_id: user.id,
         date: setup.date,
         course_name: setup.courseName,
@@ -163,39 +166,32 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
         mood: (mood || null) as 'tough' | 'average' | 'good' | 'great' | null,
         conditions: conditions || null,
         energy_level: (energy || null) as 'fresh' | 'normal' | 'tired' | 'niggly' | null,
-      })
-      .select('id')
-      .single()
-
-    if (roundError || !round) {
-      setError('Failed to save round — your data is safe on this device. Check your signal and try again.')
-      setSaving(false)
-      return
+      },
+      holes: holeData.map(h => ({
+        round_id: roundId,
+        hole_number: h.holeNumber,
+        par: h.par,
+        score: h.score,
+        fir: h.fir,
+        gir: h.gir,
+        putts: h.putts,
+        up_and_down: h.upAndDown,
+        sand_save: h.sandSave,
+        shots: h.shots ? JSON.parse(JSON.stringify(h.shots)) : null,
+      })),
+      queuedAt: new Date().toISOString(),
     }
 
-    // Insert holes
-    const holesInsert = holeData.map(h => ({
-      round_id: round.id,
-      hole_number: h.holeNumber,
-      par: h.par,
-      score: h.score,
-      fir: h.fir,
-      gir: h.gir,
-      putts: h.putts,
-      up_and_down: h.upAndDown,
-      sand_save: h.sandSave,
-      shots: h.shots ? JSON.parse(JSON.stringify(h.shots)) : null,
-    }))
-
-    const { error: holesError } = await supabase.from('holes').insert(holesInsert)
-
-    if (holesError) {
-      // Clean up the orphaned round row
-      await supabase.from('rounds').delete().eq('id', round.id)
-      setError('Failed to save round — your data is safe on this device. Check your signal and try again.')
-      setSaving(false)
+    let saved = false
+    try { saved = await uploadRound(pending) } catch { saved = false }
+    if (!saved) {
+      // No signal (or the server did not answer): keep it on this phone and upload later
+      queueRound(pending)
+      clearDraft()
+      router.push('/rounds?queued=1')
       return
     }
+    const round = { id: roundId }
 
     clearDraft()
     // Email the golfer (and their coach) a PDF breakdown. Fire and forget: the

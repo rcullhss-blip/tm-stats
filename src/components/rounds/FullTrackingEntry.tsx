@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { HoleData } from '@/lib/types'
 import type { LieType, LieQuality, ShotEntry, ShotMiss } from '@/lib/types'
 import { deriveShotStats } from '@/lib/shot-stats'
+import { tapHaptic } from '@/lib/haptics'
 
 interface Props {
   holeNumber: number
@@ -187,6 +188,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
       ...(askMiss && pendingMiss ? { miss: pendingMiss } : {}),
     }
     const newShots = [...shots, newShot]
+    tapHaptic()
     setShots(newShots)
     onShotsChange?.(newShots)
     setPendingDist('')

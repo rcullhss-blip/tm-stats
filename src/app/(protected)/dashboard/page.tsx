@@ -15,6 +15,8 @@ import ExampleRound from '@/components/dashboard/ExampleRound'
 import ProgressLadder from '@/components/dashboard/ProgressLadder'
 import { hasPro } from '@/lib/plan'
 import UnfinishedRoundBanner from '@/components/rounds/UnfinishedRoundBanner'
+import GettingStarted from '@/components/dashboard/GettingStarted'
+import { createServiceClient } from '@/lib/supabase/service'
 
 function scoreToPar(score: number | null, par: number | null): string {
   if (!score || !par) return '—'
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any)
     .from('users')
-    .select('name, handicap, subscription_status, player_context')
+    .select('name, handicap, subscription_status, player_context, sg_goal')
     .eq('id', user.id)
     .single()
 
@@ -86,6 +88,13 @@ export default async function DashboardPage() {
   } catch {}
 
   const name = profile?.name?.split(' ')[0] || 'Golfer'
+  // Getting started checklist
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const svc = createServiceClient() as any
+  const [{ count: teamCount }, { count: coachCount }] = await Promise.all([
+    svc.from('team_members').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    svc.from('teams').select('id', { count: 'exact', head: true }).eq('coach_user_id', user.id),
+  ])
   const isPro = hasPro(profile?.subscription_status)
   const roundCount = totalRounds ?? rounds?.length ?? 0
 
@@ -184,6 +193,12 @@ export default async function DashboardPage() {
       </div>
 
       <UnfinishedRoundBanner />
+      <GettingStarted steps={[
+        { key: 'round', label: 'Log your first round', sub: 'Quick stats take two minutes', href: '/rounds/new', done: roundCount > 0 },
+        { key: 'team', label: 'Join your team', sub: 'Got a code or link from your coach? Use it in Profile', href: '/profile', done: (teamCount ?? 0) > 0 || (coachCount ?? 0) > 0 },
+        ...(isPro ? [{ key: 'goal', label: 'Set a goal', sub: 'Pick a part of your game and a date', href: '/stats', done: !!profile?.sg_goal }] : []),
+        { key: 'handicap', label: 'Add your handicap', sub: 'So your numbers compare with golfers like you', href: '/profile', done: profile?.handicap != null },
+      ]} />
 
       {pendingRounds.map(r => (
         <StatsPendingCard key={r.id} roundId={r.id} title={r.notes || r.course_name} subtitle={r.notes ? r.course_name : undefined} score={r.score_total} />

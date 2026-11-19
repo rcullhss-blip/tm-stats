@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import BecomeCoach from '@/components/coach/BecomeCoach'
+import TeamInvite from '@/components/coach/TeamInvite'
+import QRCode from 'qrcode'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
 import TeamLeaderboard, { type LeaderboardRow } from '@/components/coach/TeamLeaderboard'
 import TeamSettings from '@/components/coach/TeamSettings'
@@ -23,11 +25,22 @@ export default async function CoachPage() {
 
   const { data: profile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
   if (profile?.subscription_status !== 'team') {
+    // Asked already: waiting for Rob to approve
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: waiting } = await (createServiceClient() as any).from('teams').select('name').eq('coach_user_id', user.id).maybeSingle()
+    if (waiting) {
+      return (
+        <div className="px-4 py-10 max-w-lg mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Thanks, we&apos;re checking {waiting.name}</h1>
+          <p className="text-sm" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>We check every new team by hand, usually within a day. You&apos;ll get an email as soon as it&apos;s ready, then your join code and QR code appear here.</p>
+        </div>
+      )
+    }
     // Not a coach yet: a coach sets up their own team here
     return (
       <div className="px-4 py-8 max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Set up your team</h1>
-        <p className="text-sm mb-1" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Live team qualifying, groups and tee times, selection and every player&apos;s Strokes Gained side by side. Free for your first year, and players who join get Pro for that year too.</p>
+        <p className="text-sm mb-1" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Live team qualifying, groups and tee times, selection and every player&apos;s Strokes Gained side by side. Free for your first year, and players who join get Pro for that year too. We check each new team by hand, usually within a day.</p>
         <p className="text-sm mb-5" style={{ color: '#9A9DB0', lineHeight: 1.6 }}>Playing on a team? You don&apos;t need this: ask your coach for the team code and enter it in Profile.</p>
         <BecomeCoach />
       </div>
@@ -115,25 +128,18 @@ export default async function CoachPage() {
     return '#EF4444'
   }
 
+  // The join link and its QR code (dark on white so every phone camera reads it)
+  const joinLink = `https://www.tmstatsgolf.com/join/${team.join_code}`
+  const joinQr = await QRCode.toString(joinLink, { type: 'svg', margin: 1, color: { dark: '#0F1117', light: '#FFFFFF' } })
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
         {team.name}
       </h1>
 
-      {/* Join code */}
-      <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#1A1D27' }}>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: '#9A9DB0' }}>Player join code</p>
-        <p
-          className="text-2xl font-bold tracking-widest"
-          style={{ fontFamily: 'var(--font-dm-mono)', color: '#CC2222', letterSpacing: '0.2em' }}
-        >
-          {team.join_code}
-        </p>
-        <p className="text-xs mt-1" style={{ color: '#4A4D60' }}>
-          Players enter this in their Profile → Join a team
-        </p>
-      </div>
+      {/* Join link, QR code and code */}
+      <TeamInvite teamName={team.name} code={team.join_code} link={joinLink} qrSvg={joinQr} />
 
       <Link href="/coach/selection" className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #22C55E40', minHeight: '64px' }}>
         <div>

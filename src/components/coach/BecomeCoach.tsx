@@ -19,7 +19,7 @@ export default function BecomeCoach() {
       const res = await fetch('/api/coach/become', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ teamName, organisation, kind, confirm }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not set up your team')
-      window.location.href = '/coach?welcome=1'
+      window.location.href = '/coach'
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not set up your team')
       setBusy(false)
@@ -44,7 +44,7 @@ export default function BecomeCoach() {
       </div>
       <label className="flex items-start gap-3 mb-4" style={{ minHeight: '44px' }}>
         <input type="checkbox" checked={confirm} onChange={e => setConfirm(e.target.checked)} style={{ width: '22px', height: '22px', accentColor: '#CC2222', marginTop: '2px', flexShrink: 0 }} />
-        <span className="text-sm" style={{ color: '#F0F0F0' }}>I coach or run this team. <span style={{ color: '#9A9DB0' }}>This account becomes a coach account.</span></span>
+        <span className="text-sm" style={{ color: '#F0F0F0' }}>I coach or run this team. <span style={{ color: '#9A9DB0' }}>We check it, then this account becomes a coach account.</span></span>
       </label>
       {error && <p className="text-xs mb-3" style={{ color: '#EF4444' }}>{error}</p>}
       <button type="button" onClick={go} disabled={busy || teamName.trim().length < 2 || !confirm} className="w-full rounded-xl font-semibold text-sm" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '52px', opacity: busy || teamName.trim().length < 2 || !confirm ? 0.5 : 1 }}>

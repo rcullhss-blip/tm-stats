@@ -11,6 +11,7 @@ import Link from 'next/link'
 import DeleteAccount from '@/components/profile/DeleteAccount'
 import WatchSettings from '@/components/profile/WatchSettings'
 import PushSettings from '@/components/profile/PushSettings'
+import AppPreferences from '@/components/profile/AppPreferences'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
 import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
@@ -238,6 +239,7 @@ export default async function ProfilePage() {
 
       {/* Notifications: only appears inside the iPhone/Android app */}
       <PushSettings />
+      <AppPreferences />
 
       {/* Apple Watch: connect with the code the watch shows */}
       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>

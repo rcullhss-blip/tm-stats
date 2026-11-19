@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { SetupData, HoleData } from '@/lib/types'
 import FullTrackingEntry from './FullTrackingEntry'
 import HowToPlayGuide from './HowToPlayGuide'
+import { tapHaptic } from '@/lib/haptics'
 
 interface Props {
   setup: SetupData
@@ -454,7 +455,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             <p className="text-sm font-medium" style={{ color: '#9A9DB0' }}>Score</p>
             <Stepper
               value={hole.score}
-              onChange={score => updateHole({ score })}
+              onChange={score => { tapHaptic(); updateHole({ score }) }}
               min={1}
               max={15}
             />
