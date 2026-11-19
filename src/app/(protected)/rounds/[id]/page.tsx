@@ -182,7 +182,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
       .from('rounds')
       .select('id, score_total, par_total')
       .eq('user_id', user.id)
-      .order('date', { ascending: false })
+      .order('date', { ascending: false }).order('created_at', { ascending: false })
       .limit(10)
     const others = (recent ?? []).filter(r => r.id !== id && r.score_total != null && r.par_total != null)
     const thisToPar = round.score_total - round.par_total
@@ -549,7 +549,7 @@ export default async function RoundDetailPage({ params }: PageProps) {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className={`grid ${(2 + (fairwaysTotal >= 0 ? 1 : 0) + (upDownAttempts > 0 ? 1 : 0) + (sandAttempts > 0 ? 1 : 0)) === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-3 mb-6`}>
         {[
           { label: 'FIR', value: fairwaysTotal > 0 ? `${fairwaysHit}/${fairwaysTotal}` : '—', sub: fairwaysTotal > 0 ? `${Math.round(fairwaysHit / fairwaysTotal * 100)}%` : '' },
           { label: 'GIR', value: `${girs}/${holeList.length}`, sub: `${Math.round(girs / holeList.length * 100)}%` },

@@ -118,8 +118,8 @@ export default function RoundSummary({ setup, holes, saving, error, onBack, onSa
         <p className="text-sm mt-1" style={{ color: '#9A9DB0' }}>Par {totalPar}</p>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      {/* Stats grid: four tiles sit two by two so none is left on its own */}
+      <div className={`grid ${(fairwaysTotal > 0 ? 1 : 0) + 2 + (upDownAttempts > 0 ? 1 : 0) === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-3 mb-6`}>
         {fairwaysTotal > 0 && (
           <div className="p-3 rounded-xl text-center" style={{ backgroundColor: '#1A1D27' }}>
             <p className="text-lg font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>

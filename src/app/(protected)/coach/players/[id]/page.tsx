@@ -60,7 +60,7 @@ export default async function CoachPlayerPage({ params }: PageProps) {
     .from('rounds')
     .select('id, date, course_name, par_total, score_total, input_mode, holes')
     .eq('user_id', playerId)
-    .order('date', { ascending: false })
+    .order('date', { ascending: false }).order('created_at', { ascending: false })
     .limit(10)
 
   const rounds = roundsRaw ?? []

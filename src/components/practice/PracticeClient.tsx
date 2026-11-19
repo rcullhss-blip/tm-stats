@@ -247,7 +247,7 @@ export default function PracticeClient() {
             No sessions logged yet
           </h2>
           <p className="text-sm max-w-xs mx-auto" style={{ color: '#9A9DB0' }}>
-            Your AI coach gives you drills after every round — log the sessions here and watch the stats prove the work.
+            Log your practice sessions here and watch your stats show the work paying off.
           </p>
         </div>
       ) : (

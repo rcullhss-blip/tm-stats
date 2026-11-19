@@ -62,7 +62,7 @@ export default async function DashboardPage() {
       .from('rounds')
       .select('*')
       .eq('user_id', user.id)
-      .order('date', { ascending: false })
+      .order('date', { ascending: false }).order('created_at', { ascending: false })
       .limit(10),
     supabase
       .from('rounds')
@@ -90,7 +90,11 @@ export default async function DashboardPage() {
 
   // Quick stats from last 5 rounds
   const recentRounds = (rounds ?? []).slice(0, 5)
-  const roundsWithScores = recentRounds.filter(r => r.score_total && r.par_total)
+  // Compare like with like: 18-hole rounds when any of the last 5 are 18 holes
+  const scored5 = recentRounds.filter(r => r.score_total && r.par_total)
+  const any18 = scored5.some(r => (r.holes ?? 18) >= 18)
+  const roundsWithScores = scored5.filter(r => !any18 || (r.holes ?? 18) >= 18)
+  const avgLabel = scored5.length === 0 ? 'Avg score (last 5)' : any18 ? (roundsWithScores.length < scored5.length ? 'Avg score (last 5, 18 holes)' : 'Avg score (last 5)') : 'Avg score (last 5, 9 holes)'
   const avgScore = roundsWithScores.length > 0
     ? Math.round((roundsWithScores.reduce((sum, r) => sum + (r.score_total! - r.par_total!), 0) / roundsWithScores.length) * 10) / 10
     : null
@@ -269,7 +273,7 @@ export default async function DashboardPage() {
       {roundCount > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
-            <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>Avg score (last 5)</p>
+            <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>{avgLabel}</p>
             <p
               className="text-2xl font-medium"
               style={{

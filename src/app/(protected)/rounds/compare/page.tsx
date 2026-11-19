@@ -25,7 +25,7 @@ export default async function CompareRoundsPage() {
     .from('rounds')
     .select('*')
     .eq('user_id', user.id)
-    .order('date', { ascending: false })
+    .order('date', { ascending: false }).order('created_at', { ascending: false })
     .limit(50)
 
   const roundList: RoundRow[] = roundsRaw ?? []

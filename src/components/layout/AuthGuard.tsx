@@ -3,10 +3,15 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
+export default function AuthGuard({ children, sessionGone = false }: { children: React.ReactNode; sessionGone?: boolean }) {
   const [checking, setChecking] = useState(true)
 
   useEffect(() => {
+    if (sessionGone) {
+      // The server no longer accepts this sign-in: clear it on this device too
+      createClient().auth.signOut({ scope: 'local' }).finally(() => { window.location.href = '/login' })
+      return
+    }
     createClient().auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setChecking(false)
@@ -14,7 +19,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         window.location.href = '/login'
       }
     })
-  }, [])
+  }, [sessionGone])
 
   if (checking) {
     return (

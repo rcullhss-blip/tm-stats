@@ -15,7 +15,7 @@ export default function DeleteAccount({ isCoach }: { isCoach: boolean }) {
       const res = await fetch('/api/account/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: text }) })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not delete your account')
-      window.location.href = '/?deleted=1'
+      window.location.href = '/account-deleted'
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not delete your account')
       setBusy(false)

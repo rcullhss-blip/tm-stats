@@ -5,7 +5,10 @@ import TopBar from '@/components/layout/TopBar'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  // The sign-in on this device belongs to an account that no longer exists
+  // (deleted on another device) or a session that was revoked: sign out here.
+  const sessionGone = !user && !!authError && [401, 403].includes(Number(authError.status))
 
   let isCoach = false
   let isAdmin = false
@@ -35,7 +38,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   }
 
   return (
-    <AuthGuard>
+    <AuthGuard sessionGone={sessionGone}>
       <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F1117' }}>
         <TopBar />
         <main className="flex-1 pb-24">

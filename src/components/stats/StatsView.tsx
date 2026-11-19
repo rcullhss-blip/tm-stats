@@ -43,6 +43,9 @@ export interface RoundDataPoint {
   bogeys: number
   doubles: number
   totalHoles: number
+  // Raw counts, so averages across rounds count every hole the same
+  // (a 9-hole round must not weigh as much as an 18)
+  counts?: { firHoles: number; firHit: number; girHit: number; putts: number; udAttempts: number; udMade: number; sandAttempts: number; sandSaves: number; threePutts?: number }
 }
 
 export interface Milestones {
@@ -286,22 +289,33 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
 
     const rounds18 = filtered.filter(r => r.totalHoles >= 18)
     const rounds9  = filtered.filter(r => r.totalHoles <= 9)
+    // Best and worst only compare like with like: 18-hole rounds when there are any
+    const scoreSet = rounds18.length > 0 ? rounds18 : rounds9.length > 0 ? rounds9 : filtered
+    const sameLen = scoreSet.map(r => r.scoreToPar)
+    // Pool every hole: % of fairways hit across all the holes, not an average of round percentages
+    const haveCounts = filtered.every(r => r.counts)
+    const sum = (k: keyof NonNullable<RoundDataPoint['counts']>) => filtered.reduce((s, r) => s + (r.counts?.[k] ?? 0), 0)
+    const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : null)
     const avgGross18 = avg(rounds18.map(r => r.scoreToPar + r.par))
     const avgPar18   = avg(rounds18.map(r => r.scoreToPar))
     const avgGross9  = avg(rounds9.map(r => r.scoreToPar + r.par))
     const avgPar9    = avg(rounds9.map(r => r.scoreToPar))
 
     return {
-      avgScore: avg(scores),
+      avgScore: avg(sameLen),
       avgGross18, avgPar18,
       avgGross9,  avgPar9,
-      bestScore: Math.min(...scores),
-      worstScore: Math.max(...scores),
-      avgFir: avg(firRounds.map(r => r.firPct as number)),
-      avgGir: avg(girRounds),
-      avgPutts: avg(puttRounds),
-      avgUd: avg(udRounds),
-      avgSandSave: avg(sandRounds),
+      bestScore: Math.min(...sameLen),
+      worstScore: Math.max(...sameLen),
+      scoreSetLabel: rounds18.length > 0 ? '18-hole' : rounds9.length > 0 ? '9-hole' : '',
+      scoreSetCount: scoreSet.length,
+      avgFir: haveCounts ? pct(sum('firHit'), sum('firHoles')) : avg(firRounds.map(r => r.firPct as number)),
+      avgGir: haveCounts ? pct(sum('girHit'), totalHoles) : avg(girRounds),
+      avgPutts: haveCounts ? (totalHoles > 0 ? sum('putts') / totalHoles : null) : avg(puttRounds),
+      avgUd: haveCounts ? pct(sum('udMade'), sum('udAttempts')) : avg(udRounds),
+      avgSandSave: haveCounts ? pct(sum('sandSaves'), sum('sandAttempts')) : avg(sandRounds),
+      // Three-putts per 18 holes, when the rounds carry the counts
+      threePuttsPer18: haveCounts && totalHoles > 0 ? (sum('threePutts') / totalHoles) * 18 : null,
       avgSgTotal: avg(sgRounds.map(r => r.sgTotal as number)),
       avgSgOffTee: avg(sgRounds.map(r => r.sgOffTee as number)),
       avgSgApproach: avg(sgRounds.map(r => r.sgApproach as number)),
@@ -351,11 +365,13 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
   }, [filtered])
 
   // Chart data — oldest first for trend lines
-  const trendData = useMemo(() =>
-    [...filtered].reverse().map((r, i) => ({
+  const trendData = useMemo(() => {
+    // The score line only plots one round length, so a 9-hole +4 never sits next to an 18-hole +4
+    const has18 = filtered.some(x => x.totalHoles >= 18)
+    return [...filtered].reverse().map((r, i) => ({
       n: i + 1,
       label: new Date(r.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-      score: r.scoreToPar,
+      score: !has18 || r.totalHoles >= 18 ? r.scoreToPar : null,
       gir: Math.round(r.girPct),
       fir: r.firPct !== null ? Math.round(r.firPct) : null,
       putts: parseFloat(r.puttsPerHole.toFixed(2)),
@@ -364,9 +380,8 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
       sgAroundGreen: r.sgAroundGreen,
       sgPutt: r.sgPutt,
       process: r.processPct !== null ? Math.round(r.processPct) : null,
-    })),
-    [filtered]
-  )
+    }))
+  }, [filtered])
 
   const sgTrendPoints = trendData.filter(d => d.sgOffTee !== null).length
   const processTrendPoints = trendData.filter(d => d.process !== null).length
@@ -590,7 +605,7 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
               </div>
             </div>
             <p className="text-xs mb-2" style={{ color: '#4A4D60' }}>
-              Best {agg.bestScore > 0 ? '+' : ''}{agg.bestScore} · Worst {agg.worstScore > 0 ? '+' : ''}{agg.worstScore} across {filtered.length} round{filtered.length !== 1 ? 's' : ''}
+              Best {agg.bestScore > 0 ? '+' : ''}{agg.bestScore} · Worst {agg.worstScore > 0 ? '+' : ''}{agg.worstScore} across {agg.scoreSetCount} {agg.scoreSetLabel} round{agg.scoreSetCount !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -791,8 +806,9 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
             // ~1 extra GIR per round saves ~0.8 strokes (avoids chip + potential extra putt)
             const girSaving = Math.round(1 * 0.8 * 10) / 10  // 1 more GIR → ~0.8 shots
             // 1 fewer 3-putt → 1 shot saved
-            const threePuttRate = Math.max(0, currentPutts - 1.7)
-            const puttSaving = threePuttRate > 0.1 ? '1 shot' : null
+            // Only suggest it to golfers who actually three-putt (about one every other round or more)
+            const threePuttRate = agg.threePuttsPer18 ?? Math.max(0, currentPutts - 1.7) * 10
+            const puttSaving = threePuttRate >= 0.5 ? '1 shot' : null
             return (
               <div>
                 <h2 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9A9DB0' }}>Score impact</h2>
@@ -856,6 +872,7 @@ export default function StatsView({ rounds, skillLevelLabel, benchmark, isPro, c
                     <Line
                       type="monotone"
                       dataKey="score"
+                      connectNulls
                       stroke="#CC2222"
                       strokeWidth={2}
                       dot={{ fill: '#CC2222', r: 3, strokeWidth: 0 }}

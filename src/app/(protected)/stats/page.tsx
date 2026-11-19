@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+import Link from 'next/link'
 
 import { createClient } from '@/lib/supabase/server'
 import type { HoleRow, RoundRow, ShotEntry } from '@/lib/types'
@@ -46,7 +47,8 @@ export default async function StatsPage() {
         <h1 className="text-2xl font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Stats</h1>
         <div className="text-center py-16">
           <h2 className="text-lg font-semibold mb-2" style={{ color: '#F0F0F0' }}>No data yet</h2>
-          <p className="text-sm" style={{ color: '#9A9DB0' }}>Log a few rounds and your stats will appear here.</p>
+          <p className="text-sm mb-6" style={{ color: '#9A9DB0' }}>Log a few rounds and your stats will appear here.</p>
+          <Link href="/rounds/new" className="inline-block px-5 py-3 rounded-xl text-sm font-semibold" style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}>Log a round</Link>
         </div>
       </div>
     )
@@ -128,6 +130,7 @@ export default async function StatsPage() {
         processPct,
         eagles, birdies, pars, bogeys, doubles,
         totalHoles: holes.length,
+        counts: { firHoles: firHoles.length, firHit, girHit, putts, udAttempts, udMade, sandAttempts, sandSaves, threePutts: holes.filter(h => (h.putts ?? 0) >= 3).length },
       }
     })
 

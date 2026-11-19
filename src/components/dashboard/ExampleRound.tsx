@@ -49,7 +49,7 @@ export default function ExampleRound({
 
       <div className="p-4 text-left">
         <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>
-          This is what you get back after one round. A {EXAMPLE.handicap} handicapper shoots {EXAMPLE.score} and wants to know why.
+          This is what you get back after one round. A {EXAMPLE.handicap} handicapper shoots {EXAMPLE.score}, a little better than their usual round, and wants to know where the shots came from.
         </p>
 
         {/* Score + played like */}

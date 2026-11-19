@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     .eq('join_code', joinCode.trim().toUpperCase())
     .single()
 
-  if (!team) return NextResponse.json({ error: 'Invalid join code' }, { status: 400 })
+  if (!team) return NextResponse.json({ error: 'No team found with that code. Check it with your coach.' }, { status: 400 })
 
   // Can't join your own team
   if (team.coach_user_id === user.id) {

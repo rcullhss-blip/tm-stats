@@ -227,7 +227,10 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
   }
 
   const isLast = current === holeCount - 1
-  const scoreToPar = hole.score - hole.par
+  // Shot by shot: the header follows the shots as they go in, not the saved score
+  const liveFull = setup.inputMode === 'full' && !cardLocked
+  const shownScore = liveFull ? (hole.shots?.length ?? 0) : hole.score
+  const scoreToPar = shownScore - hole.par
   const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Birdie', 'Eagle', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
   const scoreParColor = scoreToPar < 0 ? '#22C55E' : scoreToPar === 0 ? '#F0F0F0' : scoreToPar <= 2 ? '#9A9DB0' : '#EF4444'
 
@@ -339,7 +342,8 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           {holes.map((h, i) => {
             const diff = h.score - h.par
             const isCurrent = i === current
-            const hasData = i <= highestReached
+            // A shot-by-shot hole with no shots yet has no score to show
+            const hasData = i <= highestReached && !(setup.inputMode === 'full' && !cardLocked && !(h.shots && h.shots.length > 0))
             const isReachable = hasData && !isCurrent
             const scoreColor = !hasData ? '#4A4D60' : diff < 0 ? '#22C55E' : diff === 0 ? '#F0F0F0' : diff === 1 ? '#9A9DB0' : '#EF4444'
             const Tag = isReachable ? 'button' : 'div'
@@ -382,7 +386,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
         ) : (
           <div className="mb-4 px-4 py-3 rounded-xl" style={{ backgroundColor: '#22C55E15', border: '1px solid #22C55E40' }}>
             <p className="text-sm" style={{ color: '#22C55E', lineHeight: 1.5 }}>
-              Filled in from your recording. Check it, then tap {setup.inputMode === 'full' ? '"Next hole"' : 'Next'}.
+              Filled in from your recording. Check it, then tap {setup.inputMode === 'full' ? '"Holed, next hole"' : 'Next'}.
               {setup.inputMode === 'full' ? ' Use "Undo last shot" to change anything.' : ''}
             </p>
           </div>
@@ -401,10 +405,10 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             className="text-3xl font-medium"
             style={{ fontFamily: 'var(--font-dm-mono)', color: scoreParColor }}
           >
-            {hole.score}
+            {shownScore > 0 ? shownScore : '–'}
           </p>
           <p className="text-sm" style={{ color: scoreParColor }}>
-            {scoreParLabel}
+            {shownScore > 0 ? scoreParLabel : `Par ${hole.par}`}
           </p>
         </div>
       </div>
@@ -541,6 +545,7 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
             onShotsChange={shots => updateHole({ shots })}
             trackProcess={setup.trackProcess}
             advanced={setup.advanced}
+            lastHole={isLast && current >= highestReached}
             onComplete={(data) => {
               const updatedHoles = holes.map((h, i) =>
                 i === current ? { ...h, ...data } : h

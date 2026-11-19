@@ -28,7 +28,7 @@ const TIERS: Record<Tier, {
     monthly: 4.99,
     yearly: 50,
     features: [
-      { label: 'Unlimited rounds', sub: 'Free plan is capped at 5' },
+      { label: 'Unlimited rounds', sub: 'Free plan: 5 rounds in total, 9-hole rounds included' },
       { label: 'Full Strokes Gained', sub: 'Off tee, approach, around green, putting' },
       { label: 'Game level', sub: 'The handicap each part of your game plays like' },
       { label: 'AI coaching feedback', sub: 'In the voice of your chosen coach' },

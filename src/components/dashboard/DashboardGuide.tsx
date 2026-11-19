@@ -15,8 +15,8 @@ export default function DashboardGuide() {
         className="fixed flex flex-col items-center justify-center gap-1 z-40"
         style={{
           right: 0,
-          top: '50%',
-          transform: 'translateY(-50%)',
+          // Low on the right edge, above the bottom bar, so it never covers the dashboard cards
+          bottom: 'calc(96px + env(safe-area-inset-bottom))',
           backgroundColor: '#CC2222',
           color: '#F0F0F0',
           borderRadius: '8px 0 0 8px',

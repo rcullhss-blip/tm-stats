@@ -19,6 +19,8 @@ interface Props {
   cardScore?: number
   // Tee yardage for this hole from an earlier shot-by-shot round here, if known
   teeYards?: number | null
+  // The last hole of the round: the finish button says so
+  lastHole?: boolean
 }
 
 const LIE_OPTIONS: { value: LieType; label: string }[] = [
@@ -79,7 +81,7 @@ function nextLieSuggestion(shots: ShotEntry[], par: 3 | 4 | 5): LieType {
   return 'fairway'
 }
 
-export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false, cardScore, teeYards = null }: Props) {
+export default function FullTrackingEntry({ holeNumber, par, initialShots, onChangePar, onComplete, onShotsChange, trackProcess = false, advanced = false, cardScore, teeYards = null, lastHole = false }: Props) {
   const [shots, setShots] = useState<ShotEntry[]>(initialShots ?? [])
   const [pendingLie, setPendingLie] = useState<LieType>(() => {
     if (initialShots && initialShots.length > 0) {
@@ -260,7 +262,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
           style={{ backgroundColor: '#22263A', color: '#F59E0B', border: '1px solid #F59E0B40', minHeight: '48px' }}
         >
-          Hole Out (chip-in)
+          Holed it{lastHole ? ', finish round' : ''}
         </button>
       )}
 
@@ -272,7 +274,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
           className="w-full py-3 rounded-xl font-semibold text-sm mt-2"
           style={{ backgroundColor: '#22263A', color: '#22C55E', border: '1px solid #22C55E40', minHeight: '48px' }}
         >
-          ✓ Next hole
+          {lastHole ? '✓ Holed, finish round' : '✓ Holed, next hole'}
         </button>
       )}
     </>
@@ -443,7 +445,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
         <div>
           {finishButtons}
           <p className="text-xs mt-2 text-center" style={{ color: '#9A9DB0' }}>
-            Holed the last putt? Tap Next hole. Missed it? Add where the ball is now below.
+            Holed the last putt? Tap {lastHole ? '"Holed, finish round"' : '"Holed, next hole"'}. Missed it? Add where the ball is now below.
           </p>
         </div>
       )}
@@ -456,7 +458,8 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
 
         {/* Lie type */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {LIE_OPTIONS.map(({ value, label }) => {
+          {/* The first shot of a hole is played from the tee */}
+          {LIE_OPTIONS.filter(o => shots.length > 0 || o.value === 'tee').map(({ value, label }) => {
             const { bg, text, border } = lieColor(value, pendingLie === value)
             return (
               <button
@@ -504,7 +507,7 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
         {isPenalty ? (
           <div className="mb-3 p-3 rounded-xl" style={{ backgroundColor: '#EF444415', border: '1px solid #EF444440' }}>
             <p className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>Penalty stroke</p>
-            <p className="text-xs" style={{ color: '#9A9DB0' }}>Counts as 1 shot. No yardage needed — your next shot carries on from where you were.</p>
+            <p className="text-xs" style={{ color: '#9A9DB0' }}>Counts as 1 shot. No yardage needed. Then add your next shot from where you play it: the drop, or the tee if you are re-teeing.</p>
           </div>
         ) : (
           <div className="mb-3">

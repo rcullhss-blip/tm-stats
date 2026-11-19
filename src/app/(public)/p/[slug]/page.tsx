@@ -177,7 +177,7 @@ export default async function RecruitingProfilePage({ params }: PageProps) {
           <div className="p-4 rounded-xl mb-3 flex items-end justify-between" style={card}>
             <div>
               <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Playing like</p>
-              <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>The handicap the last {nFull} shot by shot round{nFull !== 1 ? 's' : ''} played to</p>
+              <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>{nFull === 1 ? 'The handicap their one shot by shot round played to' : `The handicap their last ${nFull} shot by shot rounds played to`}</p>
             </div>
             <p className="font-medium leading-none" style={{ ...mono, color: '#F0F0F0', fontSize: '40px' }}>{fmtHandicapLevel(levels.total)}</p>
           </div>

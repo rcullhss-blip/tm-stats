@@ -25,7 +25,7 @@ export default function CookieBanner() {
     >
       <div className="max-w-lg mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm" style={{ color: '#9A9DB0' }}>
-          We use cookies to keep you logged in and improve your experience.{' '}
+          We only use the cookies needed to keep you signed in. No advertising or tracking cookies.{' '}
           <Link href="/privacy" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>
             Privacy Policy
           </Link>
@@ -37,7 +37,7 @@ export default function CookieBanner() {
             className="px-5 py-2.5 rounded-xl text-sm font-semibold"
             style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '44px' }}
           >
-            Accept
+            OK
           </button>
         </div>
       </div>

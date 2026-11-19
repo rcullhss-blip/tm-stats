@@ -34,6 +34,13 @@ function fmtToPar(n: number): string {
   return n > 0 ? `+${n}` : `${n}`
 }
 
+/** The total shown on the card: the four parts as displayed, added up, so the card always adds up. */
+function shownTotal(d: { sgTotal: number | null; sgOffTee: number | null; sgApproach: number | null; sgAroundGreen: number | null; sgPutt: number | null }): number {
+  const parts = [d.sgOffTee, d.sgApproach, d.sgAroundGreen, d.sgPutt]
+  if (parts.some(p => p === null)) return d.sgTotal ?? 0
+  return Math.round(parts.reduce<number>((s, p) => s + Math.round((p as number) * 10) / 10, 0) * 10) / 10
+}
+
 function fmtSGNum(n: number): string {
   return n > 0 ? `+${n.toFixed(1)}` : n.toFixed(1)
 }
@@ -141,7 +148,7 @@ async function drawStoryImage(data: ShareData): Promise<Blob | null> {
     ctx.textAlign = 'right'
     ctx.fillStyle = data.sgTotal >= 0 ? '#22C55E' : '#EF4444'
     ctx.font = 'bold 56px -apple-system, "Helvetica Neue", Arial, sans-serif'
-    ctx.fillText(fmtSGNum(data.sgTotal), W - 130, y + 78)
+    ctx.fillText(fmtSGNum(shownTotal(data)), W - 130, y + 78)
 
     const cats = [
       { label: 'Tee', v: data.sgOffTee },
@@ -304,7 +311,7 @@ export default function ShareCard({ data }: Props) {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold tracking-wide" style={{ color: '#9A9DB0' }}>STROKES GAINED</p>
               <p className="text-lg font-bold" style={{ fontFamily: 'var(--font-dm-mono)', color: data.sgTotal >= 0 ? '#22C55E' : '#EF4444' }}>
-                {fmtSGNum(data.sgTotal)}
+                {fmtSGNum(shownTotal(data))}
               </p>
             </div>
             <div className="flex justify-between">

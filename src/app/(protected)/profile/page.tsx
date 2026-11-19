@@ -66,7 +66,7 @@ export default async function ProfilePage() {
       .select('id')
       .eq('user_id', user.id)
       .eq('input_mode', 'full')
-      .order('date', { ascending: false })
+      .order('date', { ascending: false }).order('created_at', { ascending: false })
       .limit(10)
 
     if (fullRounds && fullRounds.length >= 2) {
@@ -314,7 +314,9 @@ export default async function ProfilePage() {
         </a>
       </div>
 
-      <LogoutButton />
+      <div className="mt-6">
+        <LogoutButton />
+      </div>
       <DeleteAccount isCoach={profile?.subscription_status === 'team'} />
     </div>
   )

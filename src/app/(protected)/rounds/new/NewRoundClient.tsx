@@ -55,6 +55,8 @@ interface Props {
 export default function NewRoundClient({ recentCourses = [], voiceEnabled = false, advancedEnabled = false }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'setup' | 'voice' | 'holes' | 'summary'>('setup')
+  // Each step starts at the top of the page, not where the last one was scrolled to
+  useEffect(() => { window.scrollTo(0, 0) }, [step])
   // Per-hole notes from voice entry: what the golfer still needs to check or add
   const [voiceNotes, setVoiceNotes] = useState<(string | null)[] | null>(null)
   const [setup, setSetup] = useState<SetupData | null>(null)
