@@ -8,6 +8,7 @@ import LeaderboardSettings from '@/components/profile/LeaderboardSettings'
 import RecruitingProfileSettings from '@/components/profile/RecruitingProfileSettings'
 import { parseProfileInfo } from '@/lib/recruit-profile'
 import Link from 'next/link'
+import DeleteAccount from '@/components/profile/DeleteAccount'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
 import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
@@ -308,6 +309,7 @@ export default async function ProfilePage() {
       </div>
 
       <LogoutButton />
+      <DeleteAccount isCoach={profile?.subscription_status === 'team'} />
     </div>
   )
 }
