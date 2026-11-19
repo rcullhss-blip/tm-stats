@@ -94,7 +94,8 @@ html {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* In-app mode (the store apps): no links to buying a plan outside the store */
-html[data-app] a[href^="/upgrade"],
+/* In-app mode (the store apps): no links to buying a plan outside the store.
+   Where Apple subscriptions are on (data-iap), /upgrade sells through Apple, so its links stay. */
+html[data-app]:not([data-iap]) a[href^="/upgrade"],
 html[data-app] a[href*="tmstatsgolf.com/upgrade"],
 html[data-app] [data-purchase] { display: none !important; }

@@ -107,17 +107,10 @@ export default function PracticeClient() {
   const monthMinutes = thisMonth.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0)
 
   return (
-    <div className="px-4 py-6 max-w-lg mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
-            Practice log
-          </h1>
-          <p className="text-sm" style={{ color: '#9A9DB0' }}>
-            Log your sessions — your AI coach&apos;s drills work better when you do them.
-          </p>
-        </div>
-      </div>
+    <div>
+      <p className="text-sm mb-5" style={{ color: '#9A9DB0' }}>
+        Log what you worked on and for how long. Use Tests to measure it.
+      </p>
 
       {/* This month summary */}
       {thisMonth.length > 0 && (

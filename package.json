@@ -9,14 +9,15 @@
     "lint": "./node_modules/.bin/eslint",
     "test:sg": "node --test tests/sg-engine.test.mjs",
     "test:qualifying": "node --test tests/qualifying.test.mjs",
-    "test:college": "node --test tests/college.test.mjs",
-    "test": "node --test tests/sg-engine.test.mjs tests/qualifying.test.mjs tests/college.test.mjs"
+    "test:college": "node --test tests/college.test.mjs tests/practice.test.mjs",
+    "test": "node --test tests/sg-engine.test.mjs tests/qualifying.test.mjs tests/college.test.mjs tests/practice.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
     "@capacitor/core": "^8.6.2",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/push-notifications": "^8.1.3",
+    "@revenuecat/purchases-capacitor": "^14.1.2",
     "@stripe/stripe-js": "^9.2.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.1",

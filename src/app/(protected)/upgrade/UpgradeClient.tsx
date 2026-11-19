@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppleUpgrade from '@/components/upgrade/AppleUpgrade'
 
 // Flip to 'gocardless' (Direct Debit) by setting NEXT_PUBLIC_PAYMENT_PROVIDER.
 // Defaults to Stripe so nothing changes until the switch is thrown.
@@ -122,7 +123,10 @@ export default function UpgradeClient({ eliteOpen = false }: { eliteOpen?: boole
 
   // In the store apps, plans are not sold or advertised (store rules)
   const [inApp, setInApp] = useState(false)
-  useEffect(() => { setInApp(document.documentElement.hasAttribute('data-app')) }, [])
+  const [iap, setIap] = useState(false)
+  useEffect(() => { setInApp(document.documentElement.hasAttribute('data-app')); setIap(document.documentElement.hasAttribute('data-iap')) }, [])
+  // iPhone app with Apple subscriptions switched on: buy through Apple
+  if (inApp && iap) return <AppleUpgrade reason={searchParams.get('reason')} />
   if (inApp) {
     return (
       <div className="px-4 py-6 max-w-lg mx-auto">

@@ -213,13 +213,17 @@ export default async function DashboardPage() {
           <span className="text-lg" style={{ color: '#CC2222' }}>→</span>
         </Link>
       ))}
-      <div className={`grid ${onTeam && openQualifiers.length === 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 mb-4`}>
+      <div className={`grid ${onTeam && openQualifiers.length === 0 ? 'grid-cols-2' : 'grid-cols-3'} gap-2 mb-4`}>
         {onTeam && openQualifiers.length === 0 && (
           <Link href="/qualifying" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
             <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Qualifying</span>
             <span className="text-xs" style={{ color: '#9A9DB0' }}>Team scoring</span>
           </Link>
         )}
+        <Link href="/practice" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
+          <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Practice</span>
+          <span className="text-xs" style={{ color: '#9A9DB0' }}>Tests to beat</span>
+        </Link>
         <Link href="/leaderboards" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
           <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Leaderboards</span>
           <span className="text-xs" style={{ color: '#9A9DB0' }}>Squad, area, world</span>

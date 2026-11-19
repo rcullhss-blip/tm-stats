@@ -141,6 +141,14 @@ export default async function CoachPage() {
       {/* Join link, QR code and code */}
       <TeamInvite teamName={team.name} code={team.join_code} link={joinLink} qrSvg={joinQr} />
 
+      <Link href="/coach/tests" className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #F59E0B40', minHeight: '64px' }}>
+        <div>
+          <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Practice tests</p>
+          <p className="text-xs mt-0.5" style={{ color: '#9A9DB0' }}>Every player&apos;s best and latest score on each test, side by side.</p>
+        </div>
+        <span className="text-lg" style={{ color: '#F59E0B' }}>→</span>
+      </Link>
+
       <Link href="/coach/selection" className="flex items-center justify-between p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #22C55E40', minHeight: '64px' }}>
         <div>
           <p className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Selection</p>

@@ -64,7 +64,7 @@ export default function RootLayout({
             allow an app to send people elsewhere to pay, so in the apps every upgrade
             link is hidden (see globals.css) and the upgrade page explains plans
             neutrally. Set before the page paints, remembered on the device. */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var q=new URLSearchParams(location.search).get('app');var u=/TMStatsApp\/(android|ios)/i.exec(navigator.userAgent||'');var m=(q==='android'||q==='ios')?q:(u?u[1].toLowerCase():localStorage.getItem('tm_app'));if(m==='android'||m==='ios'){localStorage.setItem('tm_app',m);document.documentElement.setAttribute('data-app',m)}}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var q=new URLSearchParams(location.search).get('app');var u=/TMStatsApp\/(android|ios)/i.exec(navigator.userAgent||'');var m=(q==='android'||q==='ios')?q:(u?u[1].toLowerCase():localStorage.getItem('tm_app'));if(m==='android'||m==='ios'){localStorage.setItem('tm_app',m);document.documentElement.setAttribute('data-app',m);if(m==='ios'&&${JSON.stringify(!!process.env.NEXT_PUBLIC_REVENUECAT_IOS_KEY)})document.documentElement.setAttribute('data-iap','1')}}catch(e){}` }} />
       </head>
       <body className="min-h-full flex flex-col">
         {children}
