@@ -32,10 +32,16 @@ export async function GET(request: Request) {
 
   // Warmup week: measured from the ramp-start date above.
   const week = Math.max(0, Math.floor((Date.now() - RAMP_START.getTime()) / (7 * 24 * 60 * 60 * 1000)))
+  // Ceiling per day. Brevo's free plan allows 300 emails a day in total, so the
+  // default stays at 280. On a paid Brevo plan set OUTREACH_MAX_PER_DAY (e.g. 400)
+  // in Vercel: after the ramp the cron then sends up to that many each weekday.
+  const maxPerDay = Math.max(50, Math.min(1000, Number(process.env.OUTREACH_MAX_PER_DAY) || 280))
+  const rampTop = maxPerDay > 280 ? maxPerDay : WARMUP[WARMUP.length - 1]
+  const ramp = week < WARMUP.length - 1 ? WARMUP[week] : rampTop
   // Optional one-off top-up from the admin "send now" button (?extra=N): lets a
-  // manual run go past today's ramp, but never past 280 (Brevo free tier is 300).
+  // manual run go past today's ramp, but never past the ceiling.
   const extra = Math.max(0, Math.min(80, Number(new URL(request.url).searchParams.get('extra') ?? 0) || 0))
-  const dailyLimit = Math.min(280, WARMUP[Math.min(week, WARMUP.length - 1)] + extra)
+  const dailyLimit = Math.min(maxPerDay, ramp + extra)
 
   // How many already sent today (cron retries / manual runs stay safe)
   const todayStart = new Date()
