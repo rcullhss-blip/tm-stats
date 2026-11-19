@@ -191,9 +191,22 @@ export default async function DashboardPage() {
           <span className="text-lg" style={{ color: '#CC2222' }}>→</span>
         </Link>
       ))}
-      {onTeam && openQualifiers.length === 0 && pendingRounds.length === 0 && (
-        <Link href="/qualifying" className="inline-block text-xs mb-4" style={{ color: '#9A9DB0', minHeight: '32px' }}>Team qualifying →</Link>
-      )}
+      <div className={`grid ${onTeam && openQualifiers.length === 0 ? 'grid-cols-3' : 'grid-cols-2'} gap-2 mb-4`}>
+        {onTeam && openQualifiers.length === 0 && (
+          <Link href="/qualifying" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
+            <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Qualifying</span>
+            <span className="text-xs" style={{ color: '#9A9DB0' }}>Team scoring</span>
+          </Link>
+        )}
+        <Link href="/leaderboards" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
+          <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Leaderboards</span>
+          <span className="text-xs" style={{ color: '#9A9DB0' }}>Squad, area, world</span>
+        </Link>
+        <Link href="/profile#recruiting" className="p-3 rounded-xl flex flex-col justify-center" style={{ backgroundColor: '#1A1D27', minHeight: '64px' }}>
+          <span className="text-sm font-semibold" style={{ color: '#F0F0F0' }}>Recruiting page</span>
+          <span className="text-xs" style={{ color: '#9A9DB0' }}>One link for coaches</span>
+        </Link>
+      </div>
 
       {/* Training focus + One Shot Fix */}
       {trainingFocus && (

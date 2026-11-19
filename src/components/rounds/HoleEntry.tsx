@@ -192,7 +192,20 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
     })
   }
 
+  // Quick mode: an unanswered fairway or green would read as a miss in every
+  // percentage, so both need a Yes or No before moving on.
+  const [nextError, setNextError] = useState<string | null>(null)
+  function quickProblem(h: HoleData): string | null {
+    if (setup.inputMode !== 'quick') return null
+    const missing = [h.par !== 3 && h.fir === null ? 'fairway' : null, h.gir === null ? 'green in regulation' : null].filter(Boolean)
+    if (missing.length > 0) return `Tap Yes or No for ${missing.join(' and ')} on hole ${h.holeNumber}.`
+    return null
+  }
+
   function handleNext() {
+    const problem = quickProblem(hole)
+    if (problem) { setNextError(problem); return }
+    setNextError(null)
     if (current < highestReached) {
       // Editing a previous hole — jump back to the frontier
       setCurrent(highestReached)
@@ -217,6 +230,8 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
   const scoreToPar = hole.score - hole.par
   const scoreParLabel = scoreToPar === 0 ? 'Par' : scoreToPar < 0 ? ['Birdie', 'Eagle', 'Albatross'][Math.abs(scoreToPar) - 1] || `${Math.abs(scoreToPar)} under` : scoreToPar === 1 ? 'Bogey' : scoreToPar === 2 ? 'Double' : `+${scoreToPar}`
   const scoreParColor = scoreToPar < 0 ? '#22C55E' : scoreToPar === 0 ? '#F0F0F0' : scoreToPar <= 2 ? '#9A9DB0' : '#EF4444'
+
+  useEffect(() => { setNextError(null) }, [current])
 
   // Scroll scorecard strip to keep active tile in view
   useEffect(() => {
@@ -548,6 +563,16 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
       {/* Next/finish button — only in quick mode (full mode auto-advances on hole out) */}
       {setup.inputMode === 'quick' && (
         <div className="mt-8">
+          {(() => {
+            const putts = hole.putts ?? 0
+            const toGreen = hole.score - putts
+            let warn: string | null = null
+            if (putts > 0 && putts >= hole.score) warn = `${putts} putt${putts !== 1 ? 's' : ''} on a ${hole.score} leaves no shot to reach the green. Check the putts.`
+            else if (hole.gir === true && putts > 0 && toGreen > hole.par - 2) warn = `On in regulation with ${putts} putt${putts !== 1 ? 's' : ''} would be ${hole.par - 2 + putts} or better, but the score is ${hole.score}. Check the green or the putts.`
+            else if (hole.gir === false && putts > 0 && toGreen <= hole.par - 2) warn = `${hole.score} with ${putts} putt${putts !== 1 ? 's' : ''} means you were on in ${toGreen}, which is in regulation. Check the green answer.`
+            return warn ? <p className="text-sm mb-3" style={{ color: '#F59E0B' }}>{warn}</p> : null
+          })()}
+          {nextError && <p className="text-sm mb-3" style={{ color: '#EF4444' }}>{nextError}</p>}
           <button
             type="button"
             onClick={handleNext}

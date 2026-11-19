@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/service'
-import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO, TEAM_NUDGE_SUBJECT, teamNudgeHtml, teamNudgeKey } from '@/lib/lifecycle-emails'
+import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO, STATS_WAITING_SUBJECT, TEAM_NUDGE_SUBJECT, statsWaitingHtml, statsWaitingKey, teamNudgeHtml, teamNudgeKey } from '@/lib/lifecycle-emails'
 import { hasPro } from '@/lib/plan'
 
 export const maxDuration = 60
@@ -81,9 +81,14 @@ export async function GET(request: Request) {
 
   const { data: roundsRaw } = await sb
     .from('rounds')
-    .select('user_id, date, input_mode')
+    .select('*')
     .order('date', { ascending: false })
-  const rounds: { user_id: string; date: string; input_mode: string }[] = roundsRaw ?? []
+  // A round whose scores came from qualifying but has no stats yet is not a
+  // round the golfer has logged: it does not count as activity, and it gets its
+  // own reminder below.
+  const allRounds: { id: string; user_id: string; date: string; input_mode: string; stats_pending?: boolean; created_at: string; course_name: string; notes: string | null; score_total: number | null }[] = roundsRaw ?? []
+  const rounds = allRounds.filter(r => !r.stats_pending)
+  const waiting = allRounds.filter(r => r.stats_pending)
 
   // Team memberships, for the weekly "played this week?" reminder
   const { data: memberRaw } = await sb.from('team_members').select('user_id, joined_at, teams(name)')
@@ -125,6 +130,37 @@ export async function GET(request: Request) {
     if (fullRounds.length >= 1 && !isPro) candidates.push('sg_explainer')
     if (!isPro && userRounds.length >= 4) candidates.push('upgrade_push')
     if (lastRoundAge !== null && lastRoundAge >= 30 * day && lastRoundAge <= 90 * day) candidates.push('winback')
+
+    // Scores in from qualifying, stats not added after three days: one reminder
+    // for that round. It goes ahead of the other emails because it is the one
+    // thing the golfer can act on in two minutes.
+    const stale = waiting.find(r =>
+      r.user_id === user.id &&
+      now - new Date(r.created_at).getTime() >= 3 * day &&
+      now - new Date(r.created_at).getTime() <= 21 * day &&
+      !alreadySent.has(`${user.id}:${statsWaitingKey(r.id)}`)
+    )
+    if (stale) {
+      const { error: waitError } = await resend.emails.send({
+        from: PERSONAL_FROM,
+        replyTo: REPLY_TO,
+        to: [user.email],
+        subject: STATS_WAITING_SUBJECT,
+        html: statsWaitingHtml({
+          userId: user.id,
+          firstName: user.name?.split(' ')[0] || 'golfer',
+          eventName: stale.notes || 'team',
+          courseName: stale.course_name,
+          score: stale.score_total,
+          roundId: stale.id,
+        }),
+      })
+      if (waitError) { failures++; continue }
+      await sb.from('email_log').insert({ user_id: user.id, email_type: statsWaitingKey(stale.id) })
+      sent.push(`stats_wait:${user.email}`)
+      if (sent.length >= 50) break
+      continue
+    }
 
     // Team players: a weekly reminder when a week has gone by with no round.
     // It stops after three reminders in a row with no round logged, so a player

@@ -158,3 +158,10 @@ export function validateSetup(input: {
   }
   return null
 }
+
+/** Rebuild the leaderboard from the cards already on it (used after a tap, before the server answers). */
+export function rebuildBoard(q: Pick<Qualifier, 'holes' | 'pars' | 'round_count' | 'rounds_finished'>, board: BoardRow[]): BoardRow[] {
+  const players = board.map(r => ({ id: r.userId, name: r.name }))
+  const rows: QualifierScoreRow[] = board.flatMap(r => r.rounds.map(rd => ({ qualifier_id: '', round_no: rd.roundNo, user_id: r.userId, scores: rd.scores, round_id: rd.roundId })))
+  return buildBoard(q, players, rows)
+}

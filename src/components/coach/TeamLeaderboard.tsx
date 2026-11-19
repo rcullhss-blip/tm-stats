@@ -42,7 +42,15 @@ function display(tab: Tab, v: number): string {
   return fmtHandicapLevel(v)
 }
 
-export default function TeamLeaderboard({ rows }: { rows: LeaderboardRow[] }) {
+interface Props {
+  rows: LeaderboardRow[]
+  // Player view: rows are not links (a player cannot open a team-mate's rounds)
+  // and their own row is picked out.
+  viewerId?: string
+  title?: string
+}
+
+export default function TeamLeaderboard({ rows, viewerId, title = 'Leaderboard' }: Props) {
   const [tab, setTab] = useState<Tab>('avgToPar')
   const meta = TABS.find(t => t.key === tab)!
 
@@ -53,7 +61,7 @@ export default function TeamLeaderboard({ rows }: { rows: LeaderboardRow[] }) {
 
   return (
     <div className="mb-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>Leaderboard</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>{title}</h2>
 
       <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
         {TABS.map(t => {
@@ -85,27 +93,30 @@ export default function TeamLeaderboard({ rows }: { rows: LeaderboardRow[] }) {
             {tab === 'avgToPar' || tab === 'roundsLast30' ? 'No rounds logged yet.' : 'No full tracking rounds yet. These need shot by shot rounds.'}
           </p>
         )}
-        {ranked.map((r, i) => (
-          <Link
-            key={r.id}
-            href={`/coach/players/${r.id}`}
-            className="flex items-center justify-between px-4"
-            style={{ minHeight: '52px', borderTop: i > 0 ? '1px solid #2E3247' : 'none' }}
-          >
-            <span className="flex items-center gap-3">
-              <span className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: i === 0 ? '#22C55E' : '#9A9DB0', width: '20px' }}>{i + 1}</span>
-              <span>
-                <span className="text-sm block" style={{ color: '#F0F0F0' }}>{r.name}</span>
-                <span className="text-xs" style={{ color: '#4A4D60' }}>
-                  {r.handicap !== null ? `Hcp ${r.handicap}` : 'No handicap'}
+        {ranked.map((r, i) => {
+          const inner = (
+            <>
+              <span className="flex items-center gap-3">
+                <span className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: i === 0 ? '#22C55E' : '#9A9DB0', width: '20px' }}>{i + 1}</span>
+                <span>
+                  <span className="text-sm block" style={{ color: '#F0F0F0' }}>{r.name}{viewerId === r.id ? ' (you)' : ''}</span>
+                  <span className="text-xs" style={{ color: '#4A4D60' }}>
+                    {r.handicap !== null ? `Hcp ${r.handicap}` : 'No handicap'}
+                  </span>
                 </span>
               </span>
-            </span>
-            <span className="text-lg font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
-              {display(tab, r[tab] as number)}
-            </span>
-          </Link>
-        ))}
+              <span className="text-lg font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
+                {display(tab, r[tab] as number)}
+              </span>
+            </>
+          )
+          const style = { minHeight: '52px', borderTop: i > 0 ? '1px solid #2E3247' : 'none', backgroundColor: viewerId === r.id ? '#CC222210' : 'transparent' }
+          return viewerId ? (
+            <div key={r.id} className="flex items-center justify-between px-4" style={style}>{inner}</div>
+          ) : (
+            <Link key={r.id} href={`/coach/players/${r.id}`} className="flex items-center justify-between px-4" style={style}>{inner}</Link>
+          )
+        })}
       </div>
 
       {unranked.length > 0 && ranked.length > 0 && (

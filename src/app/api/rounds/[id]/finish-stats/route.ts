@@ -41,6 +41,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: `Hole ${card.hole_number}: your card says ${card.score} but ${shots.length} shots were entered` }, { status: 400 })
       }
     }
+    if (inputMode === 'quick' && (bool(h.gir) === null || (card.par !== 3 && bool(h.fir) === null))) {
+      return NextResponse.json({ error: `Hole ${card.hole_number} needs a Yes or No for fairway and green` }, { status: 400 })
+    }
     const putts = typeof h.putts === 'number' && h.putts >= 0 && h.putts <= card.score ? h.putts : null
 
     const { error } = await service.from('holes').update({

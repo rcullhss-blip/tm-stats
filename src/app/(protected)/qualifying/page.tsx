@@ -51,7 +51,10 @@ export default async function QualifyingListPage() {
       <div className="flex items-center justify-between mb-1">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Qualifying</h1>
         {team.role === 'coach' && (
-          <Link href="/qualifying/new" className="px-4 rounded-xl text-sm font-semibold flex items-center" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '44px' }}>New</Link>
+          <div className="flex gap-2">
+            <Link href="/qualifying/upload" className="px-3 rounded-xl text-sm font-medium flex items-center" style={{ backgroundColor: '#1A1D27', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '44px' }}>Upload result</Link>
+            <Link href="/qualifying/new" className="px-4 rounded-xl text-sm font-semibold flex items-center" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '44px' }}>New</Link>
+          </div>
         )}
       </div>
       <p className="text-sm mb-6" style={{ color: '#9A9DB0' }}>{team.teamName}</p>

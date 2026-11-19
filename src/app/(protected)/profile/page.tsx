@@ -4,6 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import LogoutButton from '@/components/profile/LogoutButton'
 import SGBaselinePicker from '@/components/profile/SGBaselinePicker'
+import LeaderboardSettings from '@/components/profile/LeaderboardSettings'
+import RecruitingProfileSettings from '@/components/profile/RecruitingProfileSettings'
+import { parseProfileInfo } from '@/lib/recruit-profile'
+import Link from 'next/link'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
 import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
@@ -21,7 +25,7 @@ export default async function ProfilePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any)
     .from('users')
-    .select('name, email, handicap, subscription_status, sg_baseline, feedback_level, coach_persona, promo_expires_at, player_context')
+    .select('*')
     .eq('id', user.id)
     .single()
 
@@ -214,6 +218,19 @@ export default async function ProfilePage() {
       {profile?.subscription_status !== 'team' && (
         <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
           <JoinTeamForm teamNames={teamNames} />
+        </div>
+      )}
+
+      {/* Leaderboards: where the golfer plays and whether they are listed */}
+      <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
+        <LeaderboardSettings country={profile?.country ?? null} region={profile?.region ?? null} optIn={profile?.leaderboard_opt_in === true} />
+        <Link href="/leaderboards" className="inline-block text-sm mt-4" style={{ color: '#CC2222', minHeight: '32px' }}>See the leaderboards →</Link>
+      </div>
+
+      {/* Recruiting profile: the page a golfer sends to college coaches */}
+      {profile?.subscription_status !== 'team' && (
+        <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
+          <RecruitingProfileSettings isPublic={profile?.profile_public === true} slug={profile?.profile_slug ?? null} info={parseProfileInfo(profile?.profile_info)} />
         </div>
       )}
 

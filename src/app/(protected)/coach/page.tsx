@@ -5,13 +5,12 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import CoachTeamSetup from '@/components/coach/CoachTeamSetup'
-import type { ShotEntry } from '@/lib/types'
 import TeamLeaderboard, { type LeaderboardRow } from '@/components/coach/TeamLeaderboard'
 import TeamSettings from '@/components/coach/TeamSettings'
-import { pooledHandicapLevels } from '@/lib/handicap-level'
+import { squadLeaderboard } from '@/lib/leaderboards-server'
 
-// Squad settings appear once the player leaderboard and the college benchmarks are switched on.
-const SQUAD_SETTINGS_LIVE = false
+// Squad settings: who sees the leaderboard, and (once switched on) the squad's benchmark.
+const SQUAD_SETTINGS_LIVE = true
 
 function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
@@ -96,55 +95,8 @@ export default async function CoachPage() {
     })
   }
 
-  // Leaderboard: handicap levels from each player's last 5 full tracking rounds
-  if (memberIds.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: lbRounds } = await (service as any)
-      .from('rounds')
-      .select('id, user_id, date, input_mode')
-      .in('user_id', memberIds)
-      .order('date', { ascending: false })
-
-    const cutoff = isoDaysAgo(30)
-    const fullByPlayer = new Map<string, string[]>()
-    const recentCount = new Map<string, number>()
-    for (const r of (lbRounds ?? []) as { id: string; user_id: string; date: string; input_mode: string }[]) {
-      if (r.date >= cutoff) recentCount.set(r.user_id, (recentCount.get(r.user_id) ?? 0) + 1)
-      if (r.input_mode !== 'full') continue
-      const list = fullByPlayer.get(r.user_id) ?? []
-      if (list.length < 5) { list.push(r.id); fullByPlayer.set(r.user_id, list) }
-    }
-
-    const fullIds = [...fullByPlayer.values()].flat()
-    const holesByRound = new Map<string, { holeNumber: number; par: 3 | 4 | 5; shots: ShotEntry[] | null }[]>()
-    if (fullIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: lbHoles } = await (service as any).from('holes').select('round_id, hole_number, par, shots').in('round_id', fullIds)
-      for (const h of lbHoles ?? []) {
-        if (!holesByRound.has(h.round_id)) holesByRound.set(h.round_id, [])
-        holesByRound.get(h.round_id)!.push({ holeNumber: h.hole_number, par: h.par, shots: h.shots })
-      }
-    }
-
-    leaderboard = players.map(p => {
-      const ids = fullByPlayer.get(p.id) ?? []
-      const levels = ids.length > 0 ? pooledHandicapLevels(ids.map(id => holesByRound.get(id) ?? [])) : null
-      return {
-        id: p.id,
-        name: p.name ?? p.email,
-        handicap: p.handicap,
-        avgToPar: p.avgScore,
-        roundsLast30: recentCount.get(p.id) ?? 0,
-        sgRounds: ids.length,
-        level: levels?.total ?? null,
-        // Parts of the game need 3 rounds before a handicap level means anything
-        offTee: ids.length >= 3 ? levels?.offTee ?? null : null,
-        approach: ids.length >= 3 ? levels?.approach ?? null : null,
-        aroundGreen: ids.length >= 3 ? levels?.aroundGreen ?? null : null,
-        putting: ids.length >= 3 ? levels?.putting ?? null : null,
-      }
-    })
-  }
+  // Leaderboard: scoring, handicap levels and rounds logged for each player
+  if (memberIds.length > 0) leaderboard = await squadLeaderboard(service, memberIds)
 
   function scoreColor(v: number | null) {
     if (v === null) return '#4A4D60'

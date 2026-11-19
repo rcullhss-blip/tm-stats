@@ -6,6 +6,8 @@ import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVE
 import StatsView, { type RoundDataPoint, type SGBand } from '@/components/stats/StatsView'
 import GameLevelCard, { type CategoryForm } from '@/components/stats/GameLevelCard'
 import { bandsForRound, rankBands, bestAndWorst, biggestLeaks } from '@/lib/sg-bands'
+import GoalCard from '@/components/stats/GoalCard'
+import { parseGoal } from '@/lib/goal'
 import { hasPro, hasElite } from '@/lib/plan'
 import ShotPatterns from '@/components/stats/ShotPatterns'
 import { buildShotPatterns } from '@/lib/shot-patterns'
@@ -19,7 +21,7 @@ export default async function StatsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('handicap, sg_baseline, subscription_status, coach_persona')
+    .select('*')
     .eq('id', user.id)
     .single()
 
@@ -216,7 +218,7 @@ export default async function StatsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>Stats</h1>
         <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#22263A', color: '#9A9DB0' }}>
-          {rounds.length} rounds
+          {rounds.length} round{rounds.length !== 1 ? 's' : ''}
         </span>
       </div>
       <GameLevelCard
@@ -232,6 +234,20 @@ export default async function StatsPage() {
         benchmarkLabel={SKILL_LEVEL_LABELS[skillLevel]}
         trendNote={trendNote}
       />
+      {isPro && (
+        <GoalCard
+          goal={parseGoal((profile as { sg_goal?: unknown } | null)?.sg_goal)}
+          current={{
+            total: pooled?.total ?? null,
+            offTee: partLevels?.offTee ?? null,
+            approach: partLevels?.approach ?? null,
+            aroundGreen: partLevels?.aroundGreen ?? null,
+            putting: partLevels?.putting ?? null,
+          }}
+          today={new Date().toISOString().slice(0, 10)}
+          handicap={profile?.handicap ?? null}
+        />
+      )}
       <ShotPatterns access={isElite ? 'elite' : isPro ? 'pro' : 'free'} buckets={patternBuckets} rounds={nSg} />
       <StatsView
         rounds={rounds}

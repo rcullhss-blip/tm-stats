@@ -8,7 +8,9 @@
     "start": "./node_modules/.bin/next start",
     "lint": "./node_modules/.bin/eslint",
     "test:sg": "node --test tests/sg-engine.test.mjs",
-    "test:qualifying": "node --test tests/qualifying.test.mjs"
+    "test:qualifying": "node --test tests/qualifying.test.mjs",
+    "test:college": "node --test tests/college.test.mjs",
+    "test": "node --test tests/sg-engine.test.mjs tests/qualifying.test.mjs tests/college.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",

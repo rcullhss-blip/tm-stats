@@ -1,5 +1,8 @@
 import { createHmac } from 'crypto'
 import { EMAIL_FROM } from '@/lib/email-from'
+import { teamNudgeKey } from '@/lib/team-nudge'
+
+export { teamNudgeKey }
 
 const SITE = 'https://tmstatsgolf.com'
 
@@ -127,16 +130,6 @@ export const LIFECYCLE_EMAILS: Record<string, LifecycleEmail> = {
 // Sent to players on a coach's team who have not logged a round for a week.
 // Not in LIFECYCLE_EMAILS because it repeats (weekly, with a cap) and names the team.
 
-/** email_log key for a team nudge: one per ISO week, e.g. team_nudge_2026w47. */
-export function teamNudgeKey(d: Date = new Date()): string {
-  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-  const dayNum = t.getUTCDay() || 7
-  t.setUTCDate(t.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1))
-  const week = Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7)
-  return `team_nudge_${t.getUTCFullYear()}w${String(week).padStart(2, '0')}`
-}
-
 export const TEAM_NUDGE_SUBJECT = 'Played this week?'
 
 export function teamNudgeHtml(userId: string, firstName: string, teamName: string, everLogged: boolean): string {
@@ -183,5 +176,29 @@ export function statsReadyHtml(opts: {
       ? para('Your coach set this account up for you. The link signs you straight in and asks you to choose a password. Your round is waiting on the first screen.')
       : undefined,
     footerReason: `You are getting this because you are on ${opts.teamName} in TM Stats.`,
+  })
+}
+
+// ─── "Your scores are still waiting" ──────────────────────────────────────────
+// One reminder per round, three days after a qualifying or tournament round
+// landed in the golfer's account, if they still have not added their stats.
+
+/** email_log key for the reminder about one round (fits the 40 character column). */
+export function statsWaitingKey(roundId: string): string {
+  return `stats_wait_${roundId.replace(/-/g, '').slice(0, 28)}`
+}
+
+export const STATS_WAITING_SUBJECT = 'Your round is still waiting for its stats'
+
+export function statsWaitingHtml(opts: { userId: string; firstName: string; eventName: string; courseName: string; score: number | null; roundId: string }): string {
+  return personalNote({
+    userId: opts.userId,
+    greeting: `Hi ${opts.firstName},`,
+    bodyHtml:
+      para(`Your ${opts.eventName} round at ${opts.courseName}${opts.score ? ` (${opts.score})` : ''} is in TM Stats with every hole's par and score filled in, but it has no stats yet.`) +
+      para('Quick mode is fairways, greens and putts, about two minutes. Your coach can see who has done theirs.'),
+    linkLabel: 'Add your stats',
+    linkUrl: `${SITE}/rounds/${opts.roundId}/finish`,
+    afterLinkHtml: para('This is the only reminder you will get about this round.'),
   })
 }

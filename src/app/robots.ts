@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin', '/api/', '/dashboard', '/rounds', '/stats', '/profile', '/mental', '/practice', '/coach'],
+      disallow: ['/admin', '/api/', '/dashboard', '/rounds', '/stats', '/profile', '/mental', '/practice', '/coach', '/qualifying', '/leaderboards', '/p/'],
     },
     sitemap: 'https://tmstatsgolf.com/sitemap.xml',
   }

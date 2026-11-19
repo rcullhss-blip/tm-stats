@@ -189,6 +189,8 @@ export default function FullTrackingEntry({ holeNumber, par, initialShots, onCha
     setPendingProcess(null)
     setPendingMiss(null)
     setPendingLie(nextLieSuggestion(newShots, par))
+    // The score is already known: once the shots add up to it, the hole is done
+    if (cardScore !== undefined && newShots.length === cardScore) finalise(newShots)
   }
 
   function removeLastShot() {

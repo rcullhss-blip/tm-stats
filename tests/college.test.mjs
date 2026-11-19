@@ -1,0 +1,174 @@
+// Tests for the college release logic. Run with:  npm run test:college
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { cleanParsed, usableCard, nameSimilarity, matchRoster, validateImport } from '../src/lib/results-import.ts'
+import { parseGoal, validateGoal, goalProgress } from '../src/lib/goal.ts'
+import { collegeStandings, boardName, placeKey, tidyPlace, rankArea } from '../src/lib/leaderboards.ts'
+import { slugBase, makeSlug, parseProfileInfo, scoringSummary } from '../src/lib/recruit-profile.ts'
+import { rankBands, bestAndWorst, biggestLeaks } from '../src/lib/sg-bands.ts'
+import { teamNudgeKey } from '../src/lib/team-nudge.ts'
+import { expectedStrokes, COLLEGE_LEVELS, isCollegeLevel, normalizeSkillLevel } from '../src/lib/sg-engine.ts'
+
+const card18 = Array.from({ length: 18 }, () => 4)
+
+// ── Uploaded results ─────────────────────────────────────────────────────────
+test('names match whatever order or punctuation they are printed in', () => {
+  assert.equal(nameSimilarity('Murphy, Cole', 'Cole Murphy'), 1)
+  assert.equal(nameSimilarity('COLE MURPHY', 'Cole Murphy'), 1)
+  assert.ok(nameSimilarity('AJ Moeldrup', 'A.J. Moeldrup') >= 0.5)
+  assert.ok(nameSimilarity('Andrew Sciortino', 'Andy Sciortino') >= 0.5)
+  assert.equal(nameSimilarity('Cole Murphy', 'Matt Klaus'), 0)
+  assert.equal(nameSimilarity('', 'Matt Klaus'), 0)
+})
+
+test('roster matching uses each squad player once and refuses weak matches', () => {
+  const roster = [{ id: 'a', name: 'Cole Murphy' }, { id: 'b', name: 'Connor Murphy' }, { id: 'c', name: 'Matt Klaus' }]
+  assert.deepEqual(matchRoster(['Murphy, Cole', 'Murphy, Connor', 'Klaus, Matt', 'Someone Else'], roster), ['a', 'b', 'c', null])
+  // A lone surname is not enough to put scores in someone's account
+  assert.deepEqual(matchRoster(['Murphy'], roster), [null])
+  // Two printed names that could be the same squad player: only one gets them
+  const m = matchRoster(['Cole Murphy', 'Cole Murphy'], roster)
+  assert.equal(m.filter(x => x === 'a').length, 1)
+})
+
+test('what comes back from reading a file is cleaned', () => {
+  const p = cleanParsed({
+    event_name: '  Fall Invite ', course_name: 'Home', holes: 18, pars: [4, 4], round_count: 2, dates: ['2026-10-01', 'yesterday'],
+    players: [
+      { name: 'A B', team: 'X', rounds: [{ round_no: 1, scores: card18, total: 72 }, { round_no: 9, scores: [], total: 70 }] },
+      { name: '', team: 'X', rounds: [] },
+    ],
+    notes: 'ok',
+  })
+  assert.equal(p.event_name, 'Fall Invite')
+  assert.deepEqual(p.pars, [])                      // wrong length: treated as not shown
+  assert.deepEqual(p.dates, ['2026-10-01', ''])
+  assert.equal(p.players.length, 1)                 // nameless player dropped
+  assert.equal(p.players[0].rounds.length, 1)       // round 9 of 2 dropped
+  assert.equal(cleanParsed(null).players.length, 0)
+  assert.equal(cleanParsed({ holes: 9, round_count: 99 }).round_count, 1)
+})
+
+test('only a full believable card can be brought in', () => {
+  assert.equal(usableCard(card18, 18), true)
+  assert.equal(usableCard(card18.slice(1), 18), false)
+  assert.equal(usableCard([...card18.slice(1), 0], 18), false)
+  assert.equal(usableCard([...card18.slice(1), 16], 18), false)
+  assert.equal(usableCard([], 18), false)
+})
+
+test('an import is checked before anything is created', () => {
+  const ok = { name: 'Fall Invite', courseName: 'Home', holes: 18, pars: card18, dates: ['2026-10-01', '2026-10-02'], players: [{ userId: 'a', rounds: [card18, null] }, { userId: 'b', rounds: [null, null] }] }
+  const good = validateImport(ok)
+  assert.ok(!('error' in good))
+  assert.equal(good.players.length, 1)              // b has no card at all: left out
+  assert.deepEqual(good.players[0].rounds, [card18, null])
+  assert.match(validateImport({ ...ok, players: [{ userId: 'a', rounds: [card18] }, { userId: 'a', rounds: [card18] }] }).error, /two names/)
+  assert.match(validateImport({ ...ok, pars: card18.slice(1) }).error, /par/)
+  assert.match(validateImport({ ...ok, dates: [] }).error, /date/)
+  assert.match(validateImport({ ...ok, players: [{ userId: 'b', rounds: [null, null] }] }).error, /hole-by-hole/)
+  assert.match(validateImport({ ...ok, name: '' }).error, /name/)
+})
+
+// ── Goals ────────────────────────────────────────────────────────────────────
+test('a goal is checked', () => {
+  const today = '2026-11-18'
+  assert.equal(validateGoal({ metric: 'approach', target: 4, by: '2027-03-01' }, today), null)
+  assert.match(validateGoal({ metric: 'chipping', target: 4, by: '2027-03-01' }, today), /part of your game/)
+  assert.match(validateGoal({ metric: 'total', target: 40, by: '2027-03-01' }, today), /handicap/)
+  assert.match(validateGoal({ metric: 'total', target: 4, by: '2026-11-18' }, today), /future/)
+  assert.match(validateGoal({ metric: 'total', target: 4, by: '2029-01-01' }, today), /two years/)
+  assert.equal(parseGoal({ metric: 'total', target: 'four', by: '2027-03-01' }), null)
+  assert.equal(parseGoal(null), null)
+})
+
+test('goal progress: reached, on track, behind, no data, expired', () => {
+  const g = { metric: 'approach', target: 4, by: '2027-01-17', start: 8, setAt: '2026-11-18' } // 60 days
+  assert.equal(goalProgress(g, 3.9, '2026-12-01').status, 'reached')
+  const half = goalProgress(g, 6, '2026-12-18')    // half the gap closed, half the time used
+  assert.equal(half.status, 'on_track'); assert.equal(half.fraction, 0.5); assert.equal(half.toGo, 2); assert.equal(half.daysLeft, 30)
+  assert.equal(goalProgress(g, 7.5, '2027-01-10').status, 'behind')
+  assert.equal(goalProgress(g, null, '2026-12-01').status, 'no_data')
+  assert.equal(goalProgress(g, 6, '2027-02-01').status, 'expired')
+  assert.equal(goalProgress(g, 9, '2026-12-01').fraction, 0)        // gone backwards: never negative
+  assert.equal(goalProgress({ ...g, start: null }, 6, '2026-12-01').status, 'behind')
+})
+
+// ── Leaderboards ─────────────────────────────────────────────────────────────
+test('college board: three scored players to count, best four cards make the number', () => {
+  const teams = [{ id: 't1', name: 'Alpha' }, { id: 't2', name: 'Beta' }, { id: 't3', name: 'Gamma' }]
+  const p = (teamId, avgToPar, i) => ({ userId: `${teamId}${i}`, teamId, avgToPar, rounds: 3 })
+  const standings = collegeStandings(teams, [
+    p('t1', 2, 1), p('t1', 4, 2), p('t1', 6, 3), p('t1', 8, 4), p('t1', 30, 5),   // best four: 5.0
+    p('t2', 1, 1), p('t2', 1, 2), p('t2', null, 3),                              // only two scored: out
+    p('t3', 3, 1), p('t3', 3, 2), p('t3', 3, 3),                                  // 3.0
+  ])
+  assert.deepEqual(standings.map(s => [s.name, s.avgToPar, s.players]), [['Gamma', 3, 3], ['Alpha', 5, 5]])
+})
+
+test('names on public boards, and places typed differently', () => {
+  assert.equal(boardName('Sam Johnson'), 'Sam J.')
+  assert.equal(boardName('Mary Jane van der Berg'), 'Mary B.')
+  assert.equal(boardName('Cher'), 'Cher')
+  assert.equal(boardName('  '), 'Golfer')
+  assert.equal(placeKey(' Cheshire  '), placeKey('cheshire'))
+  assert.equal(tidyPlace('  north   wales '), 'North Wales')
+  assert.equal(tidyPlace('   '), null)
+  assert.deepEqual(rankArea([{ userId: 'a', name: 'A', level: 6, rounds: 3 }, { userId: 'b', name: 'B', level: -1, rounds: 5 }]).map(g => [g.name, g.position]), [['B', 1], ['A', 2]])
+})
+
+// ── Recruiting profile ───────────────────────────────────────────────────────
+test('profile address and details', () => {
+  assert.equal(slugBase("Sam O'Neil-Jones"), 'sam-oneil-jones')
+  assert.equal(slugBase('Zoë Åkesson'), 'zoe-akesson')
+  assert.equal(slugBase('!!!'), '')
+  assert.match(makeSlug('Sam Jones', () => 0), /^sam-jones-aaaa$/)
+  assert.match(makeSlug('', () => 0.99), /^golfer-[a-z0-9]{4}$/)
+  const info = parseProfileInfo({ gradYear: 1999, homeClub: '  Bromborough ', bio: 'x'.repeat(900), contact: '' })
+  assert.equal(info.gradYear, null); assert.equal(info.homeClub, 'Bromborough'); assert.equal(info.bio.length, 400); assert.equal(info.contact, null)
+})
+
+test('scoring summary uses 18 hole rounds only, newest ten', () => {
+  const r = (score, type = 'practice', holes = 18) => ({ date: '2026-11-01', course: 'Home', holes, score, toPar: score - 72, type, teamScored: false })
+  const s = scoringSummary([r(74), r(70, 'competition'), r(38, 'practice', 9), r(76, 'tournament')])
+  assert.equal(s.rounds, 3); assert.equal(s.avgScore, 73.3); assert.equal(s.avgToPar, 1.3)
+  assert.equal(s.best.score, 70); assert.equal(s.competitionRounds, 2); assert.equal(s.competitionAvgToPar, 1)
+  const none = scoringSummary([])
+  assert.equal(none.rounds, 0); assert.equal(none.avgScore, null); assert.equal(none.best, null)
+})
+
+// ── Leaks ────────────────────────────────────────────────────────────────────
+test('biggest leaks: only bands that really cost shots, worst first', () => {
+  const band = (label, category, sgSum, count) => ({ label, category, minY: 0, maxY: 0, sgSum, count })
+  const round = [band('150–175y', 'approach', -2.4, 6), band('5–8ft', 'putting', -0.6, 5), band('250–275y', 'off_tee', 1.0, 8), band('0–10y', 'around_green', -0.05, 4), band('40ft+', 'putting', -3, 2)]
+  const ranked = rankBands([round, round])
+  assert.deepEqual(biggestLeaks(ranked).map(l => l.label), ['Putts 40ft+', 'Approach 150–175y', 'Putts 5–8ft'])
+  assert.equal(biggestLeaks(ranked)[1].sgPerRound, -2.4)       // per round, not per shot
+  assert.deepEqual(biggestLeaks(rankBands([[band('250–275y', 'off_tee', 1.0, 8)]])), [])   // nothing losing shots: no leaks
+  assert.deepEqual(rankBands([[band('40ft+', 'putting', -3, 2)]]), [])                      // under 3 shots: not ranked
+  assert.deepEqual(bestAndWorst([]), { best: [], worst: [] })
+  assert.deepEqual(rankBands([null, null]), [])
+})
+
+// ── Reminders and benchmarks ─────────────────────────────────────────────────
+test('one reminder key per ISO week', () => {
+  assert.equal(teamNudgeKey(new Date('2026-11-18T09:00:00Z')), 'team_nudge_2026w47')
+  assert.equal(teamNudgeKey(new Date('2026-11-16T00:00:00Z')), teamNudgeKey(new Date('2026-11-22T23:59:00Z')))
+  assert.notEqual(teamNudgeKey(new Date('2026-11-22T23:59:00Z')), teamNudgeKey(new Date('2026-11-23T00:00:00Z')))
+  assert.equal(teamNudgeKey(new Date('2027-01-01T12:00:00Z')), 'team_nudge_2026w53')
+  assert.ok(teamNudgeKey().length <= 40)                                                    // email_log column is 40 wide
+})
+
+test('college levels sit between tour and the handicap bands they should', () => {
+  for (const l of COLLEGE_LEVELS) {
+    assert.ok(isCollegeLevel(l)); assert.equal(normalizeSkillLevel(l), l)
+    assert.ok(expectedStrokes(400, 'tee', l) > expectedStrokes(400, 'tee', 'tour'), `${l} beats tour`)
+  }
+  const at = (l) => expectedStrokes(400, 'tee', l)
+  assert.ok(at('d1_men') < at('scratch') && at('scratch') < at('d2_men'))
+  assert.ok(at('d2_men') < at('d3_men'))
+  assert.equal(normalizeSkillLevel('naia_men'), null)
+  assert.equal(normalizeSkillLevel('njcaa_men'), null)
+  assert.ok(at('d1_women') < at('d2_women') && at('d2_women') < at('d3_women'))
+  assert.equal(isCollegeLevel('h5_9'), false)
+})

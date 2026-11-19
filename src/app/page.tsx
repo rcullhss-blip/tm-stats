@@ -107,8 +107,12 @@ export default function LandingPage() {
               { title: 'Strokes Gained', desc: 'The same analytics used on tour — see which shots actually cost you' },
               { title: 'Played like a handicap', desc: 'Every round and every part of your game turned into the handicap it played like. Driving like a 3, approach like a 10: now you know what to work on' },
               { title: 'Shot patterns', desc: 'One tap per shot for where it finished. See which way you miss from every distance, short or long, left or right' },
+              { title: 'Your biggest leaks', desc: 'The three distances costing you the most shots over your last 10 rounds, so you know exactly what to practise first' },
+              { title: 'Goals with a date', desc: 'Pick a part of your game, the handicap you want it playing like and when by. See every round whether you are on track' },
               { title: 'AI Coaching', desc: 'Data-driven feedback in 7 different coaching styles, based on your round' },
               { title: 'Built for the course', desc: 'Mobile-first, fast entry, works in any conditions — no hardware needed' },
+              { title: 'Leaderboards', desc: 'Rank against your squad, your area and golfers worldwide on the handicap your rounds actually played like' },
+              { title: 'Recruiting profile', desc: 'One link to send to college coaches: your scoring, recent rounds and the handicap each part of your game plays like' },
             ].map(({ title, desc }) => (
               <div key={title} className="flex items-start gap-4 p-4 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
                 <div>
@@ -117,6 +121,42 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* College teams and coaches */}
+          <div className="mb-12 p-5 rounded-2xl" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222240' }}>
+            <p className="text-xs uppercase tracking-widest font-semibold mb-3 text-center" style={{ color: '#CC2222' }}>
+              For college teams and coaches
+            </p>
+            <h2 className="text-xl font-bold text-center mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+              Your qualifying scores are already in. Your players just add the stats.
+            </h2>
+            <p className="text-sm text-center mb-5" style={{ color: '#9A9DB0' }}>
+              Built by a former NCAA player for the way college teams actually run.
+            </p>
+            <div className="space-y-3 mb-5">
+              {[
+                { title: 'Live qualifying', desc: 'Set up qualifying in a minute. Every group enters scores on their own phones, hole by hole, with a live leaderboard for the whole squad.' },
+                { title: 'Stats half done', desc: 'When the round ends, every player gets it in their account with pars and scores filled in. They add fairways, greens and putts in about two minutes, or every shot for Strokes Gained.' },
+                { title: 'Tournament results in one upload', desc: 'Upload the results sheet from an event and each player’s card goes straight into their account, ready for stats.' },
+                { title: 'See who has done it', desc: 'One screen shows which players have added their stats, with reminders sent for you.' },
+                { title: 'Squad leaderboard and coach view', desc: 'Every player’s Strokes Gained, biggest leaks and handicap level for each part of the game, side by side.' },
+              ].map(({ title, desc }) => (
+                <div key={title}>
+                  <p className="font-semibold text-sm mb-0.5" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>{title}</p>
+                  <p className="text-sm" style={{ color: '#9A9DB0' }}>{desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="text-center">
+              <Link
+                href="/contact"
+                className="inline-block px-6 py-3 rounded-xl text-sm font-semibold"
+                style={{ backgroundColor: '#CC2222', color: '#F0F0F0' }}
+              >
+                Get your team set up free
+              </Link>
+            </div>
           </div>
 
           {/* Stats benchmarks */}

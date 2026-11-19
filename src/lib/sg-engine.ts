@@ -18,17 +18,17 @@ export type SkillLevel =
   | 'tour' | 'scratch' | 'h1_4' | 'h5_9' | 'h10_14' | 'h15_19' | 'h20_28' | 'h29'
   | CollegeLevel
 
-// College benchmarks: the average player in that division. ESTIMATES, built
-// from typical scoring averages and turned into a gap to tour the same way the
-// handicap bands are. There is no public shot-by-shot college data, so the
-// split between driving, approach, short game and putting is the model's.
+// College benchmarks: a typical player in the middle of that division, built
+// from published scoring averages (see LEVEL_GAP). There is no public
+// shot-by-shot college data, so the split between driving, approach, short
+// game and putting is the model's, not measured.
 export type CollegeLevel =
-  | 'd1_men' | 'd2_men' | 'd3_men' | 'naia_men' | 'njcaa_men'
-  | 'd1_women' | 'd2_women' | 'd3_women' | 'naia_women'
+  | 'd1_men' | 'd2_men' | 'd3_men'
+  | 'd1_women' | 'd2_women' | 'd3_women'
 
 export const COLLEGE_LEVELS: CollegeLevel[] = [
-  'd1_men', 'd2_men', 'd3_men', 'naia_men', 'njcaa_men',
-  'd1_women', 'd2_women', 'd3_women', 'naia_women',
+  'd1_men', 'd2_men', 'd3_men',
+  'd1_women', 'd2_women', 'd3_women',
 ]
 
 // Off until Rob has checked the numbers below. While false the college levels
@@ -51,12 +51,9 @@ export const SKILL_LEVEL_LABELS: Record<SkillLevel, string> = {
   d1_men:     'College D1 men',
   d2_men:     'College D2 men',
   d3_men:     'College D3 men',
-  naia_men:   'College NAIA men',
-  njcaa_men:  'Junior college men',
   d1_women:   'College D1 women',
   d2_women:   'College D2 women',
   d3_women:   'College D3 women',
-  naia_women: 'College NAIA women',
 }
 
 // Baseline keys stored before the band refresh → map to the nearest new band so
@@ -85,20 +82,21 @@ const LEVEL_GAP: Record<SkillLevel, number> = {
   h15_19:  21.6,
   h20_28:  28.0,
   h29:     35.5,
-  // College (estimates). Men: the handicap the average player in the division
-  // plays to, through the same formula as the bands (5.5 + 0.95 × handicap):
-  // D1 about +2.5, D2 about +0.5, NAIA about 1, D3 about 2.5, junior college about 3.
-  d1_men:     3.1,
-  d2_men:     5.0,
-  naia_men:   6.5,
-  d3_men:     7.9,
-  njcaa_men:  8.4,
-  // Women, from scoring average over par on the shorter set-ups they play:
-  // D1 about +3.5, D2 about +8, NAIA about +10, D3 about +14.
-  d1_women:   6.3,
-  d2_women:   10.8,
-  naia_women: 12.8,
-  d3_women:   16.8,
+  // College. Each is the middle of the division, not the top: the scoring
+  // average of players 1 to 5 on mid-ranked teams (Golfstat rankings, 27 May
+  // 2022, as tabulated by Path Fore Success), taken over par 72 and added to
+  // the tour baseline of 2.4 under. College events are played on longer, harder
+  // set-ups than a home course, so these read slightly harsh on the player.
+  //   Men:   D1 74.0 (teams 101-150)   D2 76.0 (51-150)   D3 78.7 (51-150)
+  //   Women: D1 76.4 (teams 101-150)   D2 80.3 (51-100)   D3 85.6 (51-100)
+  // NAIA and junior college have no published division-wide average, so they
+  // are left out rather than guessed.
+  d1_men:     4.4,
+  d2_men:     6.4,
+  d3_men:     9.1,
+  d1_women:   6.8,
+  d2_women:   10.7,
+  d3_women:   16.0,
 }
 
 export function handicapToSkillLevel(handicap: number | null): SkillLevel {

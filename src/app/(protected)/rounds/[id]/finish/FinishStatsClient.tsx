@@ -142,7 +142,7 @@ export default function FinishStatsClient({ roundId, courseName, eventName, date
 
         <button type="button" onClick={() => start('full')} className="w-full text-left p-4 rounded-xl mb-3" style={{ backgroundColor: '#1A1D27', border: '1px solid #CC222260', minHeight: '72px' }}>
           <p className="text-base font-semibold" style={{ color: '#F0F0F0' }}>Full tracking</p>
-          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Each shot: where it was and how far out. Gives you Strokes Gained for the round. About 8 minutes.</p>
+          <p className="text-xs mt-1" style={{ color: '#9A9DB0' }}>Each shot: where it was and how far out. Gives you Strokes Gained for the round. About 15 to 20 minutes, and each hole moves on by itself once the shots match your score.</p>
         </button>
         {advancedEnabled && (
           <label className="flex items-center gap-3 px-4 mb-3" style={{ minHeight: '44px' }}>

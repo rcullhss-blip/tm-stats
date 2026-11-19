@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { currentRound, fmtToPar, isFinished, type BoardRow } from '@/lib/qualifying'
+import { currentRound, fmtToPar, isFinished, rebuildBoard, type BoardRow } from '@/lib/qualifying'
 import type { QualifierState } from '@/lib/qualifying-server'
 
 interface Props {
@@ -36,7 +36,9 @@ export default function QualifyingClient({ initial, userId }: Props) {
   const q = state.qualifier
   const isCoach = state.role === 'coach'
   const finished = isFinished(q)
-  const openRound = currentRound(q)
+  const liveRound = currentRound(q)
+  const [roundSel, setRoundSel] = useState<number | null>(null)
+  const openRound = roundSel ?? liveRound
   const groupKey = `tmstats_qual_group_${q.id}`
 
   // The group this phone is marking for, remembered between visits
@@ -51,20 +53,18 @@ export default function QualifyingClient({ initial, userId }: Props) {
 
   const applyPending = useCallback((s: QualifierState): QualifierState => {
     if (pending.current.size === 0) return s
-    const round = currentRound(s.qualifier)
-    return {
-      ...s,
-      board: s.board.map(row => ({
-        ...row,
-        rounds: row.rounds.map(r => r.roundNo !== round ? r : {
-          ...r,
-          scores: r.scores.map((sc, i) => {
-            const key = `${row.userId}:${round}:${i + 1}`
-            return pending.current.has(key) ? pending.current.get(key)! : sc
-          }),
+    const board = s.board.map(row => ({
+      ...row,
+      rounds: row.rounds.map(r => ({
+        ...r,
+        scores: r.scores.map((sc, i) => {
+          const key = `${row.userId}:${r.roundNo}:${i + 1}`
+          return pending.current.has(key) ? pending.current.get(key)! : sc
         }),
       })),
-    }
+    }))
+    // Totals, "thru" and the order all follow the new scores straight away
+    return { ...s, board: rebuildBoard(s.qualifier, board) }
   }, [])
 
   const refresh = useCallback(async () => {
@@ -135,9 +135,10 @@ export default function QualifyingClient({ initial, userId }: Props) {
       if (!res.ok) throw new Error(data.error ?? 'Could not finish the round')
       const parts = [`${data.created} player${data.created !== 1 ? 's' : ''} now ${data.created === 1 ? 'has' : 'have'} the round in their account`]
       if (data.emailed > 0) parts.push(`${data.emailed} emailed the link to add stats`)
-      if (data.incomplete?.length > 0) parts.push(`not finished, card incomplete: ${data.incomplete.join(', ')}`)
+      if (data.incomplete?.length > 0) parts.push(`Card not complete, so not added yet: ${data.incomplete.join(', ')}. Fill in the missing holes and finish again to add them`)
       setMessage({ text: `${parts.join('. ')}.`, ok: (data.incomplete?.length ?? 0) === 0 })
       setConfirmFinish(false)
+      if (roundSel !== null) { setRoundSel(null); setGroup([]); setTab('board') }
       await refresh()
     } catch (e) {
       setMessage({ text: e instanceof Error ? e.message : 'Could not finish the round', ok: false })
@@ -161,6 +162,23 @@ export default function QualifyingClient({ initial, userId }: Props) {
   const par = q.pars[hole - 1]
   const groupRows = group.map(id => state.board.find(r => r.userId === id)).filter((r): r is BoardRow => !!r)
   const roundOf = (row: BoardRow) => row.rounds[openRound - 1]
+  const editing = !finished || roundSel !== null
+  // Cards from rounds already finished that were not complete at the time, so
+  // never reached the player's account. The coach can fill them in and add them.
+  const earlierGaps = isCoach
+    ? Array.from({ length: q.rounds_finished }, (_, i) => i + 1).flatMap(n =>
+        state.board.filter(r => { const rd = r.rounds[n - 1]; return rd && rd.thru > 0 && !rd.complete && !rd.roundId }).map(r => ({ roundNo: n, row: r }))
+      ).filter(g => g.roundNo !== roundSel)
+    : []
+  function completeEarlier(roundNo: number, userId: string) {
+    setRoundSel(roundNo)
+    setGroup([userId])
+    const row = state.board.find(r => r.userId === userId)
+    const first = row ? row.rounds[roundNo - 1].scores.findIndex(sc => sc === null) : 0
+    setHole(first === -1 ? 1 : first + 1)
+    setMessage(null)
+    setTab('score')
+  }
   const incompleteCards = state.board.filter(r => { const rd = roundOf(r); return rd.thru > 0 && !rd.complete })
   const untouched = state.board.filter(r => roundOf(r).thru === 0)
   const waitingStats = Object.values(state.stats).flat().filter(s => !s.done).length
@@ -171,14 +189,21 @@ export default function QualifyingClient({ initial, userId }: Props) {
       <div className="flex items-start justify-between mb-1">
         <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>{q.name}</h1>
         <span className="text-xs font-semibold px-2 py-1 rounded mt-1" style={{ backgroundColor: finished ? '#22263A' : '#CC222220', color: finished ? '#9A9DB0' : '#CC2222' }}>
-          {finished ? 'Final' : q.round_count > 1 ? `Round ${openRound} of ${q.round_count}` : 'Live'}
+          {roundSel !== null ? `Fixing round ${roundSel}` : finished ? 'Final' : q.round_count > 1 ? `Round ${openRound} of ${q.round_count}` : 'Live'}
         </span>
       </div>
       <p className="text-sm mb-5" style={{ color: '#9A9DB0' }}>
         {q.course_name} · par <span style={{ fontFamily: 'var(--font-dm-mono)' }}>{q.pars.reduce((s, p) => s + p, 0)}</span>
       </p>
 
-      {!finished && (
+      {roundSel !== null && (
+        <div className="mb-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3" style={{ backgroundColor: '#F59E0B15', border: '1px solid #F59E0B40' }}>
+          <p className="text-sm" style={{ color: '#F59E0B' }}>Completing a card from round {roundSel}. Fill in the missing holes, then add it below.</p>
+          <button type="button" onClick={() => { setRoundSel(null); setGroup([]); setTab('board') }} className="text-xs flex-shrink-0" style={{ color: '#9A9DB0', minHeight: '44px' }}>Done</button>
+        </div>
+      )}
+
+      {editing && (
         <div className="grid grid-cols-2 gap-2 mb-5 p-1 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
           {(['board', 'score'] as const).map(t => (
             <button key={t} type="button" onClick={() => (t === 'score' ? openScoring() : setTab('board'))} className="rounded-lg text-sm font-semibold" style={{ backgroundColor: tab === t ? '#CC2222' : 'transparent', color: tab === t ? '#F0F0F0' : '#9A9DB0', minHeight: '44px' }}>
@@ -195,13 +220,13 @@ export default function QualifyingClient({ initial, userId }: Props) {
       )}
 
       {/* ── Leaderboard ── */}
-      {(tab === 'board' || finished) && (
+      {(tab === 'board' || !editing) && (
         <>
           <div className="rounded-xl overflow-hidden mb-5" style={{ backgroundColor: '#1A1D27' }}>
             <div className="flex items-center px-4 py-2 text-xs" style={{ color: '#4A4D60', borderBottom: '1px solid #22263A' }}>
               <span className="w-9">Pos</span>
               <span className="flex-1">Player</span>
-              {q.round_count > 1 && <span className="w-20 text-right">Rounds</span>}
+              {q.round_count > 1 && <span className="w-20 text-right">Scores</span>}
               <span className="w-12 text-right">Thru</span>
               <span className="w-12 text-right">Total</span>
             </div>
@@ -227,7 +252,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
       )}
 
       {/* ── Score entry ── */}
-      {tab === 'score' && !finished && (
+      {tab === 'score' && editing && (
         <>
           <div className="mb-5">
             <p className="text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>Who are you marking for?</p>
@@ -331,14 +356,28 @@ export default function QualifyingClient({ initial, userId }: Props) {
               </div>
             ))}
           </div>
-          <p className="text-xs mt-2" style={{ color: '#4A4D60' }}>Players who are waiting get a reminder from us after a week. A word from you works faster.</p>
+          <p className="text-xs mt-2" style={{ color: '#4A4D60' }}>Players who are still waiting after three days get one reminder from us. A word from you works faster.</p>
+        </div>
+      )}
+
+      {/* ── Coach: cards from earlier rounds that are not in yet ── */}
+      {earlierGaps.length > 0 && (
+        <div className="p-4 rounded-xl mb-5" style={{ backgroundColor: '#1A1D27', border: '1px solid #F59E0B40' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Cards not added yet</p>
+          <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>These were incomplete when the round was finished, so the players do not have them yet.</p>
+          {earlierGaps.map(g => (
+            <button key={`${g.roundNo}:${g.row.userId}`} type="button" onClick={() => completeEarlier(g.roundNo, g.row.userId)} className="w-full flex items-center justify-between px-3 rounded-lg mb-2 text-sm" style={{ backgroundColor: '#22263A', color: '#F0F0F0', minHeight: '48px' }}>
+              <span>{g.row.name}{q.round_count > 1 ? `, round ${g.roundNo}` : ''} <span style={{ color: '#9A9DB0' }}>({g.row.rounds[g.roundNo - 1].thru}/{q.holes})</span></span>
+              <span style={{ color: '#F59E0B' }}>Complete it →</span>
+            </button>
+          ))}
         </div>
       )}
 
       {/* ── Coach: finish the round ── */}
-      {isCoach && !finished && (
+      {isCoach && editing && (
         <div className="p-4 rounded-xl mb-5" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
-          <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Finish {q.round_count > 1 ? `round ${openRound}` : 'the round'}</p>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>{roundSel !== null ? `Add completed cards to round ${roundSel}` : `Finish ${q.round_count > 1 ? `round ${openRound}` : 'the round'}`}</p>
           <p className="text-xs mb-3" style={{ color: '#9A9DB0', lineHeight: 1.5 }}>
             Every player with a full card gets this round in their own account, pars and scores already in, and an email with a link to add their stats.
           </p>
@@ -352,7 +391,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
           )}
           {!confirmFinish ? (
             <button type="button" onClick={() => setConfirmFinish(true)} disabled={busy || untouched.length === state.board.length} className="w-full rounded-xl font-semibold text-sm" style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3247', minHeight: '48px', opacity: untouched.length === state.board.length ? 0.4 : 1 }}>
-              Finish {q.round_count > 1 ? `round ${openRound}` : 'round'}
+              {roundSel !== null ? 'Add to players\' accounts' : `Finish ${q.round_count > 1 ? `round ${openRound}` : 'round'}`}
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-3">
