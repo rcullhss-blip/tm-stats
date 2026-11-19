@@ -9,6 +9,7 @@ import RecruitingProfileSettings from '@/components/profile/RecruitingProfileSet
 import { parseProfileInfo } from '@/lib/recruit-profile'
 import Link from 'next/link'
 import DeleteAccount from '@/components/profile/DeleteAccount'
+import WatchSettings from '@/components/profile/WatchSettings'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
 import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
@@ -221,6 +222,11 @@ export default async function ProfilePage() {
           <JoinTeamForm teamNames={teamNames} />
         </div>
       )}
+
+      {/* Apple Watch: connect with the code the watch shows */}
+      <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
+        <WatchSettings />
+      </div>
 
       {/* Leaderboards: where the golfer plays and whether they are listed */}
       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>

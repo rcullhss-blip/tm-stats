@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { userFromDeviceToken } from '@/lib/device-auth'
 import { Resend } from 'resend'
 import { buildBoard, cleanCard, fmtToPar, type BoardRow, type Par, type Qualifier, type QualifierScoreRow } from '@/lib/qualifying'
 import { PERSONAL_FROM, REPLY_TO, statsReadyHtml, statsReadySubject } from '@/lib/lifecycle-emails'
@@ -15,6 +16,9 @@ export type QualifierRole = 'coach' | 'player'
 type Service = any
 
 export async function currentUserId(): Promise<string | null> {
+  // The Apple Watch signs in with its own token; everything else uses cookies
+  const fromWatch = await userFromDeviceToken()
+  if (fromWatch) return fromWatch
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user?.id ?? null
