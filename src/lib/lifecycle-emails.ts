@@ -162,13 +162,18 @@ export function statsReadyHtml(opts: {
   // For a player whose account has not been opened yet: a one-tap sign-in link.
   // They choose a password, then the round is waiting on their dashboard.
   claimLink?: string
+  // Only the round total came in (no hole-by-hole card): the golfer adds hole scores too
+  totalOnly?: boolean
 }): string {
   return personalNote({
     userId: opts.userId,
     greeting: `Hi ${opts.firstName},`,
     bodyHtml:
-      para(`Your ${opts.eventName} round at ${opts.courseName} is already in TM Stats: <strong>${opts.score} (${opts.toPar})</strong>, with every hole's par and score filled in.`) +
-      para('All that is left is your stats. Quick mode is fairways, greens and putts, about two minutes. Full tracking is each shot, and gives you Strokes Gained for the round.') +
+      (opts.totalOnly
+        ? para(`Your ${opts.eventName} round at ${opts.courseName} is in TM Stats: <strong>${opts.score} (${opts.toPar})</strong>. The results only had your total, so the next step is your hole scores: snap your scorecard or type them in, and the app checks they add up.`) +
+          para('Then add your stats. Quick mode is fairways, greens and putts, about two minutes.')
+        : para(`Your ${opts.eventName} round at ${opts.courseName} is already in TM Stats: <strong>${opts.score} (${opts.toPar})</strong>, with every hole's par and score filled in.`) +
+          para('All that is left is your stats. Quick mode is fairways, greens and putts, about two minutes. Full tracking is each shot, and gives you Strokes Gained for the round.')) +
       para('Do it while you still remember the shots.'),
     linkLabel: opts.claimLink ? 'Open your account and add your stats' : 'Add your stats',
     linkUrl: opts.claimLink ?? `${SITE}/rounds/${opts.roundId}/finish`,

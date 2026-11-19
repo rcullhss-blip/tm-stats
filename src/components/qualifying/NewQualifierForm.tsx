@@ -24,6 +24,7 @@ const inputStyle = { backgroundColor: '#22263A', color: '#F0F0F0', border: '1px 
 
 export default function NewQualifierForm({ teamName, players, knownCourses }: Props) {
   const router = useRouter()
+  const [kind, setKind] = useState<'qualifying' | 'tournament'>('qualifying')
   const [name, setName] = useState('')
   const [courseName, setCourseName] = useState('')
   const [holes, setHoles] = useState<9 | 18>(18)
@@ -64,7 +65,7 @@ export default function NewQualifierForm({ teamName, players, knownCourses }: Pr
       const res = await fetch('/api/qualifying', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, courseName, holes, pars, roundCount, dates, playerIds: [...picked] }),
+        body: JSON.stringify({ kind, name, courseName, holes, pars, roundCount, dates, playerIds: [...picked] }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not set up the qualifier')
@@ -80,7 +81,7 @@ export default function NewQualifierForm({ teamName, players, knownCourses }: Pr
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <Link href="/qualifying" className="text-sm mb-4 inline-block" style={{ color: '#9A9DB0' }}>← Qualifying</Link>
-      <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>New qualifier</h1>
+      <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>{kind === 'tournament' ? 'New tournament' : 'New qualifier'}</h1>
       <p className="text-sm mb-6" style={{ color: '#9A9DB0' }}>{teamName}</p>
 
       {players.length === 0 ? (
@@ -91,8 +92,20 @@ export default function NewQualifierForm({ teamName, players, knownCourses }: Pr
       ) : (
         <div className="space-y-6">
           <div>
+            <label className="text-sm font-medium block mb-2" style={{ color: '#9A9DB0' }}>What is it?</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['qualifying', 'tournament'] as const).map(k => (
+                <button key={k} type="button" onClick={() => setKind(k)} className="rounded-xl text-sm font-semibold" style={{ backgroundColor: kind === k ? '#CC2222' : '#1A1D27', color: kind === k ? '#F0F0F0' : '#9A9DB0', border: `1px solid ${kind === k ? '#CC2222' : '#2E3247'}`, minHeight: '48px' }}>
+                  {k === 'qualifying' ? 'Team qualifying' : 'Tournament'}
+                </button>
+              ))}
+            </div>
+            {kind === 'tournament' && <p className="text-xs mt-2" style={{ color: '#9A9DB0' }}>Players or a parent enter hole scores during or straight after each round, so every card is in without needing the results sheet.</p>}
+          </div>
+
+          <div>
             <label className="text-sm font-medium block mb-2" style={{ color: '#9A9DB0' }}>Name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Spring qualifying" maxLength={80} className="w-full px-3 rounded-xl text-sm" style={inputStyle} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder={kind === 'tournament' ? 'e.g. Tiger Invitational' : 'e.g. Spring qualifying'} maxLength={80} className="w-full px-3 rounded-xl text-sm" style={inputStyle} />
           </div>
 
           <div>
@@ -176,7 +189,7 @@ export default function NewQualifierForm({ teamName, players, knownCourses }: Pr
           {error && <p className="text-sm" style={{ color: '#EF4444' }}>{error}</p>}
 
           <button type="button" onClick={create} disabled={saving} className="w-full rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px', opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Setting up…' : 'Start qualifying →'}
+            {saving ? 'Setting up…' : kind === 'tournament' ? 'Start live scoring →' : 'Start qualifying →'}
           </button>
         </div>
       )}

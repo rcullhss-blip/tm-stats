@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { currentUserId, finishQualifierRound, teamFor } from '@/lib/qualifying-server'
+import { createTotalOnlyRound, currentUserId, finishQualifierRound, teamFor } from '@/lib/qualifying-server'
 import { blankCard, type Qualifier } from '@/lib/qualifying'
 import { validateImport } from '@/lib/results-import'
 
@@ -60,5 +60,17 @@ export async function POST(request: Request) {
     problems.push(...result.incomplete)
   }
 
-  return NextResponse.json({ ok: true, id: created.id, rounds: roundsMade, emailed, problems })
+  // Players with only a round total: their round is made now and they add the holes
+  let totalOnly = 0
+  for (const p of players) {
+    for (let i = 0; i < roundCount; i++) {
+      const total = p.totals[i]
+      if (total === null || p.rounds[i]) continue
+      const r = await createTotalOnlyRound(service, { ...qualifier, rounds_finished: roundCount }, i + 1, p.userId, total)
+      if (r.created) { roundsMade++; totalOnly++ }
+      if (r.emailed) emailed++
+    }
+  }
+
+  return NextResponse.json({ ok: true, id: created.id, rounds: roundsMade, emailed, problems, totalOnly })
 }

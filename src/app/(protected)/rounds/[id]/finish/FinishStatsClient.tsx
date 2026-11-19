@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { HoleData, InputMode, RoundType, SetupData } from '@/lib/types'
 import HoleEntry from '@/components/rounds/HoleEntry'
 import RoundSummary from '@/components/rounds/RoundSummary'
+import HoleScoresStep from '@/components/rounds/HoleScoresStep'
 
 interface CardHole { holeNumber: number; par: 3 | 4 | 5; score: number }
 
@@ -17,6 +18,9 @@ interface Props {
   holes: CardHole[]
   advancedEnabled: boolean
   yardages?: (number | null)[]
+  // The result only had the total: the golfer adds hole scores first
+  totalOnly?: boolean
+  total?: number | null
 }
 
 interface Draft { mode: InputMode; holes: HoleData[]; current: number; highest: number; step: 'holes' | 'summary' }
@@ -28,7 +32,27 @@ function fmtToPar(n: number): string {
   return n > 0 ? `+${n}` : `${n}`
 }
 
-export default function FinishStatsClient({ roundId, courseName, eventName, date, roundType, holes, advancedEnabled, yardages }: Props) {
+export default function FinishStatsClient({ roundId, courseName, eventName, date, roundType, holes: cardHoles, advancedEnabled, yardages, totalOnly = false, total = null }: Props) {
+  // Hole scores the golfer entered (total-only rounds), or the card as it came
+  const [entered, setEnteredState] = useState<number[] | null>(null)
+  const [enteredPutts, setEnteredPutts] = useState<(number | null)[] | null>(null)
+  // Remember entered hole scores on the phone, so a reload half way through
+  // the stats does not mean typing them again
+  const scoresKey = `tmstats_finish_scores_${roundId}`
+  useEffect(() => {
+    if (!totalOnly) return
+    try {
+      const saved = JSON.parse(localStorage.getItem(scoresKey) ?? 'null')
+      if (Array.isArray(saved?.scores) && saved.scores.length === cardHoles.length && saved.scores.reduce((a: number, b: number) => a + b, 0) === total) {
+        setEnteredState(saved.scores); setEnteredPutts(saved.putts ?? null)
+      }
+    } catch {}
+  }, [scoresKey, totalOnly, cardHoles.length, total])
+  function setEntered(scores: number[], putts: (number | null)[]) {
+    setEnteredState(scores); setEnteredPutts(putts)
+    try { localStorage.setItem(scoresKey, JSON.stringify({ scores, putts })) } catch {}
+  }
+  const holes: CardHole[] = entered ? cardHoles.map((h, i) => ({ ...h, score: entered[i] })) : cardHoles
   const router = useRouter()
   const [step, setStep] = useState<'choose' | 'holes' | 'summary'>('choose')
   const [mode, setMode] = useState<InputMode>('quick')
@@ -67,7 +91,7 @@ export default function FinishStatsClient({ roundId, courseName, eventName, date
   function blankHoles(): HoleData[] {
     return holes.map(h => ({
       holeNumber: h.holeNumber, par: h.par, score: h.score,
-      fir: null, gir: null, putts: Math.min(2, h.score), upAndDown: null, sandSave: null, bunker: null,
+      fir: null, gir: null, putts: enteredPutts?.[h.holeNumber - 1] ?? Math.min(2, h.score), upAndDown: null, sandSave: null, bunker: null,
     }))
   }
 
@@ -103,17 +127,28 @@ export default function FinishStatsClient({ roundId, courseName, eventName, date
       const res = await fetch(`/api/rounds/${roundId}/finish-stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputMode: mode, holes: holeData, notes, mood, conditions, energy }),
+        body: JSON.stringify({ inputMode: mode, holes: holeData, notes, mood, conditions, energy, ...(totalOnly ? { cardScores: holes.map(h => h.score) } : {}) }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not save your stats')
-      try { localStorage.removeItem(draftKey(roundId)) } catch {}
+      try { localStorage.removeItem(draftKey(roundId)); localStorage.removeItem(scoresKey) } catch {}
       fetch(`/api/rounds/${roundId}/summary-email`, { method: 'POST', keepalive: true }).catch(() => {})
       router.push(`/rounds/${roundId}`)
     } catch (e) {
       setError(e instanceof Error ? `${e.message}. Your stats are safe on this device, try again.` : 'Could not save your stats. Try again.')
       setSaving(false)
     }
+  }
+
+  if (totalOnly && !entered) {
+    return (
+      <HoleScoresStep
+        pars={cardHoles.map(h => h.par)}
+        total={total ?? 0}
+        eventName={eventName ?? courseName}
+        onDone={(scores, putts) => setEntered(scores, putts)}
+      />
+    )
   }
 
   if (step === 'choose') {

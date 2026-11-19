@@ -58,6 +58,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${dmSans.variable} ${inter.variable} ${dmMono.variable}`}>
+      <head>
+        {/* In-app mode. The Android and iPhone apps open the site with ?app=android
+            or ?app=ios (or identify themselves in the user agent). Store rules do not
+            allow an app to send people elsewhere to pay, so in the apps every upgrade
+            link is hidden (see globals.css) and the upgrade page explains plans
+            neutrally. Set before the page paints, remembered on the device. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var q=new URLSearchParams(location.search).get('app');var u=/TMStatsApp\/(android|ios)/i.exec(navigator.userAgent||'');var m=(q==='android'||q==='ios')?q:(u?u[1].toLowerCase():localStorage.getItem('tm_app'));if(m==='android'||m==='ios'){localStorage.setItem('tm_app',m);document.documentElement.setAttribute('data-app',m)}}catch(e){}` }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />

@@ -207,3 +207,41 @@ export async function finishQualifierRound(service: Service, qualifier: Qualifie
 
   return { created, emailed: emailed.length, incomplete }
 }
+
+/**
+ * A round where the result only had the player's total. The round is created
+ * with that total and no holes; the golfer adds hole scores (photo of the card
+ * or typed) and then stats. Safe to run twice: a card with a round is skipped.
+ */
+export async function createTotalOnlyRound(service: Service, qualifier: Qualifier, roundNo: number, userId: string, total: number): Promise<{ created: boolean; emailed: boolean }> {
+  const { data: card } = await service.from('qualifier_scores').select('id, round_id').eq('qualifier_id', qualifier.id).eq('round_no', roundNo).eq('user_id', userId).maybeSingle()
+  if (!card || card.round_id) return { created: false, emailed: false }
+  const parTotal = qualifier.pars.reduce((s, p) => s + p, 0)
+  const date = qualifier.round_dates[roundNo - 1] ?? new Date().toISOString().slice(0, 10)
+  const eventName = qualifier.round_count > 1 ? `${qualifier.name}, round ${roundNo}` : qualifier.name
+  const { data: round, error } = await service.from('rounds').insert({
+    user_id: userId, date, course_name: qualifier.course_name, holes: qualifier.holes,
+    round_type: qualifier.kind === 'tournament' ? 'tournament' : 'competition', input_mode: 'quick',
+    par_total: parTotal, score_total: total, notes: eventName, stats_pending: true, qualifier_id: qualifier.id,
+  }).select('id').single()
+  if (error || !round) return { created: false, emailed: false }
+  await service.from('qualifier_scores').update({ round_id: round.id }).eq('id', card.id)
+
+  let emailed = false
+  const { data: player } = await service.from('users').select('id, email, name, email_opt_out').eq('id', userId).maybeSingle()
+  const { data: team } = await service.from('teams').select('name').eq('id', qualifier.team_id).maybeSingle()
+  if (process.env.RESEND_API_KEY && player?.email && !player.email_opt_out) {
+    let claimLink: string | undefined
+    try {
+      const { data: authUser } = await service.auth.admin.getUserById(userId)
+      if (authUser?.user?.app_metadata?.needs_claim === true) claimLink = claimUrl(userId)
+    } catch {}
+    const { error: sendError } = await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: PERSONAL_FROM, replyTo: REPLY_TO, to: [player.email],
+      subject: statsReadySubject(eventName),
+      html: statsReadyHtml({ userId, firstName: player.name?.split(' ')[0] || 'golfer', eventName, courseName: qualifier.course_name, score: total, toPar: fmtToPar(total - parTotal), roundId: round.id, teamName: team?.name ?? 'your team', claimLink, totalOnly: true }),
+    })
+    emailed = !sendError
+  }
+  return { created: true, emailed }
+}

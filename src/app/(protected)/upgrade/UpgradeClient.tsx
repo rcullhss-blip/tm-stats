@@ -120,6 +120,21 @@ export default function UpgradeClient({ eliteOpen = false }: { eliteOpen?: boole
   const action = switching ? 'Set up Direct Debit' : activeTier === 'elite' ? 'Go Elite' : 'Go Pro'
   const cardPayment = PROVIDER !== 'gocardless' || activeTier === 'elite'
 
+  // In the store apps, plans are not sold or advertised (store rules)
+  const [inApp, setInApp] = useState(false)
+  useEffect(() => { setInApp(document.documentElement.hasAttribute('data-app')) }, [])
+  if (inApp) {
+    return (
+      <div className="px-4 py-6 max-w-lg mx-auto">
+        <Link href="/dashboard" className="text-sm mb-6 inline-block" style={{ color: '#9A9DB0' }}>← Back</Link>
+        <div className="p-5 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>Your plan</p>
+          <p className="text-sm" style={{ color: '#9A9DB0' }}>{typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('reason') === 'round_limit' ? 'Free accounts keep up to 5 rounds. ' : ''}Plans are managed on your TM Stats account. Everything your plan includes is available here in the app.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
       <Link href="/dashboard" className="text-sm mb-6 inline-block" style={{ color: '#9A9DB0' }}>

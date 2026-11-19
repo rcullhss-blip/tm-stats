@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
   const { data: created, error } = await team.service.from('qualifiers').insert({
     team_id: team.teamId,
-    kind: 'qualifying',
+    kind: body.kind === 'tournament' ? 'tournament' : 'qualifying',
     name: String(body.name).trim().slice(0, 80),
     course_name: String(body.courseName).trim().slice(0, 120),
     holes: body.holes,

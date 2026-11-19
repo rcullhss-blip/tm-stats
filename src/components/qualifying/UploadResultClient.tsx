@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Par } from '@/lib/qualifying'
-import { usableCard, type ParsedResult } from '@/lib/results-import'
+import { usableCard, usableTotal, type ParsedResult } from '@/lib/results-import'
 
 interface Props { teamName: string }
 
@@ -63,7 +63,11 @@ export default function UploadResultClient({ teamName }: Props) {
     if (!parsed) return
     setError(null)
     const players = parsed.players
-      .map((p, i) => ({ userId: matches[i], rounds: Array.from({ length: parsed.round_count }, (_, r) => p.rounds.find(x => x.round_no === r + 1)?.scores ?? null) }))
+      .map((p, i) => ({
+        userId: matches[i],
+        rounds: Array.from({ length: parsed.round_count }, (_, r) => p.rounds.find(x => x.round_no === r + 1)?.scores ?? null),
+        totals: Array.from({ length: parsed.round_count }, (_, r) => p.rounds.find(x => x.round_no === r + 1)?.total || null),
+      }))
       .filter(p => p.userId)
     const ids = players.map(p => p.userId)
     if (new Set(ids).size !== ids.length) { setError('The same squad player is picked for two names. Each player can only be matched once.'); return }
@@ -125,7 +129,7 @@ export default function UploadResultClient({ teamName }: Props) {
         <button type="button" onClick={read} disabled={busy} className="w-full rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px', opacity: busy ? 0.7 : 1 }}>
           {busy ? 'Reading the result… this can take a minute' : 'Read the result →'}
         </button>
-        <p className="text-xs mt-3" style={{ color: '#4A4D60' }}>Nothing is saved or sent until you have checked it on the next screen. It needs hole-by-hole scores: a sheet with only round totals cannot be filled in.</p>
+        <p className="text-xs mt-3" style={{ color: '#4A4D60' }}>Nothing is saved or sent until you have checked it on the next screen. A sheet with only round totals works too: players add their hole scores from their card.</p>
       </div>
     )
   }
@@ -152,7 +156,9 @@ export default function UploadResultClient({ teamName }: Props) {
   const mine = parsed.players.map((p, i) => ({ p, i })).filter(x => matches[x.i])
   const others = parsed.players.map((p, i) => ({ p, i })).filter(x => !matches[x.i])
   const cardCount = (i: number) => parsed.players[i].rounds.filter(r => usableCard(r.scores, parsed.holes)).length
-  const bringing = mine.filter(x => cardCount(x.i) > 0).length
+  const totalCount = (i: number) => parsed.players[i].rounds.filter(r => !usableCard(r.scores, parsed.holes) && usableTotal(r.total, parsed.holes)).length
+  const bringing = mine.filter(x => cardCount(x.i) + totalCount(x.i) > 0).length
+  const totalsOnly = mine.some(x => totalCount(x.i) > 0)
   const parsUnknown = parsed.pars.length !== parsed.holes
 
   const row = ({ p, i }: { p: ParsedResult['players'][number]; i: number }) => {
@@ -176,8 +182,8 @@ export default function UploadResultClient({ teamName }: Props) {
           <option value="">Not on my squad (leave out)</option>
           {roster.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
-        {matches[i] && usable === 0 && <p className="text-xs mt-2" style={{ color: '#F59E0B' }}>No hole-by-hole scores for this player, so nothing can be filled in.</p>}
-        {matches[i] && usable > 0 && usable < parsed.round_count && <p className="text-xs mt-2" style={{ color: '#9A9DB0' }}>{usable} of {parsed.round_count} rounds have hole scores. Only those are brought in.</p>}
+        {matches[i] && usable === 0 && totalCount(i) === 0 && <p className="text-xs mt-2" style={{ color: '#F59E0B' }}>No scores for this player in the file.</p>}
+        {matches[i] && totalCount(i) > 0 && <p className="text-xs mt-2" style={{ color: '#9A9DB0' }}>{usable > 0 ? `${usable} round${usable !== 1 ? 's' : ''} with hole scores. ` : ''}{totalCount(i)} with a total only: they add their hole scores from their card.</p>}
       </div>
     )
   }
@@ -230,6 +236,13 @@ export default function UploadResultClient({ teamName }: Props) {
           </div>
         </div>
       </div>
+
+      {totalsOnly && (
+        <div className="p-4 rounded-xl mb-5" style={{ ...card, border: '1px solid #2E3247' }}>
+          <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>This result only has round totals</p>
+          <p className="text-sm" style={{ color: '#9A9DB0', lineHeight: 1.5 }}>That is fine. Each player gets the round with their total, then snaps their scorecard or types their hole scores in. The app checks they add up to the total.</p>
+        </div>
+      )}
 
       <p className="text-sm font-medium mb-1" style={{ color: '#F0F0F0' }}>Your players ({mine.length})</p>
       <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>Matched by name to your squad. Change any that are wrong. A total with a * has no hole-by-hole scores.</p>

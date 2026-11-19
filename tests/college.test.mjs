@@ -66,7 +66,7 @@ test('an import is checked before anything is created', () => {
   assert.match(validateImport({ ...ok, players: [{ userId: 'a', rounds: [card18] }, { userId: 'a', rounds: [card18] }] }).error, /two names/)
   assert.match(validateImport({ ...ok, pars: card18.slice(1) }).error, /par/)
   assert.match(validateImport({ ...ok, dates: [] }).error, /date/)
-  assert.match(validateImport({ ...ok, players: [{ userId: 'b', rounds: [null, null] }] }).error, /hole-by-hole/)
+  assert.match(validateImport({ ...ok, players: [{ userId: 'b', rounds: [null, null] }] }).error, /score to bring in/)
   assert.match(validateImport({ ...ok, name: '' }).error, /name/)
 })
 
@@ -213,4 +213,24 @@ test('selection: saved picks are cleaned, and the spreadsheet escapes commas and
   const csv = standingsCsv([{ userId: 'a', name: 'Al, Jr', counted: [], available: 0, avgToPar: null, avgScore: null, best: null, worst: null, sgAvg: null, sgRounds: 0, position: null }], new Set(['a']), saved.notes)
   assert.match(csv, /"Al, Jr",Yes,0/)
   assert.match(csv, /"Strong, ""steady"""/)
+})
+
+// ── Results with totals only ─────────────────────────────────────────────────
+import { usableTotal } from '../src/lib/results-import.ts'
+test('a results sheet with only totals still brings players in', () => {
+  assert.equal(usableTotal(74, 18), true)
+  assert.equal(usableTotal(35, 9), true)
+  assert.equal(usableTotal(20, 18), false)     // too low to be a real 18
+  assert.equal(usableTotal(200, 18), false)
+  assert.equal(usableTotal(74.5, 18), false)
+  assert.equal(usableTotal('74', 18), false)
+  const base = { name: 'Big South', courseName: 'Fripp Island', holes: 18, pars: card18, dates: ['2025-04-13', '2025-04-14', '2025-04-15'] }
+  const ok = validateImport({ ...base, players: [
+    { userId: 'a', rounds: [null, null, null], totals: [76, 72, 74] },
+    { userId: 'b', rounds: [card18, null, null], totals: [999, 83, null] },   // a card wins over a total; nonsense total dropped
+    { userId: 'c', rounds: [null, null, null], totals: [null, null, null] },  // nothing: left out
+  ] })
+  assert.ok(!('error' in ok))
+  assert.deepEqual(ok.players.map(p => [p.userId, p.totals]), [['a', [76, 72, 74]], ['b', [null, 83, null]]])
+  assert.match(validateImport({ ...base, players: [{ userId: 'c', rounds: [null, null, null], totals: [null, null, null] }] }).error, /score to bring in/)
 })

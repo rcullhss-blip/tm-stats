@@ -93,3 +93,8 @@ html {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* In-app mode (the store apps): no links to buying a plan outside the store */
+html[data-app] a[href^="/upgrade"],
+html[data-app] a[href*="tmstatsgolf.com/upgrade"],
+html[data-app] [data-purchase] { display: none !important; }

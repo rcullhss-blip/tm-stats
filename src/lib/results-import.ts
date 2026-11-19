@@ -158,7 +158,14 @@ export interface ImportInput {
   players?: unknown
 }
 
-export interface ImportPlayer { userId: string; rounds: (number[] | null)[] }
+// rounds: a hole-by-hole card, or null. totals: the round total where there is
+// no card (the player fills in the holes later), or null.
+export interface ImportPlayer { userId: string; rounds: (number[] | null)[]; totals: (number | null)[] }
+
+/** A believable round total for this many holes. */
+export function usableTotal(total: unknown, holes: number): total is number {
+  return typeof total === 'number' && Number.isInteger(total) && total >= holes * 2 && total <= holes * 9
+}
 
 /** Check what the coach confirmed. Returns a message, or the cleaned import. */
 export function validateImport(input: ImportInput): { error: string } | { name: string; courseName: string; holes: 9 | 18; pars: Par[]; dates: string[]; players: ImportPlayer[] } {
@@ -182,9 +189,14 @@ export function validateImport(input: ImportInput): { error: string } | { name: 
       const card = Array.isArray(p.rounds) ? p.rounds[i] : null
       return Array.isArray(card) && usableCard(card as number[], holes) ? (card as number[]) : null
     })
-    if (rounds.every(r => r === null)) continue
-    players.push({ userId: p.userId, rounds })
+    const totals = Array.from({ length: roundCount }, (_, i) => {
+      if (rounds[i]) return null
+      const t = Array.isArray(p.totals) ? p.totals[i] : null
+      return usableTotal(t, holes) ? t : null
+    })
+    if (rounds.every(r => r === null) && totals.every(t => t === null)) continue
+    players.push({ userId: p.userId, rounds, totals })
   }
-  if (players.length === 0) return { error: 'None of the matched players has a full hole-by-hole card to bring in' }
+  if (players.length === 0) return { error: 'None of the matched players has a score to bring in' }
   return { name: input.name.trim().slice(0, 80), courseName: input.courseName.trim().slice(0, 120), holes, pars: input.pars as Par[], dates: input.dates as string[], players }
 }

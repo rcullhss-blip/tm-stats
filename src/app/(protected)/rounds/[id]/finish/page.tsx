@@ -22,8 +22,22 @@ export default async function FinishStatsPage({ params }: PageProps) {
   if (!round) return notFound()
   if (!round.stats_pending) redirect(`/rounds/${id}`)
 
-  const { data: holes } = await sb.from('holes').select('hole_number, par, score').eq('round_id', id).order('hole_number')
-  if (!holes || holes.length === 0) return notFound()
+  let { data: holes } = await sb.from('holes').select('hole_number, par, score').eq('round_id', id).order('hole_number')
+  // A round from a results sheet that only had totals has no holes yet: the
+  // golfer adds the hole scores first. Pars come from the event.
+  let totalOnly = false
+  if (!holes || holes.length === 0) {
+    if (!round.qualifier_id || !round.score_total) return notFound()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: q } = await (createServiceClient() as any).from('qualifiers').select('pars, holes').eq('id', round.qualifier_id).maybeSingle()
+    const count = round.holes === 9 ? 9 : 18
+    const pars: (3 | 4 | 5)[] = Array.from({ length: count }, (_, i) => {
+      const p = Array.isArray(q?.pars) ? q.pars[i] : 4
+      return p === 3 || p === 5 ? p : 4
+    })
+    holes = pars.map((par, i) => ({ hole_number: i + 1, par, score: 0 }))
+    totalOnly = true
+  }
 
   const { data: profile } = await supabase.from('users').select('subscription_status').eq('id', user.id).single()
 
@@ -41,7 +55,7 @@ export default async function FinishStatsPage({ params }: PageProps) {
   }
   for (const rid of sources) {
     const { data: hs } = await service.from('holes').select('hole_number, shots').eq('round_id', rid).order('hole_number')
-    if (!hs || hs.length !== holes.length) continue
+    if (!hs || hs.length !== holes!.length) continue
     const ys = hs.map((h: { shots: unknown }) => {
       const first = Array.isArray(h.shots) ? (h.shots[0] as { lieType?: string; distanceToPin?: number } | undefined) : undefined
       return first?.lieType === 'tee' && typeof first.distanceToPin === 'number' ? first.distanceToPin : null
@@ -56,7 +70,9 @@ export default async function FinishStatsPage({ params }: PageProps) {
       eventName={round.notes ?? null}
       date={round.date}
       roundType={round.round_type}
-      holes={holes.map((h: { hole_number: number; par: 3 | 4 | 5; score: number }) => ({ holeNumber: h.hole_number, par: h.par, score: h.score }))}
+      totalOnly={totalOnly}
+      total={round.score_total ?? null}
+      holes={holes!.map((h: { hole_number: number; par: 3 | 4 | 5; score: number }) => ({ holeNumber: h.hole_number, par: h.par, score: h.score }))}
       advancedEnabled={hasElite(profile?.subscription_status)}
       yardages={yardages}
     />

@@ -52,15 +52,26 @@ export default async function SelectionPage() {
     }
   }
 
+  // Rounds that came from a results sheet with totals only have a round but no
+  // hole-by-hole card: their total counts for selection all the same
+  const totalOnlyIds = cards.filter(c => c.round_id && cleanCard(c.scores, 18).every(x => x === null) && cleanCard(c.scores, 9).every(x => x === null)).map(c => c.round_id as string)
+  const totalById = new Map<string, number>()
+  for (let i = 0; i < totalOnlyIds.length; i += 50) {
+    const { data: rs } = await service.from('rounds').select('id, score_total').in('id', totalOnlyIds.slice(i, i + 50))
+    for (const r of rs ?? []) if (typeof r.score_total === 'number') totalById.set(r.id, r.score_total)
+  }
+
   const rounds: SelectionRound[] = []
   for (const c of cards) {
     const q = qualById.get(c.qualifier_id)
     if (!q) continue
     const holes = q.holes === 9 ? 9 : 18
     const scores = cleanCard(c.scores, holes)
-    if (scores.some(s => s === null)) continue      // only complete cards count
     const par = (Array.isArray(q.pars) ? q.pars : []).slice(0, holes).reduce((s: number, p: number) => s + p, 0) || 72
-    const score = (scores as number[]).reduce((s, n) => s + n, 0)
+    let score: number
+    if (scores.every(s => s !== null)) score = (scores as number[]).reduce((s, n) => s + n, 0)
+    else if (c.round_id && totalById.has(c.round_id)) score = totalById.get(c.round_id)!
+    else continue      // an unfinished card does not count
     rounds.push({
       key: `${c.qualifier_id}:${c.round_no}:${c.user_id}`,
       userId: c.user_id,
