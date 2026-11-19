@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { currentUserId, qualifierFor } from '@/lib/qualifying-server'
 import { cleanGroups, type TeeGroup } from '@/lib/qualifying'
+import { pushToUsers } from '@/lib/push'
 
 // The coach sets groups and tee times for a round (or every round still to play).
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -32,5 +33,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
   const { error } = await service.from('qualifiers').update({ groups: all }).eq('id', qualifier.id)
   if (error) return NextResponse.json({ error: 'Could not save the groups' }, { status: 500 })
+
+  // Tell each player their group and tee time (only when the groups are new or changed for them)
+  if (groups.length > 0 && body.notify !== false) {
+    const before: TeeGroup[] = Array.isArray(row?.groups?.[String(roundNo)]) ? row.groups[String(roundNo)] : []
+    const sameAsBefore = (g: TeeGroup) => before.some(b => b.tee === g.tee && b.players.length === g.players.length && b.players.every(p => g.players.includes(p)))
+    for (const [i, g] of groups.entries()) {
+      if (sameAsBefore(g)) continue
+      await pushToUsers(g.players, {
+        title: `${qualifier.name}: your group`,
+        body: `Group ${i + 1}${g.tee ? `, on the tee at ${g.tee}` : ''}${qualifier.round_count > 1 ? `, round ${roundNo}` : ''}. Open it to score your group.`,
+        url: `/qualifying/${qualifier.id}`,
+      })
+    }
+  }
   return NextResponse.json({ ok: true, groups, rounds })
 }

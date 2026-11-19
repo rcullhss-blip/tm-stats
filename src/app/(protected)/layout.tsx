@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import AuthGuard from '@/components/layout/AuthGuard'
 import BottomNav from '@/components/layout/BottomNav'
 import TopBar from '@/components/layout/TopBar'
+import NativePushBoot from '@/components/layout/NativePushBoot'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -41,6 +42,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     <AuthGuard sessionGone={sessionGone}>
       <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#0F1117' }}>
         <TopBar />
+        <NativePushBoot />
         <main className="flex-1 pb-24">
           {children}
         </main>

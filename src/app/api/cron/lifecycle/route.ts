@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { createServiceClient } from '@/lib/supabase/service'
 import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO, STATS_WAITING_SUBJECT, TEAM_NUDGE_SUBJECT, statsWaitingHtml, statsWaitingKey, teamNudgeHtml, teamNudgeKey } from '@/lib/lifecycle-emails'
 import { hasPro } from '@/lib/plan'
+import { pushToUsers } from '@/lib/push'
 
 export const maxDuration = 60
 
@@ -157,6 +158,7 @@ export async function GET(request: Request) {
       })
       if (waitError) { failures++; continue }
       await sb.from('email_log').insert({ user_id: user.id, email_type: statsWaitingKey(stale.id) })
+      await pushToUsers([user.id], { title: 'Your stats are waiting', body: `${stale.notes || stale.course_name}: scores are in, just add the stats.`, url: `/rounds/${stale.id}/finish` })
       sent.push(`stats_wait:${user.email}`)
       if (sent.length >= 50) break
       continue

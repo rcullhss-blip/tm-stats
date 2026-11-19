@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { buildBoard, cleanAllGroups, cleanCard, fmtToPar, type BoardRow, type Par, type Qualifier, type QualifierScoreRow } from '@/lib/qualifying'
 import { PERSONAL_FROM, REPLY_TO, statsReadyHtml, statsReadySubject } from '@/lib/lifecycle-emails'
 import { claimUrl } from '@/lib/claim-link'
+import { pushToUsers } from '@/lib/push'
 
 // The qualifying tables are server only (RLS on, no policies), so every read
 // and write goes through the service client AFTER the caller's place on the
@@ -180,6 +181,8 @@ export async function finishQualifierRound(service: Service, qualifier: Qualifie
     }
     await service.from('qualifier_scores').update({ round_id: round.id }).eq('id', card.id)
     created++
+    // Phone notification too, for players with the app (fire and forget)
+    pushToUsers([card.user_id], { title: `${qualifier.name}: round ${roundNo} is in`, body: 'Your scores are already there. Add your stats in two minutes.', url: `/rounds/${round.id}/finish` }).catch(() => {})
 
     // Email the link. A player whose account we created from the coach's roster
     // and who has never opened it cannot log in, so their link is the one-tap

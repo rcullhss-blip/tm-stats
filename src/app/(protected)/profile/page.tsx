@@ -10,6 +10,7 @@ import { parseProfileInfo } from '@/lib/recruit-profile'
 import Link from 'next/link'
 import DeleteAccount from '@/components/profile/DeleteAccount'
 import WatchSettings from '@/components/profile/WatchSettings'
+import PushSettings from '@/components/profile/PushSettings'
 import ProfileEditForm from '@/components/profile/ProfileEditForm'
 import ManageBillingButton from '@/components/profile/ManageBillingButton'
 import { handicapToSkillLevel, normalizeSkillLevel, calculateRoundSG } from '@/lib/sg-engine'
@@ -234,6 +235,9 @@ export default async function ProfilePage() {
           <Link href="/coach" className="text-xs mt-3 inline-block" style={{ color: '#9A9DB0', minHeight: '44px' }}>Coach a team? Set up your team →</Link>
         </div>
       )}
+
+      {/* Notifications: only appears inside the iPhone/Android app */}
+      <PushSettings />
 
       {/* Apple Watch: connect with the code the watch shows */}
       <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27' }}>
