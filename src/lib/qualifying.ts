@@ -25,6 +25,13 @@ export interface Qualifier {
   rounds_finished: number
   created_by: string | null
   created_at: string
+  // Optional groups and tee times set by the coach, per round ("1", "2", ...)
+  groups: Record<string, TeeGroup[]>
+}
+
+export interface TeeGroup {
+  tee: string | null   // "08:10"
+  players: string[]    // user ids, in card order
 }
 
 export interface QualifierScoreRow {
@@ -33,6 +40,7 @@ export interface QualifierScoreRow {
   user_id: string
   scores: (number | null)[]
   round_id: string | null
+  submitted_at?: string | null
 }
 
 export interface BoardRow {
@@ -47,6 +55,7 @@ export interface BoardRow {
     toPar: number           // against par for the holes played
     complete: boolean
     roundId: string | null  // the golfer's own round, once finished
+    submitted: boolean      // the group checked and handed in this card
   }[]
   thru: number              // holes played in the round currently open (or the last one)
   holesPlayed: number       // across all rounds
@@ -100,7 +109,7 @@ export function buildBoard(
         strokes += s
         toPar += s - (q.pars[h] ?? 4)
       })
-      return { roundNo, scores, thru, strokes, toPar, complete: thru === q.holes, roundId: row?.round_id ?? null }
+      return { roundNo, scores, thru, strokes, toPar, complete: thru === q.holes, roundId: row?.round_id ?? null, submitted: !!row?.submitted_at }
     })
     const holesPlayed = rounds.reduce((n, r) => n + r.thru, 0)
     return {
@@ -162,6 +171,58 @@ export function validateSetup(input: {
 /** Rebuild the leaderboard from the cards already on it (used after a tap, before the server answers). */
 export function rebuildBoard(q: Pick<Qualifier, 'holes' | 'pars' | 'round_count' | 'rounds_finished'>, board: BoardRow[]): BoardRow[] {
   const players = board.map(r => ({ id: r.userId, name: r.name }))
-  const rows: QualifierScoreRow[] = board.flatMap(r => r.rounds.map(rd => ({ qualifier_id: '', round_no: rd.roundNo, user_id: r.userId, scores: rd.scores, round_id: rd.roundId })))
+  const rows: QualifierScoreRow[] = board.flatMap(r => r.rounds.map(rd => ({ qualifier_id: '', round_no: rd.roundNo, user_id: r.userId, scores: rd.scores, round_id: rd.roundId, submitted_at: rd.submitted ? 'yes' : null })))
   return buildBoard(q, players, rows)
+}
+
+/** Holes with no score on a card, numbered from 1. */
+export function missingHoles(scores: (number | null)[]): number[] {
+  return scores.map((s, i) => (s === null ? i + 1 : null)).filter((n): n is number => n !== null)
+}
+
+export const MAX_GROUP_SIZE = 6
+
+/**
+ * Tidy groups sent by a coach: only players in the qualifier, nobody in two
+ * groups, at most 6 a group, tee times as HH:MM, empty groups dropped.
+ */
+export function cleanGroups(raw: unknown, playerIds: string[]): TeeGroup[] {
+  if (!Array.isArray(raw)) return []
+  const allowed = new Set(playerIds)
+  const used = new Set<string>()
+  const out: TeeGroup[] = []
+  for (const g of raw.slice(0, 60)) {
+    if (!g || typeof g !== 'object') continue
+    const teeRaw = (g as { tee?: unknown }).tee
+    const tee = typeof teeRaw === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(teeRaw) ? teeRaw : null
+    const list = Array.isArray((g as { players?: unknown }).players) ? (g as { players: unknown[] }).players : []
+    const players: string[] = []
+    for (const id of list) {
+      if (typeof id !== 'string' || !allowed.has(id) || used.has(id) || players.length >= MAX_GROUP_SIZE) continue
+      used.add(id)
+      players.push(id)
+    }
+    if (players.length > 0) out.push({ tee, players })
+  }
+  return out
+}
+
+/** Stored groups for every round, cleaned. */
+export function cleanAllGroups(raw: unknown, roundCount: number, playerIds: string[]): Record<string, TeeGroup[]> {
+  const out: Record<string, TeeGroup[]> = {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+  for (let n = 1; n <= roundCount; n++) {
+    const g = cleanGroups((raw as Record<string, unknown>)[String(n)], playerIds)
+    if (g.length > 0) out[String(n)] = g
+  }
+  return out
+}
+
+export function groupsFor(q: Pick<Qualifier, 'groups'>, roundNo: number): TeeGroup[] {
+  return q.groups?.[String(roundNo)] ?? []
+}
+
+/** The coach's group a player is in for a round, if any. */
+export function groupOf(q: Pick<Qualifier, 'groups'>, roundNo: number, userId: string): TeeGroup | null {
+  return groupsFor(q, roundNo).find(g => g.players.includes(userId)) ?? null
 }

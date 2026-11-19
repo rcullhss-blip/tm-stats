@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (score !== null && (!Number.isInteger(score) || score < 1 || score > 15)) return NextResponse.json({ error: 'Score must be between 1 and 15' }, { status: 400 })
 
   const { data: card } = await service.from('qualifier_scores')
-    .select('id, scores, round_id')
+    .select('id, scores, round_id, submitted_at')
     .eq('qualifier_id', qualifier.id).eq('round_no', roundNo).eq('user_id', playerId)
     .maybeSingle()
   if (!card) return NextResponse.json({ error: 'That player is not in this qualifier' }, { status: 400 })
@@ -31,6 +31,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Once a round has been finished the card is the player's own round. Only the
   // coach can still correct it, and only until the player has it in their account.
   if (card.round_id) return NextResponse.json({ error: 'This round is finished. Scores are now on the player\'s own round.' }, { status: 409 })
+  // A submitted card is handed in: only the coach can change it now
+  if (card.submitted_at && role !== 'coach') {
+    return NextResponse.json({ error: 'This card has been submitted. Ask your coach to change a score.' }, { status: 409 })
+  }
   if (roundNo <= qualifier.rounds_finished && role !== 'coach') {
     return NextResponse.json({ error: 'This round is finished. Ask your coach to change a score.' }, { status: 409 })
   }

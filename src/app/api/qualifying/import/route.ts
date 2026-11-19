@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   const qualifier: Qualifier = {
     id: created.id, team_id: created.team_id, kind: 'tournament', name: created.name, course_name: created.course_name,
     holes: checked.holes, pars: checked.pars, round_count: roundCount, round_dates: checked.dates,
-    rounds_finished: 0, created_by: userId, created_at: created.created_at,
+    rounds_finished: 0, created_by: userId, created_at: created.created_at, groups: {},
   }
   let roundsMade = 0, emailed = 0
   const problems: string[] = []

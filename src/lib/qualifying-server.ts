@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { userFromDeviceToken } from '@/lib/device-auth'
 import { Resend } from 'resend'
-import { buildBoard, cleanCard, fmtToPar, type BoardRow, type Par, type Qualifier, type QualifierScoreRow } from '@/lib/qualifying'
+import { buildBoard, cleanAllGroups, cleanCard, fmtToPar, type BoardRow, type Par, type Qualifier, type QualifierScoreRow } from '@/lib/qualifying'
 import { PERSONAL_FROM, REPLY_TO, statsReadyHtml, statsReadySubject } from '@/lib/lifecycle-emails'
 import { claimUrl } from '@/lib/claim-link'
 
@@ -34,6 +34,11 @@ export async function teamFor(userId: string): Promise<{ service: Service; teamI
   return null
 }
 
+function allIdsIn(raw: unknown): string[] {
+  if (!raw || typeof raw !== 'object') return []
+  return Object.values(raw as Record<string, unknown>).flatMap(v => Array.isArray(v) ? v.flatMap(g => (g && Array.isArray((g as { players?: unknown }).players) ? (g as { players: unknown[] }).players.filter((x): x is string => typeof x === 'string') : [])) : [])
+}
+
 function normalise(row: Record<string, unknown>): Qualifier {
   const holes = row.holes === 9 ? 9 : 18
   const pars = Array.from({ length: holes }, (_, i) => {
@@ -51,6 +56,8 @@ function normalise(row: Record<string, unknown>): Qualifier {
     round_count: Number(row.round_count) || 1,
     round_dates: Array.isArray(row.round_dates) ? row.round_dates.map(String) : [],
     rounds_finished: Number(row.rounds_finished) || 0,
+    // Player ids are checked again where groups are saved; here only the shape
+    groups: cleanAllGroups(row.groups, Number(row.round_count) || 1, allIdsIn(row.groups)),
     created_by: row.created_by ? String(row.created_by) : null,
     created_at: String(row.created_at ?? ''),
   }
@@ -80,7 +87,7 @@ export interface QualifierState {
 
 /** Everything the live page needs: the qualifier, the leaderboard and who has done their stats. */
 export async function qualifierState(service: Service, qualifier: Qualifier, role: QualifierRole): Promise<QualifierState> {
-  const { data: scoreRaw } = await service.from('qualifier_scores').select('qualifier_id, round_no, user_id, scores, round_id').eq('qualifier_id', qualifier.id)
+  const { data: scoreRaw } = await service.from('qualifier_scores').select('qualifier_id, round_no, user_id, scores, round_id, submitted_at').eq('qualifier_id', qualifier.id)
   const scoreRows: QualifierScoreRow[] = (scoreRaw ?? []).map((r: QualifierScoreRow) => ({ ...r, scores: cleanCard(r.scores, qualifier.holes) }))
   const playerIds = [...new Set(scoreRows.map(r => r.user_id))]
   const { data: users } = playerIds.length > 0

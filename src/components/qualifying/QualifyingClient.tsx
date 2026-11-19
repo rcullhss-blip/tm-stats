@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { currentRound, fmtToPar, isFinished, rebuildBoard, type BoardRow } from '@/lib/qualifying'
+import { currentRound, fmtToPar, groupOf, groupsFor, isFinished, missingHoles, rebuildBoard, type BoardRow } from '@/lib/qualifying'
+import Scorecard from './Scorecard'
+import GroupsEditor from './GroupsEditor'
 import type { QualifierState } from '@/lib/qualifying-server'
 
 interface Props {
@@ -30,6 +32,8 @@ export default function QualifyingClient({ initial, userId }: Props) {
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
   const [confirmFinish, setConfirmFinish] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmSubmit, setConfirmSubmit] = useState(false)
+  const [editGroups, setEditGroups] = useState(false)
   // Scores typed but not yet confirmed by the server, so a refresh never undoes a tap
   const pending = useRef<Map<string, number | null>>(new Map())
 
@@ -43,6 +47,9 @@ export default function QualifyingClient({ initial, userId }: Props) {
 
   // The group this phone is marking for, remembered between visits
   useEffect(() => {
+    // The coach's group for this player, when the coach has set groups
+    const mine = groupOf(initial.qualifier, currentRound(initial.qualifier), userId)
+    if (mine) { setGroup(mine.players); return }
     try {
       const saved = JSON.parse(localStorage.getItem(groupKey) ?? '[]') as string[]
       const valid = saved.filter(id => initial.board.some(r => r.userId === id))
@@ -91,6 +98,32 @@ export default function QualifyingClient({ initial, userId }: Props) {
       setHole(first === -1 ? q.holes : first + 1)
     }
     setTab('score')
+  }
+
+  function pickGroup(ids: string[]) {
+    setGroup(ids)
+    try { localStorage.setItem(groupKey, JSON.stringify(ids)) } catch {}
+  }
+
+  async function submitCards(reopen = false) {
+    setBusy(true); setMessage(null)
+    try {
+      const res = await fetch(`/api/qualifying/${q.id}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roundNo: openRound, userIds: group, reopen }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not submit the cards')
+      setConfirmSubmit(false)
+      setMessage({ text: reopen ? 'Cards reopened. The group can change scores again.' : `Cards submitted. ${isCoach ? 'They are locked for players now.' : 'Your coach has them, and only your coach can change a score now.'}`, ok: true })
+      await refresh()
+      if (!reopen) setTab('board')
+    } catch (e) {
+      setMessage({ text: e instanceof Error ? e.message : 'Could not submit the cards', ok: false })
+    } finally {
+      setBusy(false)
+    }
   }
 
   function toggleGroup(id: string) {
@@ -179,6 +212,11 @@ export default function QualifyingClient({ initial, userId }: Props) {
     setMessage(null)
     setTab('score')
   }
+  const teeGroups = groupsFor(q, openRound)
+  const nameOf = (id: string) => state.board.find(r => r.userId === id)?.name ?? 'Player'
+  const groupSubmitted = groupRows.length > 0 && groupRows.every(r => roundOf(r).submitted)
+  const groupGaps = groupRows.map(r => ({ name: r.name, holes: missingHoles(roundOf(r).scores) })).filter(g => g.holes.length > 0)
+  const notSubmitted = state.board.filter(r => { const rd = roundOf(r); return rd.complete && !rd.submitted && !rd.roundId })
   const incompleteCards = state.board.filter(r => { const rd = roundOf(r); return rd.thru > 0 && !rd.complete })
   const untouched = state.board.filter(r => roundOf(r).thru === 0)
   const waitingStats = Object.values(state.stats).flat().filter(s => !s.done).length
@@ -241,13 +279,36 @@ export default function QualifyingClient({ initial, userId }: Props) {
                   </span>
                 )}
                 <span className="w-12 text-right text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
-                  {finished ? (row.holesPlayed > 0 ? 'F' : '-') : row.thru === 0 ? '-' : row.thru === q.holes ? 'F' : row.thru}
+                  {finished ? (row.holesPlayed > 0 ? 'F' : '-') : row.thru === 0 ? '-' : row.thru === q.holes ? (roundOf(row).submitted ? 'F✓' : 'F') : row.thru}
                 </span>
                 <span className="w-12 text-right text-base font-medium" style={{ fontFamily: 'var(--font-dm-mono)', color: toParColor(row.toPar) }}>{fmtToPar(row.toPar)}</span>
               </div>
             ))}
           </div>
-          {!finished && <p className="text-xs mb-5" style={{ color: '#4A4D60' }}>Updates every 15 seconds while this page is open.</p>}
+          {!finished && <p className="text-xs mb-5" style={{ color: '#4A4D60' }}>Updates every 15 seconds while this page is open.{state.board.some(r => roundOf(r).submitted) ? ' F✓ means the card has been submitted.' : ''}</p>}
+          {!finished && roundSel === null && (teeGroups.length > 0 || isCoach) && (
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9A9DB0' }}>Groups{q.round_count > 1 ? `, round ${openRound}` : ''}</p>
+                {isCoach && !editGroups && <button type="button" onClick={() => setEditGroups(true)} className="text-xs" style={{ color: '#CC2222', minHeight: '40px' }}>{teeGroups.length > 0 ? 'Change' : 'Set groups and tee times'}</button>}
+              </div>
+              {editGroups ? (
+                <GroupsEditor qualifierId={q.id} roundNo={openRound} roundsLeft={q.round_count - q.rounds_finished} players={state.board.map(r => ({ id: r.userId, name: r.name }))} initial={teeGroups}
+                  onDone={async saved => { setEditGroups(false); if (saved) { await refresh(); setMessage({ text: 'Groups saved. Players open straight onto their group.', ok: true }) } }} />
+              ) : teeGroups.length > 0 ? (
+                <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#1A1D27' }}>
+                  {teeGroups.map((g, gi) => (
+                    <div key={gi} className="flex items-start gap-3 px-4 py-2.5" style={{ borderTop: gi > 0 ? '1px solid #22263A' : 'none' }}>
+                      <span className="text-sm w-12 flex-shrink-0" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>{g.tee ?? `G${gi + 1}`}</span>
+                      <span className="text-sm" style={{ color: g.players.includes(userId) ? '#F0F0F0' : '#9A9DB0' }}>{g.players.map(nameOf).join(', ')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs" style={{ color: '#4A4D60' }}>Optional. Without groups, players pick who they are marking for.</p>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -255,7 +316,23 @@ export default function QualifyingClient({ initial, userId }: Props) {
       {tab === 'score' && editing && (
         <>
           <div className="mb-5">
-            <p className="text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>Who are you marking for?</p>
+            {teeGroups.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>Your group</p>
+                <div className="space-y-2">
+                  {teeGroups.map((g, gi) => {
+                    const on = g.players.length === group.length && g.players.every(id => group.includes(id))
+                    return (
+                      <button key={gi} type="button" onClick={() => pickGroup(g.players)} className="w-full text-left px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: on ? '#CC222220' : '#1A1D27', color: on ? '#F0F0F0' : '#9A9DB0', border: `1px solid ${on ? '#CC222260' : '#2E3247'}`, minHeight: '48px' }}>
+                        <span className="font-semibold">Group {gi + 1}{g.tee ? ` · ${g.tee}` : ''}</span>
+                        <span className="block text-xs mt-0.5">{g.players.map(id => nameOf(id) + (id === userId ? ' (you)' : '')).join(', ')}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            <p className="text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>{teeGroups.length > 0 ? 'Or pick players yourself' : 'Who are you marking for?'}</p>
             <div className="flex gap-2 flex-wrap">
               {state.board.map(row => {
                 const on = group.includes(row.userId)
@@ -295,7 +372,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
               <div className="space-y-3 mb-6">
                 {groupRows.map(row => {
                   const value = roundOf(row).scores[hole - 1]
-                  const locked = !!roundOf(row).roundId
+                  const locked = !!roundOf(row).roundId || (roundOf(row).submitted && !isCoach)
                   const diff = value === null ? null : value - par
                   return (
                     <div key={row.userId} className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: '#1A1D27' }}>
@@ -306,7 +383,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
                         </p>
                       </div>
                       {locked ? (
-                        <p className="text-sm" style={{ color: '#9A9DB0' }}>Round finished</p>
+                        <p className="text-sm" style={{ color: '#9A9DB0' }}>{roundOf(row).roundId ? 'Round finished' : 'Card submitted'}</p>
                       ) : (
                         <div className="flex items-center flex-shrink-0">
                           <button type="button" aria-label={`One fewer for ${row.name}`} onClick={() => setScore(row.userId, hole, value === null ? par - 1 : Math.max(1, value - 1))} className="rounded-l-xl font-bold text-xl" style={{ backgroundColor: '#22263A', color: '#F0F0F0', width: '52px', height: '52px', border: '1px solid #2E3247' }}>−</button>
@@ -322,32 +399,40 @@ export default function QualifyingClient({ initial, userId }: Props) {
               </div>
               <p className="text-xs mb-4" style={{ color: '#4A4D60' }}>Tap the middle for par, or + and − for anything else. Scores save as you tap.</p>
 
-              {/* Last hole: check every card before leaving */}
+              {/* Last hole: the whole card for everyone, then hand it in */}
               {hole === q.holes && (
-                <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
-                  <p className="text-sm font-semibold mb-2" style={{ color: '#F0F0F0' }}>Check the cards</p>
-                  {groupRows.map(row => {
-                    const rd = roundOf(row)
-                    const missing = rd.scores.map((sc, i) => (sc === null ? i + 1 : null)).filter((n): n is number => n !== null)
-                    return (
-                      <div key={row.userId} className="flex items-start justify-between py-2" style={{ borderTop: '1px solid #22263A' }}>
-                        <div className="min-w-0 pr-2">
-                          <p className="text-sm truncate" style={{ color: '#F0F0F0' }}>{row.name}</p>
-                          {missing.length > 0 ? (
-                            <button type="button" onClick={() => setHole(missing[0])} className="text-xs text-left" style={{ color: '#F59E0B' }}>
-                              No score on {missing.length === 1 ? 'hole' : 'holes'} {missing.join(', ')}. Tap to fix.
-                            </button>
-                          ) : (
-                            <p className="text-xs" style={{ color: '#22C55E' }}>All {q.holes} holes in</p>
-                          )}
+                <div className="p-4 rounded-xl mb-4" style={{ backgroundColor: '#1A1D27', border: `1px solid ${groupSubmitted ? '#22C55E40' : '#2E3247'}` }}>
+                  <p className="text-sm font-semibold mb-1" style={{ color: '#F0F0F0' }}>{groupSubmitted ? 'Cards submitted' : 'Check the cards'}</p>
+                  <p className="text-xs mb-1" style={{ color: '#9A9DB0' }}>
+                    {groupSubmitted
+                      ? (isCoach ? 'Locked for players. You can still change a score, or reopen the cards for the group.' : 'Locked. Ask your coach if a score needs changing.')
+                      : 'Check every hole against the paper cards. Tap a hole to change it.'}
+                  </p>
+                  {groupRows.map(row => (
+                    <Scorecard key={row.userId} name={row.name} pars={q.pars} scores={roundOf(row).scores} current={hole}
+                      onHole={n => { if (!(roundOf(row).submitted && !isCoach)) setHole(n) }} />
+                  ))}
+                  {groupGaps.length > 0 && (
+                    <p className="text-xs mt-2" style={{ color: '#F59E0B' }}>Missing: {groupGaps.map(g => `${g.name} hole${g.holes.length > 1 ? 's' : ''} ${g.holes.join(', ')}`).join('; ')}</p>
+                  )}
+                  {!groupSubmitted && roundSel === null && (
+                    !confirmSubmit ? (
+                      <button type="button" onClick={() => setConfirmSubmit(true)} disabled={busy || groupGaps.length > 0} className="w-full rounded-xl font-semibold text-base mt-3" style={{ backgroundColor: groupGaps.length > 0 ? '#22263A' : '#CC2222', color: '#F0F0F0', minHeight: '52px', opacity: groupGaps.length > 0 ? 0.5 : 1 }}>
+                        Submit {groupRows.length > 1 ? 'our cards' : 'card'}
+                      </button>
+                    ) : (
+                      <div className="mt-3">
+                        <p className="text-xs mb-2" style={{ color: '#F0F0F0' }}>Once submitted the scores lock. Only your coach can change them after.</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button type="button" onClick={() => setConfirmSubmit(false)} disabled={busy} className="rounded-xl text-sm" style={{ backgroundColor: 'transparent', color: '#9A9DB0', border: '1px solid #2E3247', minHeight: '48px' }}>Check again</button>
+                          <button type="button" onClick={() => submitCards()} disabled={busy} className="rounded-xl font-semibold text-sm" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '48px', opacity: busy ? 0.7 : 1 }}>{busy ? 'Submitting…' : 'Yes, submit'}</button>
                         </div>
-                        <p className="text-base font-medium flex-shrink-0" style={{ fontFamily: 'var(--font-dm-mono)', color: '#F0F0F0' }}>
-                          {rd.strokes || '–'} <span className="text-xs" style={{ color: '#9A9DB0' }}>{rd.thru > 0 ? fmtToPar(rd.toPar) : ''}</span>
-                        </p>
                       </div>
                     )
-                  })}
-                  <p className="text-xs mt-2" style={{ color: '#9A9DB0' }}>Check these against the paper cards. Your coach finishes the round when every group is in.</p>
+                  )}
+                  {groupSubmitted && isCoach && roundSel === null && (
+                    <button type="button" onClick={() => submitCards(true)} disabled={busy} className="text-xs mt-3" style={{ color: '#9A9DB0', minHeight: '44px' }}>Reopen for the group</button>
+                  )}
                 </div>
               )}
 
@@ -356,7 +441,7 @@ export default function QualifyingClient({ initial, userId }: Props) {
                 {hole < q.holes ? (
                   <button type="button" onClick={() => setHole(h => Math.min(q.holes, h + 1))} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}>Hole {hole + 1} →</button>
                 ) : (
-                  <button type="button" onClick={() => setTab('board')} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#CC2222', color: '#F0F0F0', minHeight: '56px' }}>Cards are right →</button>
+                  <button type="button" onClick={() => setTab('board')} className="rounded-xl font-semibold text-base" style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3247', minHeight: '56px' }}>Leaderboard →</button>
                 )}
               </div>
             </>
@@ -414,6 +499,9 @@ export default function QualifyingClient({ initial, userId }: Props) {
             <p className="text-xs mb-3" style={{ color: '#F59E0B' }}>
               Card not complete yet: {incompleteCards.map(r => `${r.name} (${roundOf(r).thru}/${q.holes})`).join(', ')}. They will be left out until it is. You can finish again later to add them.
             </p>
+          )}
+          {roundSel === null && notSubmitted.length > 0 && (
+            <p className="text-xs mb-3" style={{ color: '#F59E0B' }}>Card complete but not submitted yet: {notSubmitted.map(r => r.name).join(', ')}.</p>
           )}
           {untouched.length > 0 && untouched.length < state.board.length && (
             <p className="text-xs mb-3" style={{ color: '#9A9DB0' }}>No scores at all, so treated as not playing: {untouched.map(r => r.name).join(', ')}.</p>

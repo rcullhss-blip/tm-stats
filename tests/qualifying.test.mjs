@@ -70,3 +70,24 @@ test('set-up is checked', () => {
 test('to par is written the golf way', () => {
   assert.deepEqual([fmtToPar(0), fmtToPar(3), fmtToPar(-2), fmtToPar(null)], ['E', '+3', '-2', '-'])
 })
+
+test('coach groups: only qualifier players, nobody twice, 6 at most, tee times checked', async () => {
+  const { cleanGroups, groupOf, missingHoles } = await import('../src/lib/qualifying.ts')
+  const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+  const g = cleanGroups([
+    { tee: '08:10', players: ['a', 'b', 'zz', 'a'] },
+    { tee: '25:00', players: ['b', 'c'] },
+    { tee: '08:20', players: [] },
+    { tee: '08:30', players: ['d', 'e', 'f', 'g', 'h', 'c', 'x'] },
+    'junk',
+  ], ids)
+  assert.deepEqual(g, [
+    { tee: '08:10', players: ['a', 'b'] },
+    { tee: null, players: ['c'] },
+    { tee: '08:30', players: ['d', 'e', 'f', 'g', 'h'] },
+  ])
+  assert.deepEqual(cleanGroups('nope', ids), [])
+  assert.equal(groupOf({ groups: { '1': g } }, 1, 'e')?.tee, '08:30')
+  assert.equal(groupOf({ groups: { '1': g } }, 2, 'e'), null)
+  assert.deepEqual(missingHoles([4, null, 3, null]), [2, 4])
+})
