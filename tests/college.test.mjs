@@ -234,3 +234,13 @@ test('a results sheet with only totals still brings players in', () => {
   assert.deepEqual(ok.players.map(p => [p.userId, p.totals]), [['a', [76, 72, 74]], ['b', [null, 83, null]]])
   assert.match(validateImport({ ...base, players: [{ userId: 'c', rounds: [null, null, null], totals: [null, null, null] }] }).error, /score to bring in/)
 })
+
+test('hole scores a results sheet never printed are thrown away', () => {
+  const made = Array.from({ length: 18 }, () => 4)   // adds to 72
+  const sheet = (has, scores, total) => cleanParsed({ event_name: 'E', course_name: 'C', holes: 18, pars: [], round_count: 1, dates: [''], has_hole_scores: has, notes: '', players: [{ name: 'A B', team: 'T', rounds: [{ round_no: 1, scores, total }] }] })
+  assert.deepEqual(sheet(false, made, 72).players[0].rounds[0].scores, [])           // file says totals only
+  assert.deepEqual(sheet(undefined, made, 72).players[0].rounds[0].scores, [])       // not said: not trusted
+  assert.deepEqual(sheet(true, made, 76).players[0].rounds[0].scores, [])            // does not add up to the total
+  assert.equal(sheet(true, made, 72).players[0].rounds[0].scores.length, 18)         // printed and adds up: kept
+  assert.equal(sheet(false, made, 72).players[0].rounds[0].total, 72)
+})

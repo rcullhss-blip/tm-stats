@@ -60,8 +60,9 @@ export const RESULT_SCHEMA = {
       },
     },
     notes: { type: 'string', description: 'Anything the coach should know: unreadable parts, players without hole scores, withdrawals.' },
+    has_hole_scores: { type: 'boolean', description: 'true ONLY if the file itself prints a separate score for every hole for the players. false if it only shows round totals.' },
   },
-  required: ['event_name', 'course_name', 'holes', 'pars', 'round_count', 'dates', 'players', 'notes'],
+  required: ['event_name', 'course_name', 'holes', 'pars', 'round_count', 'dates', 'players', 'notes', 'has_hole_scores'],
   additionalProperties: false,
 } as const
 
@@ -72,6 +73,9 @@ export function cleanParsed(raw: unknown): ParsedResult {
   const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
   const ints = (v: unknown) => (Array.isArray(v) ? v.filter((n): n is number => typeof n === 'number' && Number.isInteger(n)) : [])
   const pars = ints(r.pars)
+  // Reading software can be tempted to fill in hole scores a sheet never printed.
+  // Only keep them when the file says it shows them.
+  const holeScoresShown = r.has_hole_scores === true
   const roundCount = typeof r.round_count === 'number' && r.round_count >= 1 && r.round_count <= 6 ? Math.floor(r.round_count) : 1
   const players: ParsedPlayer[] = (Array.isArray(r.players) ? r.players : []).map(p => {
     const o = (p && typeof p === 'object' ? p : {}) as Record<string, unknown>
@@ -80,7 +84,11 @@ export function cleanParsed(raw: unknown): ParsedResult {
       team: str(o.team, 80),
       rounds: (Array.isArray(o.rounds) ? o.rounds : []).map(rd => {
         const q = (rd && typeof rd === 'object' ? rd : {}) as Record<string, unknown>
-        return { round_no: typeof q.round_no === 'number' ? Math.floor(q.round_no) : 0, scores: ints(q.scores), total: typeof q.total === 'number' ? Math.floor(q.total) : 0 }
+        const total = typeof q.total === 'number' ? Math.floor(q.total) : 0
+        let scores = holeScoresShown ? ints(q.scores) : []
+        // Hole scores must add up to the printed total, or they are not trusted
+        if (scores.length > 0 && total > 0 && scores.reduce((a, b) => a + b, 0) !== total) scores = []
+        return { round_no: typeof q.round_no === 'number' ? Math.floor(q.round_no) : 0, scores, total }
       }).filter(rd => rd.round_no >= 1 && rd.round_no <= roundCount),
     }
   }).filter(p => p.name)

@@ -13,7 +13,8 @@ const SYSTEM = `You read golf tournament results and return them as data.
 
 Rules:
 - Return only what is printed. Never invent, estimate or fill in a score, a par, a name or a date.
-- Hole scores go in "scores" in hole order (hole 1 first). If a round only shows a total, or any hole is unreadable, return an empty "scores" list for that round and give the printed total.
+- Hole scores go in "scores" in hole order (hole 1 first), ONLY when the file prints a separate number for each hole. Most results sheets only print round totals: then every "scores" list is empty, "has_hole_scores" is false, and you give the printed totals. Never work out, spread or estimate hole scores from a total.
+- If a round shows hole scores but any hole is unreadable, return an empty "scores" list for that round and give the printed total.
 - If the file shows the par of every hole, return them in "pars". Otherwise return an empty list.
 - Names as "First Last", without seedings, positions or school abbreviations.
 - Include every player in the result, from every team.
