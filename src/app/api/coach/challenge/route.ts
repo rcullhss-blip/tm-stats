@@ -1,11 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { coachComplete, coachAiConfigured } from '@/lib/coach-ai'
 
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'Not configured' }, { status: 503 })
+  if (!coachAiConfigured()) return NextResponse.json({ error: 'Not configured' }, { status: 503 })
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -35,25 +34,9 @@ export async function POST(request: Request) {
   const profileContext: string = membership.coach_notes ?? ''
 
   // Generate revised feedback
-  const client = new OpenAI({ apiKey })
-  const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 400,
-    messages: [
-      {
-        role: 'system',
-        content: `You are an experienced golf coach. You have AI-generated feedback for one of your players and additional coaching context that the AI doesn't know about.
+  const revisedFeedback = await coachComplete(`You are an experienced golf coach. You have AI-generated feedback for one of your players and additional coaching context that the AI doesn't know about.
 Your job is to produce a revised, improved recommendation that combines the statistical insight from the AI with your personal coaching knowledge.
-Be direct, practical, and specific. Keep the response under 250 words.`,
-      },
-      {
-        role: 'user',
-        content: `Original AI feedback:\n${originalFeedback}\n\n${profileContext ? `Player profile context (coach's overall notes on this player):\n${profileContext}\n\n` : ''}Coach context for this round (what the AI doesn't know):\n${coachContext}\n\nPlease produce a revised coaching recommendation that incorporates this additional context.`,
-      },
-    ],
-  })
-
-  const revisedFeedback = completion.choices[0]?.message?.content ?? ''
+Be direct, practical, and specific. Keep the response under 250 words.`, `Original AI feedback:\n${originalFeedback}\n\n${profileContext ? `Player profile context (coach's overall notes on this player):\n${profileContext}\n\n` : ''}Coach context for this round (what the AI doesn't know):\n${coachContext}\n\nPlease produce a revised coaching recommendation that incorporates this additional context.`, 400)
 
   // Save to DB
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

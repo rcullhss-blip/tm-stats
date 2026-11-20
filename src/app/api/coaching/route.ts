@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { coachComplete, coachAiConfigured } from '@/lib/coach-ai'
 import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVEL_LABELS, type SkillLevel } from '@/lib/sg-engine'
 import type { ShotEntry, HoleRow } from '@/lib/types'
 import { hasPro, hasElite } from '@/lib/plan'
@@ -38,8 +38,7 @@ function sanitiseFeedback(text: string): string {
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY
-  if (!apiKey || apiKey === 'your-key-here') {
+  if (!coachAiConfigured()) {
     return NextResponse.json({ error: 'AI coaching not configured' }, { status: 503 })
   }
 
@@ -168,17 +167,9 @@ End with this exact line:
 ---
 TM Stats coaching modes are generalised coaching styles and are not affiliated with or representative of any individual coach.`
 
-    const client = new OpenAI({ apiKey })
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 200,
-      messages: [
-        { role: 'system', content: reviewSystemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    })
+    const aiText = await coachComplete(reviewSystemPrompt, userPrompt, 200)
 
-    const feedback = sanitiseFeedback(sanitiseFeedback(completion.choices[0]?.message?.content ?? ''))
+    const feedback = sanitiseFeedback(sanitiseFeedback(aiText))
     return NextResponse.json({ feedback, coach: 'review', level: feedbackLevel })
 
   // ── Practice session planner ──────────────────────────────────────────────
@@ -235,17 +226,9 @@ End with this exact line:
 ---
 TM Stats coaching modes are generalised coaching styles and are not affiliated with or representative of any individual coach.`
 
-    const client = new OpenAI({ apiKey })
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 400,
-      messages: [
-        { role: 'system', content: practiceSystemPrompt },
-        { role: 'user', content: practiceUserPrompt },
-      ],
-    })
+    const aiText = await coachComplete(practiceSystemPrompt, practiceUserPrompt, 400)
 
-    const feedback = sanitiseFeedback(completion.choices[0]?.message?.content ?? '')
+    const feedback = sanitiseFeedback(aiText)
     return NextResponse.json({ feedback, coach: coachPersona, level: feedbackLevel })
 
   // ── Pre-round plan ────────────────────────────────────────────────────────
@@ -263,16 +246,8 @@ Format exactly:
 
 No introduction. No extra commentary.`
 
-    const client = new OpenAI({ apiKey })
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 150,
-      messages: [
-        { role: 'system', content: 'You are a trusted golf performance coach. Output only the 3 numbered points. Calm, confident, clear. No filler words.' },
-        { role: 'user', content: practicePrompt },
-      ],
-    })
-    return NextResponse.json({ feedback: sanitiseFeedback(completion.choices[0]?.message?.content ?? '') })
+    const aiText = await coachComplete('You are a trusted golf performance coach. Output only the 3 numbered points. Calm, confident, clear. No filler words.', practicePrompt, 150)
+    return NextResponse.json({ feedback: sanitiseFeedback(aiText) })
 
   // ── Pattern finder ────────────────────────────────────────────────────────
   } else if (body.mode === 'patterns') {
@@ -426,16 +401,8 @@ PATTERN 3: [one sentence — the single most impactful finding for their improve
 
 Rules: every sentence must include at least one specific number. Relate to THIS player's data only. Pattern 3 should be the most actionable insight. No intro, no extra text.`
 
-    const client = new OpenAI({ apiKey })
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 220,
-      messages: [
-        { role: 'system', content: 'You are a data-driven golf analyst. Output exactly 3 PATTERN lines, each one sentence with a specific number. No intro, no commentary.' },
-        { role: 'user', content: patternPrompt },
-      ],
-    })
-    return NextResponse.json({ feedback: sanitiseFeedback(completion.choices[0]?.message?.content ?? '') })
+    const aiText = await coachComplete('You are a data-driven golf analyst. Output exactly 3 PATTERN lines, each one sentence with a specific number. No intro, no commentary.', patternPrompt, 220)
+    return NextResponse.json({ feedback: sanitiseFeedback(aiText) })
 
   // ── Bad round recovery ────────────────────────────────────────────────────
   } else if (body.mode === 'recovery') {
@@ -452,16 +419,8 @@ Line 4: One short reassurance that focuses on moving forward.
 
 No intro, no labels, no extra text.`
 
-    const client = new OpenAI({ apiKey })
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 150,
-      messages: [
-        { role: 'system', content: 'You are a calm, experienced golf mentor. Never dwell on the bad round. Always forward-focused. Tone: reassuring, experienced, brief.' },
-        { role: 'user', content: recoveryPrompt },
-      ],
-    })
-    return NextResponse.json({ feedback: sanitiseFeedback(completion.choices[0]?.message?.content ?? '') })
+    const aiText = await coachComplete('You are a calm, experienced golf mentor. Never dwell on the bad round. Always forward-focused. Tone: reassuring, experienced, brief.', recoveryPrompt, 150)
+    return NextResponse.json({ feedback: sanitiseFeedback(aiText) })
 
   // ── Single round coaching mode ─────────────────────────────────────────────
   } else {
@@ -600,22 +559,14 @@ DRILL 1: [Drill name] — [1-2 sentence instruction]
 DRILL 2: [Drill name] — [1-2 sentence instruction]
 DRILL 3: [Drill name] — [1-2 sentence instruction] (advanced only)
 
-No other markdown. Keep the whole response under 300 words. Do NOT include any disclaimers about training data, knowledge cutoff dates, or AI limitations.
+No other markdown. Keep the whole response under 280 words, counting the drills. Count before you finish. Do NOT include any disclaimers about training data, knowledge cutoff dates, or AI limitations.
 
 End your response with this exact line on a new line:
 ---
 TM Stats coaching modes are generalised coaching styles and are not affiliated with or representative of any individual coach.`
 
-  const client = new OpenAI({ apiKey })
-  const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 600,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-  })
+  const aiText = await coachComplete(systemPrompt, userPrompt, 600)
 
-  const feedback = sanitiseFeedback(completion.choices[0]?.message?.content ?? '')
+  const feedback = sanitiseFeedback(aiText)
   return NextResponse.json({ feedback, coach: coachPersona, level: feedbackLevel })
 }
