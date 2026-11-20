@@ -115,7 +115,13 @@ Target SEO keyword: "${params.keyword}"
 ${params.newsContext ? `Golf news context: ${params.newsContext}` : ''}
 ${params.angle ? `Angle: ${params.angle}` : ''}
 
-Requirements: 600-900 words, Rob's voice, keyword 3-5 times naturally, practical advice, subtle TM Stats CTA at end, UK English.
+Requirements: 500-750 words, Rob's voice, keyword 2-4 times naturally, practical advice, subtle TM Stats CTA at end, UK English.
+
+Structure rules (search engines and AI search skip pages that bury the answer):
+- The first paragraph answers the question the keyword asks, directly, in two or three sentences, with a concrete number or rule of thumb where one exists. No story, scene-setting or warm-up before the answer.
+- Then explain and give the practical advice under short h2 headings. Cut anything that repeats a point already made.
+- Do not invent personal stories, rounds, scores, courses or dates. Never write things like "I shot 74 at Bromborough last Saturday". Rob's real background (Cheshire county golfer, NCAA Division 2 at Newberry College, member at Bromborough) can be mentioned in passing, nothing more specific.
+- Use these phrases naturally where they genuinely fit, because the site links them to its guides: strokes gained, golf stats, greens in regulation, putts per round.
 
 Return ONLY the article body as HTML using p, h2, h3, ul and li tags. No title, no code fences, no commentary.`
 

@@ -14,7 +14,7 @@ function slugify(text: string): string {
 }
 
 // Auto-blog: picks the next unused keyword from blog_keywords, writes the post,
-// publishes it to /blog. Runs twice a week via Vercel cron — zero input needed.
+// publishes it to /blog. Runs once a week (Tuesday) via Vercel cron — zero input needed.
 // Add keywords any time: INSERT INTO blog_keywords (keyword) VALUES ('...')
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')

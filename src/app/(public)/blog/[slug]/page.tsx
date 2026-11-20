@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
+import { addInternalLinks } from '@/lib/blog-links'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -41,6 +42,14 @@ export default async function BlogPostPage({ params }: Props) {
     .single()
 
   if (!post) return notFound()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: related } = await (supabase as any)
+    .from('blog_posts')
+    .select('slug, title')
+    .neq('slug', post.slug)
+    .order('published_at', { ascending: false })
+    .limit(3)
 
   const url = `https://www.tmstatsgolf.com/blog/${post.slug}`
   const schema = [
@@ -88,9 +97,22 @@ export default async function BlogPostPage({ params }: Props) {
       {/* Post content rendered as HTML */}
       <div
         className="blog-content"
-        dangerouslySetInnerHTML={{ __html: post.content }}
+        dangerouslySetInnerHTML={{ __html: addInternalLinks(post.content, `/blog/${post.slug}`) }}
         style={{ color: '#9A9DB0' }}
       />
+
+      {related && related.length > 0 && (
+        <div className="mt-10">
+          <p className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: '#9A9DB0' }}>More from the blog</p>
+          <ul className="space-y-2">
+            {related.map((r: { slug: string; title: string }) => (
+              <li key={r.slug}>
+                <Link href={`/blog/${r.slug}`} className="text-sm" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>{r.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Author byline */}
       <div className="mt-10 pt-6 flex items-center gap-4" style={{ borderTop: '1px solid #2E3247' }}>
