@@ -13,6 +13,9 @@ export interface PendingRound {
   round: Record<string, unknown> & { id: string; course_name: string }
   holes: Record<string, unknown>[]
   queuedAt: string
+  // Tee the golfer picked at setup (optional). Not a rounds column; it only
+  // goes to the course library.
+  tee?: string
 }
 
 export function readOutbox(): PendingRound[] {
@@ -47,6 +50,16 @@ export async function uploadRound(p: PendingRound): Promise<boolean> {
   return true
 }
 
+/** Share the round's course card with the course library. Fire and forget: never blocks a save. */
+export function contributeCourse(roundId: string, tee?: string) {
+  fetch('/api/courses/contribute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roundId, tee: tee ?? '' }),
+    keepalive: true,
+  }).catch(() => {})
+}
+
 let flushing = false
 
 /** Try every waiting round. Returns how many went up. */
@@ -62,6 +75,7 @@ export async function flushOutbox(): Promise<number> {
       writeOutbox(readOutbox().filter(x => x.round.id !== p.round.id))
       done++
       fetch(`/api/rounds/${p.round.id}/summary-email`, { method: 'POST', keepalive: true }).catch(() => {})
+      contributeCourse(p.round.id, p.tee)
     }
   } finally {
     flushing = false

@@ -8,7 +8,7 @@ import RoundSetup, { type RecentCourse } from '@/components/rounds/RoundSetup'
 import HoleEntry from '@/components/rounds/HoleEntry'
 import RoundSummary from '@/components/rounds/RoundSummary'
 import VoiceRoundEntry from '@/components/rounds/VoiceRoundEntry'
-import { queueRound, uploadRound, type PendingRound } from '@/lib/round-outbox'
+import { queueRound, uploadRound, contributeCourse, type PendingRound } from '@/lib/round-outbox'
 
 const DRAFT_KEY = 'tmstats_round_draft'
 
@@ -180,6 +180,7 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
         shots: h.shots ? JSON.parse(JSON.stringify(h.shots)) : null,
       })),
       queuedAt: new Date().toISOString(),
+      tee: setup.tee || undefined,
     }
 
     let saved = false
@@ -197,6 +198,8 @@ export default function NewRoundClient({ recentCourses = [], voiceEnabled = fals
     // Email the golfer (and their coach) a PDF breakdown. Fire and forget: the
     // round is already saved, so a failed email must never get in the way.
     fetch(`/api/rounds/${round.id}/summary-email`, { method: 'POST', keepalive: true }).catch(() => {})
+    // Add this course's pars and yardages to the shared course library
+    contributeCourse(round.id, setup.tee)
     router.push(`/rounds/${round.id}`)
   }
 

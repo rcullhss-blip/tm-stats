@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { SetupData } from '@/lib/types'
 import type { RoundType, InputMode } from '@/lib/types'
+import { courseNameKey, teeKey, buildPrefill, type LibraryTee } from '@/lib/course-library'
 
 export interface RecentCourse {
   name: string
@@ -20,6 +21,11 @@ interface Props {
 
 const today = new Date().toISOString().split('T')[0]
 
+// Course library (shared by all golfers): courses and the tee cards saved from rounds
+interface LibraryCourse { id: string; name: string; name_key: string; holes: number | null }
+interface LibraryTeeRow extends LibraryTee { tee_key: string; rounds_seen: number | null }
+const COMMON_TEES = ['White', 'Yellow', 'Red']
+
 export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = false, advancedEnabled = false }: Props) {
   const [date, setDate] = useState(today)
   const [courseName, setCourseName] = useState('')
@@ -29,6 +35,50 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
   const [trackProcess, setTrackProcess] = useState(false)
   const [voice, setVoice] = useState(false)
   const [loadingPars, setLoadingPars] = useState(false)
+  const [tee, setTee] = useState('')
+  // Last library lookup, tagged with the name it was for, so a stale answer is never shown
+  const [lib, setLib] = useState<{ key: string; matches: LibraryCourse[]; course: LibraryCourse | null; tees: LibraryTeeRow[] }>({ key: '', matches: [], course: null, tees: [] })
+
+  // As the golfer types, look the course up in the library (ignores "Golf Club", "GC" and so on)
+  const typedKey = courseNameKey(courseName)
+  useEffect(() => {
+    if (typedKey.length < 3) return
+    let alive = true
+    const timer = setTimeout(async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sb = createClient() as any
+        const { data } = await sb
+          .from('courses')
+          .select('id, name, name_key, holes')
+          .ilike('name_key', `%${typedKey}%`)
+          .order('name')
+          .limit(6)
+        if (!alive) return
+        const matches: LibraryCourse[] = data ?? []
+        const exact = matches.find(m => m.name_key === typedKey) ?? null
+        if (!exact) { setLib({ key: typedKey, matches, course: null, tees: [] }); return }
+        const { data: tees } = await sb
+          .from('course_tees')
+          .select('tee, tee_key, pars, yards, stroke_index, rounds_seen')
+          .eq('course_id', exact.id)
+          .order('rounds_seen', { ascending: false })
+        if (alive) setLib({ key: typedKey, matches, course: exact, tees: tees ?? [] })
+      } catch {
+        // No signal, or the library is not set up yet: entry works exactly as before
+        if (alive) setLib({ key: typedKey, matches: [], course: null, tees: [] })
+      }
+    }, 250)
+    return () => { alive = false; clearTimeout(timer) }
+  }, [typedKey])
+
+  const current = typedKey.length >= 3 && lib.key === typedKey ? lib : null
+  const libMatches = current?.matches ?? []
+  const libCourse = current?.course ?? null
+  const libTees = current?.tees ?? []
+  const chosenTee = libTees.find(t => t.tee_key === teeKey(tee)) ?? null
+  const namedTees = libTees.filter(t => t.tee_key !== '').map(t => t.tee)
+  const teeChoices = [...namedTees, ...COMMON_TEES.filter(c => !namedTees.some(n => teeKey(n) === teeKey(c)))]
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -37,8 +87,8 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
 
     // Course memory: played here before → pre-fill the pars from the last round
     const match = recentCourses.find(c => c.name.trim().toLowerCase() === name.toLowerCase())
-    let parsPrefill: (3 | 4 | 5)[] | undefined
-    let yardagesPrefill: (number | null)[] | undefined
+    let ownPars: (number | null)[] | undefined
+    let ownYards: (number | null)[] | undefined
     if (match) {
       setLoadingPars(true)
       try {
@@ -49,9 +99,9 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
           .eq('round_id', match.lastRoundId)
           .order('hole_number')
         if (data && data.length > 0) {
-          parsPrefill = data.slice(0, holes).map(h => h.par as 3 | 4 | 5)
+          ownPars = data.slice(0, holes).map(h => h.par)
           // Tee yardages, when the last round here was shot by shot (used by voice entry)
-          yardagesPrefill = data.slice(0, holes).map(h => {
+          ownYards = data.slice(0, holes).map(h => {
             const first = Array.isArray(h.shots) ? (h.shots[0] as { lieType?: string; distanceToPin?: number } | undefined) : undefined
             return first?.lieType === 'tee' && typeof first.distanceToPin === 'number' ? first.distanceToPin : null
           })
@@ -62,17 +112,24 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
       setLoadingPars(false)
     }
 
+    // Best card first: library card for this tee, then the golfer's last round here,
+    // then pars from any other tee. Everything stays editable on the hole screens.
+    const others = libCourse ? libTees.filter(t => t !== chosenTee) : []
+    const prefill = buildPrefill(holes, libCourse ? chosenTee : null, others, ownPars, ownYards)
+
     onNext({
       date,
       courseName: name,
       holes,
       roundType,
       inputMode: voice ? 'full' : inputMode,
-      parsPrefill,
+      parsPrefill: prefill.pars,
       trackProcess: !voice && inputMode === 'full' ? trackProcess : false,
       voice,
       advanced: advancedEnabled && (voice || inputMode === 'full'),
-      yardagesPrefill,
+      yardagesPrefill: prefill.yards,
+      tee: tee.trim() || undefined,
+      strokeIndexPrefill: prefill.strokeIndex,
     })
   }
 
@@ -163,11 +220,80 @@ export default function RoundSetup({ onNext, recentCourses = [], voiceEnabled = 
             }}
             placeholder="e.g. Macclesfield Golf Club"
           />
-          {recentCourses.some(c => c.name.trim().toLowerCase() === courseName.trim().toLowerCase()) && (
+          {/* Library suggestions: tap one to use the saved course card */}
+          {!libCourse && libMatches.length > 0 && (
+            <div className="mt-2 rounded-xl overflow-hidden" style={{ border: '1px solid #2E3247' }}>
+              <p className="px-4 pt-2 pb-1 text-xs" style={{ color: '#9A9DB0', backgroundColor: '#1A1D27' }}>
+                In the course library
+              </p>
+              {libMatches.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => {
+                    setCourseName(m.name)
+                    if (m.holes === 9 || m.holes === 18) setHoles(m.holes)
+                  }}
+                  className="w-full px-4 text-left text-sm"
+                  style={{ backgroundColor: '#1A1D27', color: '#F0F0F0', borderTop: '1px solid #2E3247', minHeight: '44px' }}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {libCourse ? (
             <p className="text-xs mt-1.5" style={{ color: '#22C55E' }}>
-              ✓ Played here before — pars will be pre-filled from your last round
+              {chosenTee && chosenTee.yards?.some(y => y !== null)
+                ? '✓ In the course library. Pars and yardages will be filled in. You can change any of them.'
+                : '✓ In the course library. Pars will be filled in. You can change any of them.'}
+            </p>
+          ) : recentCourses.some(c => c.name.trim().toLowerCase() === courseName.trim().toLowerCase()) && (
+            <p className="text-xs mt-1.5" style={{ color: '#22C55E' }}>
+              ✓ Played here before. Pars will be filled in from your last round.
             </p>
           )}
+        </div>
+
+        {/* Tee (optional): helps the course library keep the right yardages */}
+        <div>
+          <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>
+            Tee <span className="font-normal">(optional)</span>
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {teeChoices.map(t => {
+              const selected = tee.trim() !== '' && teeKey(tee) === teeKey(t)
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTee(selected ? '' : t)}
+                  className="px-4 rounded-lg text-sm font-medium"
+                  style={{
+                    backgroundColor: selected ? '#CC222220' : '#1A1D27',
+                    color: selected ? '#CC2222' : '#9A9DB0',
+                    border: `1px solid ${selected ? '#CC222240' : '#2E3247'}`,
+                    minHeight: '44px',
+                  }}
+                >
+                  {t}
+                </button>
+              )
+            })}
+          </div>
+          <input
+            type="text"
+            value={tee}
+            onChange={e => setTee(e.target.value)}
+            maxLength={40}
+            className="w-full px-4 py-3 rounded-xl text-sm outline-none"
+            style={{
+              backgroundColor: '#1A1D27',
+              border: '1px solid #2E3247',
+              color: '#F0F0F0',
+            }}
+            placeholder="Or type your tee, e.g. Blue"
+          />
         </div>
 
         {/* Holes */}

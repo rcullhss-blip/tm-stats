@@ -224,8 +224,12 @@ export interface SetupData {
   voice?: boolean
   // Elite: ask where each shot finished (left, right, short, long)
   advanced?: boolean
-  // Tee yardage per hole from the last full-tracking round at this course, where known.
+  // Tee yardage per hole from the course library or the last full-tracking round here, where known.
   yardagesPrefill?: (number | null)[]
+  // Optional tee the golfer is playing from ("White", "Yellow"...). Used by the course library.
+  tee?: string
+  // Stroke index per hole from the course library, where known. Display only.
+  strokeIndexPrefill?: (number | null)[]
 }
 
 export interface HoleData {

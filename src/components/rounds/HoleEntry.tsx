@@ -400,6 +400,14 @@ export default function HoleEntry({ setup, onBack, onComplete, initialHoles, ini
           <h2 className="text-3xl font-bold" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
             Hole {hole.holeNumber}
           </h2>
+          {(setup.yardagesPrefill?.[current] || setup.strokeIndexPrefill?.[current]) ? (
+            <p className="text-sm" style={{ fontFamily: 'var(--font-dm-mono)', color: '#9A9DB0' }}>
+              {[
+                setup.yardagesPrefill?.[current] ? `${setup.yardagesPrefill[current]} yds` : null,
+                setup.strokeIndexPrefill?.[current] ? `SI ${setup.strokeIndexPrefill[current]}` : null,
+              ].filter(Boolean).join(' · ')}
+            </p>
+          ) : null}
         </div>
         <div className="text-right">
           <p

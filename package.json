@@ -10,7 +10,8 @@
     "test:sg": "node --test tests/sg-engine.test.mjs",
     "test:qualifying": "node --test tests/qualifying.test.mjs",
     "test:college": "node --test tests/college.test.mjs tests/practice.test.mjs",
-    "test": "node --test tests/sg-engine.test.mjs tests/qualifying.test.mjs tests/college.test.mjs tests/practice.test.mjs"
+    "test:courses": "node --test tests/course-library.test.mjs",
+    "test": "node --test tests/sg-engine.test.mjs tests/qualifying.test.mjs tests/college.test.mjs tests/practice.test.mjs tests/course-library.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
