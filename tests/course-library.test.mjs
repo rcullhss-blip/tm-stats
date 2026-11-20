@@ -1,7 +1,7 @@
 // Course library tests. Run with: node --test tests/course-library.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { courseNameKey, teeKey, teeLabel, mergeHoleValues, yardsFromShots, buildPrefill } from '../src/lib/course-library.ts'
+import { courseNameKey, teeKey, teeLabel, mergeHoleValues, mergePars, yardsFromShots, buildPrefill } from '../src/lib/course-library.ts'
 
 test('course names match regardless of Golf Club / GC suffixes and punctuation', () => {
   const k = courseNameKey('Macclesfield')
@@ -55,4 +55,26 @@ test('prefill: chosen tee first, then own last round, then other tees; nothing k
   assert.equal(q.yards, undefined)
 
   assert.deepEqual(buildPrefill(18, null, []), {})
+})
+
+test('a stored par only changes once three rounds agree', () => {
+  const card = [4, 3, null]
+  // first round fills the blank hole 3
+  let r = mergePars(card, [], [4, 3, 5])
+  assert.deepEqual(r.pars.slice(0, 3), [4, 3, 5])
+  // two rounds say hole 1 is a par 5: not enough
+  r = mergePars(r.pars, r.votes, [5, 3, 5])
+  r = mergePars(r.pars, r.votes, [5, 3, 5])
+  assert.equal(r.pars[0], 4)
+  assert.equal(r.votes[0]['5'], 2)
+  // a mistyped par 3 on hole 1 does not count towards the par 5
+  r = mergePars(r.pars, r.votes, [3, 3, 5])
+  assert.equal(r.pars[0], 4)
+  // third round agreeing on 5 changes it and clears the votes
+  r = mergePars(r.pars, r.votes, [5, 3, 5])
+  assert.equal(r.pars[0], 5)
+  assert.deepEqual(r.votes[0], {})
+  // blanks never wipe anything
+  r = mergePars(r.pars, r.votes, [null, null, null])
+  assert.deepEqual(r.pars.slice(0, 3), [5, 3, 5])
 })

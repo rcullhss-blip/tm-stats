@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   courseNameKey, teeKey, teeLabel, mergeHoleValues, sameHoleValues,
-  validPar, yardsFromShots, MAX_HOLES, type HoleValues,
+  validPar, yardsFromShots, mergePars, MAX_HOLES, type HoleValues,
 } from '@/lib/course-library'
 
 // Adds a just-saved round's course card (par and tee yardage per hole) to the
@@ -76,12 +76,13 @@ export async function POST(request: Request) {
   const tKey = teeKey(teeRaw)
   const { data: existing } = await sb
     .from('course_tees')
-    .select('id, pars, yards, rounds_seen')
+    .select('id, pars, par_votes, yards, rounds_seen')
     .eq('course_id', course.id)
     .eq('tee_key', tKey)
     .maybeSingle()
 
-  const mergedPars = mergeHoleValues(existing?.pars, pars)
+  // Pars change only when three rounds agree; yardages fill gaps and the newest wins
+  const { pars: mergedPars, votes: parVotes } = mergePars(existing?.pars, existing?.par_votes, pars)
   const mergedYards = mergeHoleValues(existing?.yards, yards)
   const now = new Date().toISOString()
 
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
     const changed = !sameHoleValues(existing.pars, mergedPars) || !sameHoleValues(existing.yards, mergedYards)
     await sb.from('course_tees').update({
       ...(changed ? { pars: mergedPars, yards: mergedYards } : {}),
+      par_votes: parVotes,
       rounds_seen: (existing.rounds_seen ?? 0) + 1,
       updated_at: now,
     }).eq('id', existing.id)
@@ -98,6 +100,7 @@ export async function POST(request: Request) {
       tee: teeLabel(teeRaw),
       tee_key: tKey,
       pars: mergedPars,
+      par_votes: parVotes,
       yards: mergedYards,
       rounds_seen: 1,
       updated_at: now,

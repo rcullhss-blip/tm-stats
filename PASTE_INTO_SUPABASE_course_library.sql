@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.course_tees (
   tee TEXT NOT NULL DEFAULT '',
   tee_key TEXT NOT NULL DEFAULT '',
   pars SMALLINT[],
+  par_votes JSONB NOT NULL DEFAULT '[]'::jsonb,  -- rounds that reported a different par; it changes at 3
   yards SMALLINT[],
   stroke_index SMALLINT[],
   rounds_seen INTEGER NOT NULL DEFAULT 0,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.course_tees (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (course_id, tee_key)
 );
+ALTER TABLE public.course_tees ADD COLUMN IF NOT EXISTS par_votes JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 -- 4. Signed-in golfers can read the library. Nobody can write to it from the app directly:
 --    saves go through the server (/api/courses/contribute), which uses the service key.

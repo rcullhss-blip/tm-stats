@@ -56,6 +56,42 @@ export function mergeHoleValues(existing: HoleValues | null | undefined, incomin
   return Array.from({ length: MAX_HOLES }, (_, i) => at(incoming, i) ?? at(existing, i))
 }
 
+/** Votes per hole for a par that differs from the stored one, e.g. [{ "5": 2 }, {}, ...]. */
+export type ParVotes = Record<string, number>[]
+
+/** How many rounds must report the same different par before a stored par changes. */
+export const PAR_CHANGE_VOTES = 3
+
+/**
+ * Pars use a stricter rule than yardages: a blank hole takes the first par anyone
+ * gives, but a par already on the card only changes once PAR_CHANGE_VOTES rounds
+ * have reported the same different value. One mistyped scorecard can't spoil it.
+ */
+export function mergePars(
+  existing: HoleValues | null | undefined,
+  votes: ParVotes | null | undefined,
+  incoming: HoleValues | null | undefined,
+): { pars: HoleValues; votes: ParVotes } {
+  const pars: HoleValues = []
+  const outVotes: ParVotes = []
+  for (let i = 0; i < MAX_HOLES; i++) {
+    const cur = at(existing, i)
+    const inc = at(incoming, i)
+    const v: Record<string, number> = { ...((Array.isArray(votes) && votes[i] && typeof votes[i] === 'object') ? votes[i] : {}) }
+    let par = cur
+    if (inc !== null) {
+      if (cur === null) { par = inc; for (const k of Object.keys(v)) delete v[k] }
+      else if (inc !== cur) {
+        v[String(inc)] = (v[String(inc)] ?? 0) + 1
+        if (v[String(inc)] >= PAR_CHANGE_VOTES) { par = inc; for (const k of Object.keys(v)) delete v[k] }
+      }
+    }
+    pars.push(par)
+    outVotes.push(v)
+  }
+  return { pars, votes: outVotes }
+}
+
 /** True when merging would change nothing, so the save can be skipped. */
 export function sameHoleValues(a: HoleValues | null | undefined, b: HoleValues | null | undefined): boolean {
   for (let i = 0; i < MAX_HOLES; i++) if (at(a, i) !== at(b, i)) return false
