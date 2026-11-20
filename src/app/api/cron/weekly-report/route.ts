@@ -81,7 +81,7 @@ export async function GET(request: Request) {
     const joinedTeam = new Set((newTeamRows ?? []).map((r: { user_id: string }) => r.user_id))
     const signupRows: [string, string | number][] = (newUserRows ?? []).map(
       (u: { id: string; name: string | null; email: string; subscription_status: string; created_at: string }) => [
-        `${u.name || u.email.split('@')[0]} <span style="color:#888;font-size:12.5px;">${new Date(u.created_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}${joinedTeam.has(u.id) ? ', joined a coach team' : ''}</span>`,
+        `${u.name || u.email.split('@')[0]} <a href="mailto:${u.email}" style="color:#888;font-size:12.5px;">${u.email}</a><br><span style="color:#888;font-size:12.5px;">${new Date(u.created_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}${joinedTeam.has(u.id) ? ', joined a coach team' : ''}</span>`,
         u.subscription_status,
       ] as [string, string],
     )
