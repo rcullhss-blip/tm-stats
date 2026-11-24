@@ -108,3 +108,50 @@ export async function getSummary(days = 28): Promise<ScSummary> {
     }),
   }
 }
+
+export interface KeywordGap { query: string; impressions: number; clicks: number; position: number; page: string }
+
+function norm(s: string): string { return s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim() }
+
+/**
+ * Searches Google already shows TM Stats for, but where there is no page
+ * written for that search: it lands on the home page or sits beyond the first
+ * page of results. Each one is a blog post waiting to be written.
+ * `covered` is the keywords and titles that already exist or are queued.
+ */
+export async function getKeywordGaps(covered: string[], days = 90): Promise<KeywordGap[]> {
+  const token = await accessToken()
+  const rows = await query(token, {
+    startDate: iso(daysAgo(2 + days - 1)),
+    endDate: iso(daysAgo(2)),
+    dimensions: ['query', 'page'],
+    rowLimit: 2000,
+  })
+  const byQuery = new Map<string, KeywordGap>()
+  for (const r of rows) {
+    const [q, page] = r.keys
+    const cur = byQuery.get(q)
+    if (!cur) byQuery.set(q, { query: q, impressions: r.impressions, clicks: r.clicks, position: r.position, page })
+    else {
+      // Keep the page Google ranks best for this search
+      if (r.position < cur.position) { cur.position = r.position; cur.page = page }
+      cur.impressions += r.impressions
+      cur.clicks += r.clicks
+    }
+  }
+  const have = covered.map(norm).filter(Boolean)
+  const path = (u: string) => u.replace(/^https?:\/\/[^/]+/, '') || '/'
+  return [...byQuery.values()]
+    .filter(g => {
+      const q = norm(g.query)
+      if (q.split(' ').length < 2 || q.length > 80) return false
+      if (/\btm ?stats\b|tmstatsgolf/.test(q)) return false // people looking for us by name
+      if (have.some(h => h === q || h.includes(q) || q.includes(h))) return false
+      const p = path(g.page)
+      const hasOwnPage = p !== '/' && g.position <= 10
+      return g.impressions >= 3 && !hasOwnPage
+    })
+    .sort((a, b) => b.impressions - a.impressions)
+    .slice(0, 15)
+    .map(g => ({ ...g, page: path(g.page) }))
+}

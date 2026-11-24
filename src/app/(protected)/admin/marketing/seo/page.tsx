@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { getSummary, isConfigured, SC_PROPERTY, type ScSummary } from '@/lib/search-console'
+import { getSummary, getKeywordGaps, isConfigured, SC_PROPERTY, type ScSummary, type KeywordGap } from '@/lib/search-console'
+import { createServiceClient } from '@/lib/supabase/service'
+import QueueKeywordButton from '@/components/admin/QueueKeywordButton'
 
 const card = { backgroundColor: '#1A1D27', border: '1px solid #2E3247' } as const
 const mono = { fontFamily: 'var(--font-dm-mono)' } as const
@@ -63,6 +65,25 @@ export default async function SeoPage() {
     try { data = await getSummary(28) } catch (e) { error = e instanceof Error ? e.message : String(e) }
   }
 
+  // Searches we appear for with no page of our own, minus anything already
+  // written or waiting in the blog queue.
+  let gaps: KeywordGap[] = []
+  if (data) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = createServiceClient() as any
+      const [{ data: kw }, { data: posts }] = await Promise.all([
+        sb.from('blog_keywords').select('keyword'),
+        sb.from('blog_posts').select('keyword, title'),
+      ])
+      const covered = [
+        ...(kw ?? []).map((k: { keyword: string }) => k.keyword),
+        ...(posts ?? []).flatMap((p: { keyword: string | null; title: string | null }) => [p.keyword ?? '', p.title ?? '']),
+      ]
+      gaps = await getKeywordGaps(covered)
+    } catch { gaps = [] }
+  }
+
   return (
     <div className="px-4 py-6 max-w-2xl mx-auto">
       <Link href="/admin/marketing" className="text-sm mb-6 inline-block" style={{ color: '#9A9DB0' }}>← Marketing hub</Link>
@@ -115,6 +136,21 @@ export default async function SeoPage() {
               const max = Math.max(1, ...data!.daily.map(x => x.clicks))
               return <div key={d.date} title={`${d.date}: ${d.clicks} clicks, ${d.impressions} impressions`} className="flex-1 rounded-sm" style={{ height: `${Math.max(4, (d.clicks / max) * 100)}%`, backgroundColor: d.clicks ? '#CC2222' : '#2E3247' }} />
             })}
+          </div>
+
+          <h2 className="text-sm font-semibold uppercase tracking-wide mb-1" style={{ color: '#9A9DB0' }}>Searches with no page yet</h2>
+          <p className="text-xs mb-3" style={{ color: '#4A4D60' }}>Google already shows TM Stats for these (last 90 days) but nothing is written for them. Queue one and the next blog run writes it.</p>
+          <div className="rounded-xl overflow-hidden mb-6" style={card}>
+            {gaps.length === 0 && <p className="px-4 py-3 text-sm" style={{ color: '#4A4D60' }}>Nothing new right now. This fills up as Google shows the site for more searches.</p>}
+            {gaps.map((g, i) => (
+              <div key={g.query} className="flex items-center justify-between gap-3 px-4 py-2" style={{ borderBottom: i < gaps.length - 1 ? '1px solid #2E3247' : 'none' }}>
+                <div className="min-w-0">
+                  <p className="text-sm truncate" style={{ color: '#F0F0F0' }}>{g.query}</p>
+                  <p className="text-xs" style={{ ...mono, color: '#9A9DB0' }}>{g.impressions} impr. · #{g.position.toFixed(0)} · lands on {g.page}</p>
+                </div>
+                <QueueKeywordButton keyword={g.query} />
+              </div>
+            ))}
           </div>
 
           <Table title="Top queries" rows={data.queries} label={k => k} />
