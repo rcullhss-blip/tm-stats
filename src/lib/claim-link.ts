@@ -11,10 +11,18 @@ import { personalNote, para } from '@/lib/lifecycle-emails'
 //  - it stops working the moment the player sets a password, and after 30 days
 
 const SITE = 'https://www.tmstatsgolf.com'
+
+// Names are typed by coaches, so they are escaped before going into an email.
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
 export const CLAIM_LINK_DAYS = 30
 
 function sign(userId: string, exp: number): string {
-  return createHmac('sha256', process.env.CRON_SECRET ?? 'tmstats')
+  // No fallback key: a link signed with a known constant could be forged.
+  const secret = process.env.CRON_SECRET
+  if (!secret) throw new Error('CRON_SECRET is not set')
+  return createHmac('sha256', secret)
     .update(`claim:${userId}:${exp}`)
     .digest('hex')
     .slice(0, 32)
@@ -55,9 +63,9 @@ export function claimEmail(opts: {
     : ''
   const html = personalNote({
     userId: opts.userId,
-    greeting: opts.firstName ? `Hi ${opts.firstName},` : 'Hi,',
+    greeting: opts.firstName ? `Hi ${esc(opts.firstName)},` : 'Hi,',
     bodyHtml:
-      para(`Rob here from TM Stats. ${coach} has set up a Strokes Gained account for you as part of ${opts.teamName}.${until}`) +
+      para(`Rob here from TM Stats. ${coach} has set up a Strokes Gained account for you as part of ${esc(opts.teamName)}.${until}`) +
       para('Tap the link below and you are straight in. There is no password to remember, you pick your own once you are in.'),
     linkLabel: 'Open my TM Stats account',
     linkUrl: opts.linkUrl ?? claimUrl(opts.userId),

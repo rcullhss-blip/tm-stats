@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
+import { GOLF_ONLY_RULES } from '@/lib/ai-guard'
 
 // AI coaching runs on Claude Sonnet 5.5 (Rob chose it on 20 Nov 2026 after a
 // side-by-side test with Haiku 5.5 and gpt-4o-mini). If Claude fails or no key
@@ -12,7 +13,8 @@ export function coachAiConfigured(): boolean {
   return !!((a && a !== 'your-key-here') || (o && o !== 'your-key-here'))
 }
 
-export async function coachComplete(system: string, user: string, maxTokens: number): Promise<string> {
+export async function coachComplete(systemPrompt: string, user: string, maxTokens: number): Promise<string> {
+  const system = systemPrompt + GOLF_ONLY_RULES
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   if (anthropicKey && anthropicKey !== 'your-key-here') {
     try {

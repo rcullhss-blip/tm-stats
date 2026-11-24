@@ -18,7 +18,9 @@ export const PERSONAL_FROM = (() => {
 })()
 
 export function unsubscribeSig(userId: string): string {
-  return createHmac('sha256', process.env.CRON_SECRET ?? 'tmstats').update(userId).digest('hex').slice(0, 24)
+  const secret = process.env.CRON_SECRET
+  if (!secret) throw new Error('CRON_SECRET is not set')
+  return createHmac('sha256', secret).update(userId).digest('hex').slice(0, 24)
 }
 
 export function unsubscribeUrl(userId: string): string {

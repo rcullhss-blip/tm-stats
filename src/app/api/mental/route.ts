@@ -2,6 +2,13 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { hasPro } from '@/lib/plan'
+import { aiAllowed, aiLimitResponse, clip, GOLF_ONLY_RULES, SAFEGUARDING_RULES, looksLikeDistress, SUPPORT_MESSAGE } from '@/lib/ai-guard'
+
+// One message is a few sentences, not an essay; and the AI only needs the
+// recent part of a long conversation.
+const MAX_MESSAGE_CHARS = 1500
+const MAX_HISTORY = 16
+const MAX_SESSION_MESSAGES = 200
 
 // Free golfers get one sample conversation with this many messages
 const FREE_MENTAL_MESSAGES = 3
@@ -39,8 +46,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
-  const message = body.message?.trim()
+  const message = typeof body.message === 'string' ? body.message.trim() : ''
   if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
+  if (message.length > MAX_MESSAGE_CHARS) {
+    return NextResponse.json({ error: 'That message is a bit long. Keep it to a few sentences and send again.' }, { status: 400 })
+  }
 
   const playerName = profile?.name?.split(' ')[0] ?? 'Golfer'
   const handicap = profile?.handicap ?? 'unknown'
@@ -58,8 +68,17 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .single()
     if (session) {
-      existingMessages = (session.messages as MentalMessage[]) ?? []
+      // Only genuine chat turns are kept: the stored conversation is the
+      // player's own row, so it is treated as untrusted text.
+      existingMessages = (Array.isArray(session.messages) ? session.messages : [])
+        .filter((m: MentalMessage) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+        .map((m: MentalMessage) => ({ role: m.role, content: m.content.slice(0, 4000) }))
+    } else {
+      sessionId = undefined
     }
+  }
+  if (existingMessages.length >= MAX_SESSION_MESSAGES) {
+    return NextResponse.json({ error: 'This conversation is full. Start a new one to carry on.' }, { status: 400 })
   }
 
   // Free plan: one sample conversation of FREE_MENTAL_MESSAGES messages
@@ -73,23 +92,30 @@ export async function POST(request: Request) {
     }
   }
 
+  if (!(await aiAllowed(user.id, 'mental'))) return aiLimitResponse()
+
   const newUserMessage: MentalMessage = { role: 'user', content: message }
   const allMessages: MentalMessage[] = [...existingMessages, newUserMessage]
 
-  const client = new OpenAI({ apiKey })
-  const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    max_tokens: 300,
-    messages: [
-      {
-        role: 'system',
-        content: `${SYSTEM_PROMPT}\nYou are speaking with ${playerName} (handicap ${handicap}). Address them by name occasionally to keep it personal.`,
-      },
-      ...allMessages,
-    ],
-  })
-
-  const responseText = completion.choices[0]?.message?.content ?? ''
+  let responseText = ''
+  if (looksLikeDistress(message)) {
+    // Never leave this to the AI: always show the support message.
+    responseText = SUPPORT_MESSAGE
+  } else {
+    const client = new OpenAI({ apiKey })
+    const completion = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'system',
+          content: `${SYSTEM_PROMPT}\nYou are speaking with ${clip(playerName, 40)} (handicap ${clip(handicap, 8)}). Address them by name occasionally to keep it personal.${GOLF_ONLY_RULES}${SAFEGUARDING_RULES}`,
+        },
+        ...allMessages.slice(-MAX_HISTORY),
+      ],
+    })
+    responseText = completion.choices[0]?.message?.content ?? ''
+  }
   const assistantMessage: MentalMessage = { role: 'assistant', content: responseText }
   const updatedMessages: MentalMessage[] = [...allMessages, assistantMessage]
 

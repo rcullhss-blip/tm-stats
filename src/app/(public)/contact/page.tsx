@@ -6,6 +6,7 @@ export default function ContactPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
+  const [website, setWebsite] = useState('') // hidden bot trap, people never see it
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,7 +19,7 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, website }),
       })
       if (!res.ok) throw new Error('Failed to send')
       setSent(true)
@@ -62,6 +63,7 @@ export default function ContactPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" value={website} onChange={e => setWebsite(e.target.value)} style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: '#9A9DB0' }}>Name</label>
             <input

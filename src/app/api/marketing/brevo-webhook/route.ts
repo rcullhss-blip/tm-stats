@@ -12,7 +12,7 @@ export const maxDuration = 30
 //   https://www.tmstatsgolf.com/api/marketing/brevo-webhook?key=<CRON_SECRET>
 export async function POST(request: Request) {
   const url = new URL(request.url)
-  if (url.searchParams.get('key') !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || url.searchParams.get('key') !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

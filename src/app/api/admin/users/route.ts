@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
+import { isAdminEmail } from '@/lib/admin-email'
 
 async function assertAdmin(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
-  const { data: profile } = await supabase.from('users').select('email').eq('id', user.id).single()
-  return profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
+  return isAdminEmail(user.email)
   void userId
 }
 

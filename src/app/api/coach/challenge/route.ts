@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { NextResponse } from 'next/server'
 import { coachComplete, coachAiConfigured } from '@/lib/coach-ai'
+import { aiAllowed, aiLimitResponse, clip } from '@/lib/ai-guard'
 
 export async function POST(request: Request) {
   if (!coachAiConfigured()) return NextResponse.json({ error: 'Not configured' }, { status: 503 })
@@ -16,10 +17,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Coach account required' }, { status: 403 })
   }
 
-  const { roundId, playerId, originalFeedback, coachContext } = await request.json()
+  const raw = await request.json().catch(() => ({}))
+  const roundId = raw.roundId, playerId = raw.playerId
+  const originalFeedback = clip(raw.originalFeedback, 4000)
+  const coachContext = clip(raw.coachContext, 1500)
   if (!roundId || !playerId || !originalFeedback || !coachContext) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
+  if (!(await aiAllowed(user.id, 'challenge'))) return aiLimitResponse()
 
   const service = createServiceClient()
 
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: membership } = await (service as any).from('team_members').select('id, coach_notes').eq('team_id', team.id).eq('user_id', playerId).single()
   if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
-  const profileContext: string = membership.coach_notes ?? ''
+  const profileContext: string = clip(membership.coach_notes, 1500)
 
   // Generate revised feedback
   const revisedFeedback = await coachComplete(`You are an experienced golf coach. You have AI-generated feedback for one of your players and additional coaching context that the AI doesn't know about.

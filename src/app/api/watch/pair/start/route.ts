@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { hashToken, newPairCode, newSecret } from '@/lib/device-auth'
+import { withinDailyLimit } from '@/lib/rate-limit'
 
 // The watch asks for a pairing code. It shows the code; the golfer types it in
 // Profile. The secret stays on the watch and is how it collects its token.
-export async function POST() {
+export async function POST(request: Request) {
+  if (!(await withinDailyLimit(request, 'watch-pair', 40))) {
+    return NextResponse.json({ error: 'Too many tries. Wait a while and try again.' }, { status: 429 })
+  }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const service = createServiceClient() as any
   // Tidy away old codes

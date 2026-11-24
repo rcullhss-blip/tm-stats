@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { assertAdmin } from '@/lib/admin-auth'
 import { transcribeRoundAudio } from '@/lib/voice-transcribe'
 import { parseRoundTranscript, VoiceParseError } from '@/lib/voice-parse'
+import { aiAllowed, aiLimitResponse } from '@/lib/ai-guard'
 
 export const maxDuration = 120
 
@@ -24,7 +25,9 @@ function numberList(raw: FormDataEntryValue | null, max: number): (number | null
 // golfer to check and approve.
 export async function POST(request: Request) {
   // Admin only while it is being tested: each recording costs money to process.
-  if (!(await assertAdmin())) return NextResponse.json({ error: 'Voice entry is not switched on for this account yet.' }, { status: 403 })
+  const caller = await assertAdmin()
+  if (!caller) return NextResponse.json({ error: 'Voice entry is not switched on for this account yet.' }, { status: 403 })
+  if (!(await aiAllowed(caller.id, 'voice'))) return aiLimitResponse()
 
   let form: FormData
   try {

@@ -5,14 +5,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import Link from 'next/link'
 import AdminPromoForm from '@/components/admin/AdminPromoForm'
+import { isAdminEmail } from '@/lib/admin-email'
 
 export default async function AdminPromosPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase.from('users').select('email').eq('id', user.id).single()
-  const isAdmin = profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
+  const isAdmin = isAdminEmail(user.email)
   if (!isAdmin) return notFound()
 
   const service = createServiceClient()

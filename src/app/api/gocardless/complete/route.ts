@@ -20,6 +20,10 @@ export async function GET(request: Request) {
     // The flow auto-fulfils the billing request, creating customer + mandate.
     const br = await gc(`/billing_requests/${brId}`)
     const data = br.billing_requests
+    // The billing request must be the one this signed-in user started.
+    if (data?.metadata?.supabase_user_id !== user.id) {
+      return NextResponse.redirect(`${origin}/upgrade?error=1`)
+    }
     const mandateId: string | undefined = data.mandate_request?.links?.mandate ?? data.links?.mandate_request_mandate
     const customerId: string | undefined = data.links?.customer
     if (!mandateId) return NextResponse.redirect(`${origin}/upgrade?error=mandate`)

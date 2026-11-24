@@ -14,7 +14,7 @@ export default function NewsletterSignup({ source = 'footer' }: { source?: strin
       const res = await fetch('/api/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), source }),
+        body: JSON.stringify({ email: email.trim(), source, website: (e.target as HTMLFormElement).querySelector<HTMLInputElement>('input[name="website"]')?.value ?? '' }),
       })
       setState(res.ok ? 'done' : 'error')
     } catch {
@@ -32,6 +32,7 @@ export default function NewsletterSignup({ source = 'footer' }: { source?: strin
 
   return (
     <form onSubmit={handleSubmit} className="mb-4">
+      <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" defaultValue="" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, opacity: 0 }} />
       <p className="text-center text-xs mb-2" style={{ color: '#9A9DB0' }}>
         Free fortnightly email: one stat, one drill, one insight
       </p>

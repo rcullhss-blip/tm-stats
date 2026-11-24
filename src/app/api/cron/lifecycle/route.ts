@@ -21,7 +21,7 @@ interface UserLite {
 // (enforced by the email_log UNIQUE constraint) and respects email_opt_out.
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const apiKey = process.env.RESEND_API_KEY

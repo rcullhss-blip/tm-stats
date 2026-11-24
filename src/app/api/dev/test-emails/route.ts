@@ -14,7 +14,7 @@ const DEFAULT_TO = 'rcullhss@gmail.com'
 //   /api/dev/test-emails?key=<CRON_SECRET>
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  if (searchParams.get('key') !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || searchParams.get('key') !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

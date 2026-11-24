@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getStripe, priceFor, type PaidTier } from '@/lib/stripe'
 
 export async function POST(request: Request) {
@@ -38,7 +39,8 @@ export async function POST(request: Request) {
       metadata: { supabase_user_id: user.id },
     })
     customerId = customer.id
-    await supabase.from('users').update({ stripe_customer_id: customerId }).eq('id', user.id)
+    // Plan and billing columns are locked to the server (service role) only.
+    await createServiceClient().from('users').update({ stripe_customer_id: customerId }).eq('id', user.id)
   }
 
   const origin = request.headers.get('origin') ?? 'http://localhost:3000'

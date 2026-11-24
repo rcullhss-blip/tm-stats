@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { readScorecard, ScorecardReadError } from '@/lib/scorecard-read'
+import { aiAllowed, aiLimitResponse } from '@/lib/ai-guard'
 
 export const maxDuration = 60
 const MAX_BYTES = 4 * 1024 * 1024
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
   if (file.size > MAX_BYTES) return NextResponse.json({ error: 'That photo is too big. Try again, it is usually fine from the camera.' }, { status: 413 })
   const type = file.type
   if (type !== 'image/jpeg' && type !== 'image/png' && type !== 'image/webp') return NextResponse.json({ error: 'Use a JPG or PNG photo' }, { status: 400 })
+
+  if (!(await aiAllowed(user.id, 'scorecard'))) return aiLimitResponse()
 
   const { data: me } = await supabase.from('users').select('name').eq('id', user.id).single()
   try {

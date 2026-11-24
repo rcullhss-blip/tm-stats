@@ -6,6 +6,7 @@ import { calculateRoundSG, handicapToSkillLevel, normalizeSkillLevel, SKILL_LEVE
 import type { ShotEntry, HoleRow } from '@/lib/types'
 import { hasPro, hasElite } from '@/lib/plan'
 import { buildShotPatterns, describePattern } from '@/lib/shot-patterns'
+import { aiAllowed, aiLimitResponse, clip } from '@/lib/ai-guard'
 
 // Map legacy DB values to new keys (backward compatibility)
 const LEGACY_MAP: Record<string, string> = {
@@ -53,6 +54,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
 
+  // Figures sent from the app are only ever short numbers or labels. Trim
+  // them so nobody can smuggle a question for the AI in through a stat field.
+  if (body.stats && typeof body.stats === 'object') {
+    const clean: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(body.stats as Record<string, unknown>)) {
+      clean[k] = typeof v === 'number' || typeof v === 'boolean' || v === null ? v : clip(v, 40)
+    }
+    body.stats = clean
+  }
+  for (const k of ['handicap', 'weakestStat', 'scoreToPar', 'doubles']) {
+    if (typeof body[k] === 'string') body[k] = clip(body[k], 40)
+  }
+
+  if (!(await aiAllowed(user.id, 'coaching'))) return aiLimitResponse()
+
   const service = createServiceClient()
 
   // If playerId is provided, caller is a coach viewing a player's round
@@ -70,7 +86,7 @@ export async function POST(request: Request) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: membership } = await (service as any).from('team_members').select('id, coach_notes').eq('team_id', team.id).eq('user_id', playerId).single()
     if (!membership) return NextResponse.json({ error: 'Player not in your team' }, { status: 403 })
-    coachContext = membership.coach_notes ?? ''
+    coachContext = clip(membership.coach_notes, 1500)
   }
 
   // Fetch profile of the target user (player or self)
@@ -518,7 +534,7 @@ No intro, no labels, no extra text.`
       }
     }
 
-    const notesBlock = round.notes ? `\nPlayer notes: "${round.notes}"` : ''
+    const notesBlock = round.notes ? `\nPlayer notes: "${clip(round.notes, 800)}"` : ''
     const conditionParts = [
       round.mood ? `Mood: ${round.mood}` : null,
       round.energy_level ? `Energy: ${round.energy_level}` : null,
@@ -534,7 +550,7 @@ Give ${pName} specific coaching feedback based on these exact numbers.`
   }
 
   const playerContextBlock = profile?.player_context
-    ? `\n\nCRITICAL — Player's own context (written by the player). You MUST reference this in your feedback:\n${profile.player_context}`
+    ? `\n\nCRITICAL — Player's own context (written by the player). You MUST reference this in your feedback:\n${clip(profile.player_context, 1200)}`
     : ''
 
   const coachContextBlock = coachContext

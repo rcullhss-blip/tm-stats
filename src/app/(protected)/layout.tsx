@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import AuthGuard from '@/components/layout/AuthGuard'
 import BottomNav from '@/components/layout/BottomNav'
 import TopBar from '@/components/layout/TopBar'
 import NativePushBoot from '@/components/layout/NativePushBoot'
 import PendingJoin from '@/components/layout/PendingJoin'
 import RoundOutboxSync from '@/components/layout/RoundOutboxSync'
+import { isAdminEmail } from '@/lib/admin-email'
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -28,7 +30,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     if (profile?.subscription_status === 'pro' && profile?.promo_expires_at) {
       if (new Date(profile.promo_expires_at) < new Date()) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
+        await (createServiceClient() as any)
           .from('users')
           .update({ subscription_status: 'free', promo_expires_at: null })
           .eq('id', user.id)
@@ -37,7 +39,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     }
 
     isCoach = profile?.subscription_status === 'team'
-    isAdmin = profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
+    isAdmin = isAdminEmail(user.email)
   }
 
   return (

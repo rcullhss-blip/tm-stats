@@ -18,7 +18,7 @@ const RAMP_START = new Date(process.env.OUTREACH_RAMP_START || '2026-07-31T00:00
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   if (!process.env.BREVO_API_KEY) {

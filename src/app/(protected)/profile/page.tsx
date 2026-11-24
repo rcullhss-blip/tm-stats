@@ -40,7 +40,7 @@ export default async function ProfilePage() {
     const expiresAt = new Date(profile.promo_expires_at)
     if (expiresAt < new Date()) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      await (createServiceClient() as any)
         .from('users')
         .update({ subscription_status: 'free', promo_expires_at: null })
         .eq('id', user.id)

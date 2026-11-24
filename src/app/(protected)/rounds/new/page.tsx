@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewRoundClient from './NewRoundClient'
 import { hasPro, hasElite } from '@/lib/plan'
+import { isAdminEmail } from '@/lib/admin-email'
 
 export default async function NewRoundPage() {
   const supabase = await createClient()
@@ -51,7 +52,7 @@ export default async function NewRoundPage() {
 
   // Voice entry costs money per recording, so it is switched on for the admin
   // account only while it is being tested.
-  const voiceEnabled = profile?.email === 'rcullhss@gmail.com' || user.email === 'rcullhss@gmail.com'
+  const voiceEnabled = isAdminEmail(user.email)
 
   // Elite: advanced shot tracking (where each shot finished)
   const advancedEnabled = hasElite(profile?.subscription_status)

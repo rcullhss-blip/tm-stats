@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { currentUserId, teamFor } from '@/lib/qualifying-server'
 import { parseResults, ResultsParseError, type ResultSource } from '@/lib/results-parse'
 import { matchRoster } from '@/lib/results-import'
+import { aiAllowed, aiLimitResponse } from '@/lib/ai-guard'
 
 export const maxDuration = 300
 
@@ -16,7 +17,11 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const team = await teamFor(userId)
   if (!team || team.role !== 'coach') return NextResponse.json({ error: 'Only the coach can upload results' }, { status: 403 })
+  // Reading a result costs money, so it is for approved coach accounts only.
+  const { data: me } = await team.service.from('users').select('subscription_status').eq('id', userId).single()
+  if (me?.subscription_status !== 'team') return NextResponse.json({ error: 'Result uploads open once your coach account is approved' }, { status: 403 })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'Reading results is not set up on this server' }, { status: 503 })
+  if (!(await aiAllowed(userId, 'results'))) return aiLimitResponse()
 
   let form: FormData
   try { form = await request.formData() } catch { return NextResponse.json({ error: 'Send a file or paste the result' }, { status: 400 }) }
