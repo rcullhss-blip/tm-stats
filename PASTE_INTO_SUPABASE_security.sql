@@ -127,3 +127,24 @@ GRANT EXECUTE ON FUNCTION public.bump_rate(TEXT, INTEGER) TO service_role;
 
 -- Check 3: should list ai_usage and rate_limits.
 SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('ai_usage', 'rate_limits');
+
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- Part 4: site error log. When a page or action fails for someone it is
+-- recorded here, and the 9am daily job emails Rob a summary if there were any.
+CREATE TABLE IF NOT EXISTS public.error_log (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  message TEXT,
+  route TEXT,
+  path TEXT,
+  method TEXT,
+  kind TEXT,
+  stack TEXT
+);
+CREATE INDEX IF NOT EXISTS error_log_created_at ON public.error_log (created_at DESC);
+ALTER TABLE public.error_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.error_log FROM anon, authenticated;
+
+-- Check 4: should list ai_usage, error_log and rate_limits.
+SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename IN ('ai_usage', 'rate_limits', 'error_log');

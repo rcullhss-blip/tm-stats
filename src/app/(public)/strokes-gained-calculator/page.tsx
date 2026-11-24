@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import SgCalculator from '@/components/seo/SgCalculator'
 
 export const metadata: Metadata = {
-  title: 'Strokes Gained Calculator: Work Out Any Shot in Seconds | TM Stats',
+  title: 'Free Strokes Gained Calculator for Any Shot | TM Stats',
   description:
-    'Free Strokes Gained calculator. Pick your handicap level, enter where a shot started and where it finished, and see how many strokes it gained or lost against golfers at your level. No sign-up.',
+    'Free Strokes Gained calculator. Pick your handicap level, enter where a shot started and finished, and see the strokes gained or lost. No sign-up.',
   alternates: { canonical: '/strokes-gained-calculator' },
 }
 

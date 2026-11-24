@@ -5,6 +5,7 @@ import { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Golf Stats & Strokes Gained Blog | TM Stats',
   description: 'Expert advice on Strokes Gained, golf performance tracking, and how to lower your handicap using data. Written by Rob Cull, founder of TM Stats Golf.',
+  alternates: { canonical: '/blog' },
 }
 
 type BlogPost = {

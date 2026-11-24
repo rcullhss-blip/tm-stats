@@ -15,10 +15,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!page) return {}
   const title = page.stat.question(page.band)
   return {
-    title: `${title} | TM Stats`,
+    // Google cuts titles at about 60 characters, so the brand only goes on short ones
+    title: title.length <= 50 ? `${title} | TM Stats` : title,
     description: page.stat.answer(page.band).slice(0, 158),
     alternates: { canonical: `/golf-stats/${slug}` },
-    openGraph: { title, description: page.stat.answer(page.band).slice(0, 158), type: 'article' },
+    openGraph: { title, description: page.stat.answer(page.band).slice(0, 158), type: 'article', images: [{ url: '/opengraph-image', width: 1200, height: 630 }] },
   }
 }
 

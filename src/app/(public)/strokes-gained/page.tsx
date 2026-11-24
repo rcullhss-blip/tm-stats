@@ -2,9 +2,9 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Strokes Gained Explained: What It Is and How to Get Yours | TM Stats',
+  title: 'Strokes Gained Explained in Plain English | TM Stats',
   description:
-    'Strokes Gained explained in plain English by a county golfer. What it measures, the four categories, a worked example from a real round, and how to get your own numbers without buying hardware.',
+    'Strokes Gained explained by a county golfer: what it measures, the four categories, a worked example, and how to get your own numbers without hardware.',
   alternates: { canonical: '/strokes-gained' },
 }
 

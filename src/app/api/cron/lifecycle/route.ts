@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { LIFECYCLE_EMAILS, PERSONAL_FROM, REPLY_TO, STATS_WAITING_SUBJECT, TEAM_NUDGE_SUBJECT, statsWaitingHtml, statsWaitingKey, teamNudgeHtml, teamNudgeKey } from '@/lib/lifecycle-emails'
 import { hasPro } from '@/lib/plan'
 import { pushToUsers } from '@/lib/push'
+import { sendErrorDigest } from '@/lib/error-digest'
 
 export const maxDuration = 60
 
@@ -224,5 +225,9 @@ export async function GET(request: Request) {
     if (sent.length >= 50) break // safety cap per run
   }
 
-  return NextResponse.json({ ok: true, sent: sent.length, failures, ts: new Date().toISOString() })
+  // Morning error email to Rob (only sent if something broke in the last day)
+  let siteErrors = 0
+  try { siteErrors = await sendErrorDigest() } catch (e) { console.error('[lifecycle] error digest failed', e) }
+
+  return NextResponse.json({ ok: true, sent: sent.length, failures, siteErrors, ts: new Date().toISOString() })
 }

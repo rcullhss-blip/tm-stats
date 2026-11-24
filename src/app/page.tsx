@@ -1,9 +1,12 @@
+import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import Footer from '@/components/layout/Footer'
 import CookieBanner from '@/components/layout/CookieBanner'
 import ExampleRound from '@/components/dashboard/ExampleRound'
 import { priceFor } from '@/lib/stripe'
+
+export const metadata: Metadata = { alternates: { canonical: '/' } }
 
 export default function LandingPage() {
   // Elite is shown as opening soon until its Stripe prices are set up

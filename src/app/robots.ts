@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/api/', '/dashboard', '/rounds', '/stats', '/profile', '/mental', '/practice', '/coach', '/qualifying', '/leaderboards', '/p/'],
     },
-    sitemap: 'https://tmstatsgolf.com/sitemap.xml',
+    sitemap: 'https://www.tmstatsgolf.com/sitemap.xml',
   }
 }

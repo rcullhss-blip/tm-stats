@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import { COMPETITORS } from '@/lib/compare'
 
 export const metadata: Metadata = {
-  title: 'TM Stats vs Arccos, Shot Scope and 18Birdies | Golf Stats Tracker Comparison',
+  title: 'TM Stats vs Arccos, Shot Scope and 18Birdies Compared',
   description:
-    'Honest comparisons of TM Stats with Arccos Caddie, Shot Scope and 18Birdies: how each one tracks shots, what it costs, whether you get Strokes Gained, and who each is right for.',
+    'Honest comparisons of TM Stats with Arccos, Shot Scope and 18Birdies: how each tracks shots, what it costs, Strokes Gained, and who each suits.',
   alternates: { canonical: '/compare' },
 }
 

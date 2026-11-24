@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'About TM Stats | Built by a County Golfer, Not a Software Company',
+  title: 'About TM Stats | Built by a County Golfer',
   description:
-    'TM Stats was built by Rob Cull, a former Cheshire county golfer and NCAA Division II player, because no golf stats app gave serious amateurs proper Strokes Gained on a phone at a fair price.',
+    'TM Stats was built by Rob Cull, a former Cheshire county golfer and NCAA Division II player, to give serious amateurs proper Strokes Gained on a phone.',
   alternates: { canonical: '/about' },
 }
 

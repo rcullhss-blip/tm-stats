@@ -27,8 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.tmstatsgolf.com'),
   title: 'Golf Stats Tracker with Strokes Gained | TM Stats',
   description:
-    'TM Stats is a golf stats tracker for serious amateur golfers. Log rounds on your phone, see Strokes Gained off the tee, on approach, around the green and putting, and know exactly what to practise. Free to start.',
-  alternates: { canonical: '/' },
+    'Golf stats tracker for serious amateur golfers. Log rounds on your phone, see Strokes Gained by category and know exactly what to practise. Free to start.',
   openGraph: {
     type: 'website',
     siteName: 'TM Stats',

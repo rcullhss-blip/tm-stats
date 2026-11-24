@@ -13,13 +13,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const c = findCompetitor(slug)
   if (!c) return {}
-  const title = `TM Stats vs ${c.name}: Which Golf Stats Tracker Is Right for You?`
+  const title = `TM Stats vs ${c.name}: Golf Stats Trackers Compared`
   const description = `${c.name} compared with TM Stats on tracking, price, Strokes Gained and who each suits. Written by a county golfer who has used both.`
   return {
-    title: `${title} | TM Stats`,
+    title,
     description,
     alternates: { canonical: `/compare/${c.slug}` },
-    openGraph: { title, description, type: 'article' },
+    openGraph: { title, description, type: 'article', images: [{ url: '/opengraph-image', width: 1200, height: 630 }] },
   }
 }
 

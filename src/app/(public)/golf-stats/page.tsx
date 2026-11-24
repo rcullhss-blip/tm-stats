@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import { BANDS, STATS } from '@/lib/seo-stats'
 
 export const metadata: Metadata = {
-  title: 'Golf Stats: What to Track, What Is Good and Where You Lose Shots | TM Stats',
+  title: 'Golf Stats: What to Track and What Is Good | TM Stats',
   description:
-    'A plain guide to golf stats. Which numbers matter, what a good GIR%, fairways hit, putts and scrambling rate looks like for your handicap, and why Strokes Gained tells you more than any of them.',
+    'A plain guide to golf stats: which numbers matter, what good GIR, fairways, putts and scrambling look like at your handicap, and where Strokes Gained fits.',
   alternates: { canonical: '/golf-stats' },
 }
 
