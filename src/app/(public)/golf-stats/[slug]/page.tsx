@@ -135,7 +135,6 @@ export default async function GolfStatPage({ params }: Props) {
       <div className="flex flex-wrap gap-2 mb-6">
         {allSeoPages()
           .filter(p => p.slug !== slug && (p.band.slug === band.slug || p.stat.slug === stat.slug))
-          .slice(0, 8)
           .map(p => (
             <Link
               key={p.slug}

@@ -60,6 +60,30 @@ export default function AboutPage() {
           </div>
         </div>
 
+        <div>
+          <h2 className="text-base font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+            How it works
+          </h2>
+          <p className="text-sm mb-3">
+            You enter your round on your phone, during it or afterwards. In quick mode that is score, fairway, green and putts. In full tracking you add where each shot started and finished, and TM Stats works out your <a href="/strokes-gained" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>Strokes Gained</a> off the tee, on approach, around the green and on the greens, measured against golfers at your own level.
+          </p>
+          <p className="text-sm">
+            After the round you get feedback in the coaching voice you picked, and a short list of what to practise. Over a few rounds the patterns show up: the club that keeps missing right, the putt length that keeps costing you. If you are not sure which numbers matter, the <a href="/golf-stats" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats guide</a> shows what good looks like at each handicap.
+          </p>
+        </div>
+
+        <div>
+          <h2 className="text-base font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+            Who it is for
+          </h2>
+          <p className="text-sm mb-3">
+            Golfers who practise and want to know it is the right practice. It suits single figure and low teens handicaps best, along with juniors on county squads and college players. Coaches use it to see a whole squad in one place and to add what the stats cannot show.
+          </p>
+          <p className="text-sm">
+            It is free to start, with no hardware to buy. If you want to see how it sits next to the sensor and watch systems, the <a href="/compare" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>comparison pages</a> lay it out honestly.
+          </p>
+        </div>
+
         <p className="text-sm pt-2" style={{ color: '#4A4D60' }}>
           Questions?{' '}
           <a href="/contact" style={{ color: '#9A9DB0' }}>

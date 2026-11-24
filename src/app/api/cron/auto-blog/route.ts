@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { generateBlogPost } from '@/lib/marketing-ai'
+import { getKeywordGaps, isConfigured as searchConsoleReady } from '@/lib/search-console'
+import { COMPETITORS } from '@/lib/compare'
 
 export const maxDuration = 120
 
@@ -26,6 +28,36 @@ export async function GET(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sb = supabase as any
 
+  // Top up the queue from real searches: phrases Google already shows the site
+  // for where nothing is written yet. At most two a run, golf topics only, and
+  // never another company's name (those belong on the compare pages).
+  const autoQueued: string[] = []
+  if (searchConsoleReady()) {
+    try {
+      const [{ data: kw }, { data: posts }] = await Promise.all([
+        sb.from('blog_keywords').select('keyword'),
+        sb.from('blog_posts').select('keyword, title'),
+      ])
+      const covered = [
+        ...(kw ?? []).map((k: { keyword: string }) => k.keyword),
+        ...(posts ?? []).flatMap((p: { keyword: string | null; title: string | null }) => [p.keyword ?? '', p.title ?? '']),
+      ]
+      const brands = [...COMPETITORS.map(c => c.name.toLowerCase().split(' ')[0]), 'arccos', 'shot scope', 'shotscope', '18birdies', 'garmin', 'strokesgain', 'decade', 'clippd', 'hole19', 'golfshot', 'grint', 'login', 'log in']
+      const golf = /\b(golf|golfer|handicap|strokes? gained|putt|putting|putts|fairway|green|gir|driver|driving|iron|wedge|chip|chipping|bunker|sand|scramb|up and down|par|bogey|birdie|score|scoring|round|course|swing|short game|approach|tee|break (100|90|80|70)|stats?)\b/
+      const picks = (await getKeywordGaps(covered))
+        .filter(g => g.impressions >= 5)
+        .map(g => g.query.toLowerCase().trim())
+        .filter(q => golf.test(q) && !brands.some(b => q.includes(b)))
+        .slice(0, 2)
+      for (const keyword of picks) {
+        const { error: insertError } = await sb.from('blog_keywords').insert({ keyword })
+        if (!insertError) autoQueued.push(keyword)
+      }
+    } catch (e) {
+      console.error('[auto-blog] keyword top-up failed', e)
+    }
+  }
+
   const { data: next } = await sb
     .from('blog_keywords')
     .select('id, keyword')
@@ -35,7 +67,7 @@ export async function GET(request: Request) {
     .single()
 
   if (!next) {
-    return NextResponse.json({ ok: true, published: false, reason: 'keyword queue empty — add more to blog_keywords' })
+    return NextResponse.json({ ok: true, published: false, autoQueued, reason: 'keyword queue empty — add more to blog_keywords' })
   }
 
   try {
@@ -59,7 +91,7 @@ export async function GET(request: Request) {
 
     await sb.from('blog_keywords').update({ used: true }).eq('id', next.id)
 
-    return NextResponse.json({ ok: true, published: true, slug, keyword: next.keyword })
+    return NextResponse.json({ ok: true, published: true, slug, keyword: next.keyword, autoQueued })
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }

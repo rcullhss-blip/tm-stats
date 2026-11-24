@@ -41,6 +41,22 @@ export default function ComparePage() {
         ))}
       </div>
 
+      <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
+        How to choose between them
+      </h2>
+      <p className="text-sm leading-relaxed mb-4" style={{ color: '#9A9DB0' }}>
+        Start with how you want the shots recorded. If you never want to touch your phone during a round, you need hardware: sensors in the grips or a watch that tags each club. That is what you are paying for with Arccos and Shot Scope, and both do it well.
+      </p>
+      <p className="text-sm leading-relaxed mb-4" style={{ color: '#9A9DB0' }}>
+        If you mostly want yardages and a tidy scorecard, a free GPS app covers it. You will see fairways, greens and putts, which is a fair start, but those numbers on their own will not tell you which part of your game is costing you the most. Our <Link href="/golf-stats" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>guide to golf stats</Link> shows what good looks like at your handicap.
+      </p>
+      <p className="text-sm leading-relaxed mb-4" style={{ color: '#9A9DB0' }}>
+        If the question you really want answered is where am I losing shots and what should I practise this week, you need <Link href="/strokes-gained" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>Strokes Gained</Link> worked out shot by shot against golfers at your level. That is the job TM Stats was built for. You enter where each shot started and finished, it does the sums, and the coaching turns the numbers into a plan. You can try the maths on a single shot with the free <Link href="/strokes-gained-calculator" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>Strokes Gained calculator</Link>.
+      </p>
+      <p className="text-sm leading-relaxed mb-10" style={{ color: '#9A9DB0' }}>
+        One more thing worth weighing: who else needs to see it. If you have a coach, or you play on a college or county squad, TM Stats lets them see your rounds and add what the numbers cannot show.
+      </p>
+
       <div className="p-5 rounded-2xl text-center" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
         <p className="text-base font-bold mb-2" style={{ fontFamily: 'var(--font-dm-sans)', color: '#F0F0F0' }}>
           Try the no-hardware option first

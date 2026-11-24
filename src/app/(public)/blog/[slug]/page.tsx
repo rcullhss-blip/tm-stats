@@ -4,6 +4,13 @@ import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import { addInternalLinks } from '@/lib/blog-links'
 
+// Google shows about 158 characters. Cut longer ones at the last whole word.
+function fitDescription(text: string): string {
+  const t = text.trim()
+  if (t.length <= 158) return t
+  return t.slice(0, 157).replace(/\s+\S*$/, '').replace(/[,;:]$/, '') + '…'
+}
+
 type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -20,11 +27,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: post.meta_title || post.title,
-    description: post.meta_desc || post.excerpt || '',
+    description: fitDescription(post.meta_desc || post.excerpt || ''),
     alternates: { canonical: `/blog/${slug}` },
     openGraph: {
       title: post.meta_title || post.title,
-      description: post.meta_desc || post.excerpt || '',
+      description: fitDescription(post.meta_desc || post.excerpt || ''),
       type: 'article',
       url: `/blog/${slug}`,
     },
@@ -43,13 +50,18 @@ export default async function BlogPostPage({ params }: Props) {
 
   if (!post) return notFound()
 
+  // Related posts: the next three in date order, wrapping round at the end.
+  // Showing only the newest three left older posts with nothing linking to them.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: related } = await (supabase as any)
+  const { data: allPosts } = await (supabase as any)
     .from('blog_posts')
     .select('slug, title')
-    .neq('slug', post.slug)
     .order('published_at', { ascending: false })
-    .limit(3)
+  const list: { slug: string; title: string }[] = allPosts ?? []
+  const at = list.findIndex(p => p.slug === post.slug)
+  const related = list.length > 1
+    ? [1, 2, 3].map(n => list[(at + n) % list.length]).filter((p, i, arr) => p.slug !== post.slug && arr.findIndex(x => x.slug === p.slug) === i)
+    : []
 
   const url = `https://www.tmstatsgolf.com/blog/${post.slug}`
   const schema = [
@@ -57,7 +69,7 @@ export default async function BlogPostPage({ params }: Props) {
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
-      description: post.meta_desc || post.excerpt || '',
+      description: fitDescription(post.meta_desc || post.excerpt || ''),
       datePublished: post.published_at,
       dateModified: post.published_at,
       mainEntityOfPage: url,
