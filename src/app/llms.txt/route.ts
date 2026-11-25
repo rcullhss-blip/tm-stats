@@ -17,7 +17,7 @@ Key facts:
 - No sensors or hardware. Rounds are entered on a phone, either Quick (score, fairways, greens, putts) or Full Tracking (each shot, which gives Strokes Gained).
 - Strokes Gained baselines run from scratch to 29 and over handicap, plus PGA Tour and US college divisions.
 - AI coaching reads the golfer's own numbers, not generic tips. Details are in the AI coaching section below.
-- Coaches can run a team, see every player's stats and Strokes Gained, and run qualifying rounds.
+- Coaches can run a whole squad from one dashboard, including qualifying, live scoring and travel team selection. Details are in the teams and college golf sections below.
 
 ## AI coaching
 After a round, TM Stats writes coaching feedback from that golfer's own data. It is included in Pro and Elite.
@@ -29,6 +29,27 @@ After a round, TM Stats writes coaching feedback from that golfer's own data. It
 - Elite adds coaching built on miss patterns: which way the golfer misses, from which distances, with an aim point.
 - For teams, a real coach can add what the stats cannot show (an injury, a swing change in progress) and the feedback is rewritten with that in mind.
 - It stays on golf. It will not act as a general chatbot, and it points a golfer to proper support if they seem to be struggling.
+
+## For coaches and teams
+One coach account runs a whole squad: college teams, county and junior squads, academies and club teams.
+- Squad dashboard: every player's rounds, stats and Strokes Gained in one place, with each player's biggest leaks (the distances and shot types costing them most).
+- Getting players on: a join code, a join link and a QR code. A coach can also set accounts up for the squad, and each player gets a one tap link to open theirs.
+- Qualifying and live scoring: the coach sets up a qualifier (course, players, rounds, groups and tee times), and scores go in hole by hole from any phone on the team, with a live leaderboard. Several groups can score at once.
+- Scores land in the player's account: when a round is finished, every player's card is already in their own account with pars and scores filled in. They only add their stats, in about two minutes.
+- Tournament results upload: the coach uploads a results PDF, photo or pasted text, and the hole scores are read into each player's account for the coach to check.
+- Travel team selection: every qualifying and tournament round ranked in one table, with date and event filters, rounds left out, best X of Y, a picked travel team and a spreadsheet download.
+- Practice tests: scored drills with personal bests, suggested from each player's weakest area, with a squad table for the coach.
+- Keeping players logging: a weekly reminder to players who have not logged a round, and a Monday email to the coach when the squad has gone quiet.
+- Squad leaderboard that players can see, if the coach switches it on.
+- Coach and AI together: the coach can add what the numbers cannot show, and the AI feedback for that player is rewritten with it.
+- Players who join a team get Pro free for the team's first year. Coaches request a team and TM Stats approves each one.
+
+## For college golf
+- Strokes Gained baselines for US college golf: NCAA Division 1, 2 and 3, men and women, built from published scoring averages. A college player is measured against their own division, not against tour players or club handicaps.
+- Qualifying is the centre of it: run team qualifying with live scoring, and the scores are already in each player's account afterwards.
+- Selection built the way a college coach picks a travel team, from qualifying and tournament rounds together.
+- College team leaderboards, shown once enough teams are on them to mean something.
+- Recruiting profile for juniors: one link a golfer can send to college coaches, showing scoring, recent rounds and the handicap each part of their game plays like. It is off until the golfer switches it on, and they choose which rounds show.
 
 ## Free tools (no account needed)
 - [Where are you losing shots? quiz](${SITE}/quiz): five questions, shows which part of your game costs most for your handicap
