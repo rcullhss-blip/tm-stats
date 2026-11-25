@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { BANDS } from '@/lib/seo-stats'
 import {
@@ -62,10 +62,18 @@ export default function ShotsQuiz() {
   const done = step >= STEPS.length
   const result = done ? scoreQuiz(answers as QuizAnswers) : null
 
+  // The page stays where it is between questions. It only moves when the top of
+  // the quiz has been scrolled out of view (a long list on a small phone), and
+  // then only far enough to show the next question.
+  const box = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = box.current
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: 'start' })
+  }, [step])
+
   function choose(key: Key, value: string | number) {
     setAnswers(a => ({ ...a, [key]: value }))
     setStep(s => s + 1)
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function restart() {
@@ -76,8 +84,8 @@ export default function ShotsQuiz() {
   if (!done) {
     const s = STEPS[step]
     return (
-      <div className="rounded-2xl p-5" style={card}>
-        <div className="flex items-center justify-between mb-3">
+      <div ref={box} className="rounded-2xl p-5" style={{ ...card, scrollMarginTop: '12px' }}>
+        <div className="flex items-center justify-between mb-3" style={{ minHeight: '44px' }}>
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#CC2222' }}>
             Question <span style={mono}>{step + 1}</span> of <span style={mono}>{STEPS.length}</span>
           </p>
@@ -131,7 +139,7 @@ export default function ShotsQuiz() {
   const biggest = Math.max(1, ...lines.map(l => Math.abs(l.shots)))
 
   return (
-    <div>
+    <div ref={box} style={{ scrollMarginTop: '12px' }}>
       <div className="rounded-2xl p-5 mb-4" style={{ ...card, border: '1px solid #CC222260' }}>
         <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#CC2222' }}>Your result</p>
         {worst ? (
