@@ -144,7 +144,7 @@ export default async function BlogPostPage({ params }: Props) {
       <div className="mt-8 p-6 rounded-2xl text-center" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
         <p className="text-sm font-bold mb-1" style={{ color: '#F0F0F0' }}>Track your own Strokes Gained</p>
         <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>
-          TM Stats is a <Link href="/" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats tracker</Link> that shows you where you lose shots. Not sure what good looks like? Check the <Link href="/golf-stats" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats benchmarks for your handicap</Link>. Free to start.
+          TM Stats is a <Link href="/" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats tracker</Link> that shows you where you lose shots. Not sure what good looks like? Check the <Link href="/golf-stats" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>golf stats benchmarks for your handicap</Link>, or take the one minute <Link href="/quiz" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>where are you losing shots quiz</Link>. Free to start.
         </p>
         <Link
           href="/signup"

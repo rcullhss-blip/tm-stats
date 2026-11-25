@@ -70,7 +70,7 @@ export default async function BlogIndexPage() {
 
       <div className="mt-12 p-6 rounded-2xl text-center" style={{ backgroundColor: '#1A1D27', border: '1px solid #2E3247' }}>
         <p className="text-sm font-bold mb-1" style={{ color: '#F0F0F0' }}>Track your own Strokes Gained</p>
-        <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>Free to start. No card required.</p>
+        <p className="text-sm mb-4" style={{ color: '#9A9DB0' }}>Free to start. No card required. Or take the one minute <Link href="/quiz" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>where are you losing shots quiz</Link> first.</p>
         <Link
           href="/signup"
           className="inline-block px-6 py-3 rounded-lg text-sm font-bold"

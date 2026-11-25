@@ -99,3 +99,7 @@ html {
 html[data-app]:not([data-iap]) a[href^="/upgrade"],
 html[data-app] a[href*="tmstatsgolf.com/upgrade"],
 html[data-app] [data-purchase] { display: none !important; }
+
+/* Tables inside blog posts (the weekly tour winner post uses them). */
+.blog-content table { display: block; overflow-x: auto; }
+.blog-content th, .blog-content td { white-space: nowrap; }

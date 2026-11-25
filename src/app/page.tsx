@@ -55,7 +55,14 @@ export default function LandingPage() {
           >
             Start free — no card needed
           </Link>
-          <p className="text-sm" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99 a month, Elite from £6.99.</p>
+          <p className="text-sm mb-5" style={{ color: '#9A9DB0' }}>5 rounds free. Pro from £4.99 a month, Elite from £6.99.</p>
+          <Link
+            href="/quiz"
+            className="w-full flex items-center justify-center py-3 rounded-xl text-sm font-semibold"
+            style={{ backgroundColor: '#22263A', color: '#F0F0F0', border: '1px solid #2E3247', maxWidth: '320px', minHeight: '48px' }}
+          >
+            Not ready? Take the one minute quiz
+          </Link>
         </section>
 
         {/* What you get back after one round */}

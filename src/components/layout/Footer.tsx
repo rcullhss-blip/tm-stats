@@ -14,6 +14,7 @@ export default function Footer() {
           <Link href="/golf-stats" style={{ color: '#9A9DB0' }}>Stats Benchmarks</Link>
           <Link href="/strokes-gained" style={{ color: '#9A9DB0' }}>Strokes Gained</Link>
           <Link href="/strokes-gained-calculator" style={{ color: '#9A9DB0' }}>SG Calculator</Link>
+          <Link href="/quiz" style={{ color: '#9A9DB0' }}>Shots Quiz</Link>
           <Link href="/compare" style={{ color: '#9A9DB0' }}>Compare</Link>
           <Link href="/blog" style={{ color: '#9A9DB0' }}>Blog</Link>
           <Link href="/contact" style={{ color: '#9A9DB0' }}>Contact</Link>

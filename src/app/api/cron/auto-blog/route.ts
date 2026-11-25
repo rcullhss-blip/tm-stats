@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { generateBlogPost } from '@/lib/marketing-ai'
+import { generateBlogPost, isIntentKeyword } from '@/lib/marketing-ai'
 import { getKeywordGaps, isConfigured as searchConsoleReady } from '@/lib/search-console'
 import { COMPETITORS } from '@/lib/compare'
 
@@ -14,6 +14,22 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 80)
 }
+
+// Topics for golfers who are ready to pick a tool, not after general advice.
+// Added to the queue once (the table ignores ones it already has) and written
+// ahead of general topics. Every one must be something TM Stats really does.
+const INTENT_SEEDS = [
+  'strokes gained app for amateur golfers',
+  'golf stats app for a 10 handicap',
+  'strokes gained tracker for college golf teams',
+  'golf stats app for junior golfers',
+  'golf stats app for single figure handicaps',
+  'how to track strokes gained without a watch or sensors',
+  'free strokes gained calculator for amateur golfers',
+  'golf stats tracker for coaches and county squads',
+  'best way to track golf stats on your phone',
+  'golf stats app for high handicappers',
+]
 
 // Auto-blog: picks the next unused keyword from blog_keywords, writes the post,
 // publishes it to /blog. Runs once a week (Tuesday) via Vercel cron — zero input needed.
@@ -58,13 +74,25 @@ export async function GET(request: Request) {
     }
   }
 
-  const { data: next } = await sb
+  // Make sure the ready-to-use topics are in the queue.
+  try {
+    const { data: all } = await sb.from('blog_keywords').select('keyword')
+    const have = new Set((all ?? []).map((k: { keyword: string }) => k.keyword.toLowerCase().trim()))
+    const missing = INTENT_SEEDS.filter(k => !have.has(k))
+    if (missing.length > 0) await sb.from('blog_keywords').insert(missing.map(keyword => ({ keyword })))
+  } catch (e) {
+    console.error('[auto-blog] seed top-up failed', e)
+  }
+
+  // Oldest first, but a ready-to-use topic jumps the queue.
+  const { data: queue } = await sb
     .from('blog_keywords')
     .select('id, keyword')
     .eq('used', false)
     .order('created_at', { ascending: true })
-    .limit(1)
-    .single()
+    .limit(200)
+  const waiting: { id: string; keyword: string }[] = queue ?? []
+  const next = waiting.find(k => isIntentKeyword(k.keyword)) ?? waiting[0]
 
   if (!next) {
     return NextResponse.json({ ok: true, published: false, autoQueued, reason: 'keyword queue empty — add more to blog_keywords' })

@@ -25,6 +25,10 @@
       "schedule": "30 9 * * 1-5"
     },
     {
+      "path": "/api/cron/tour-winner",
+      "schedule": "0 12 * * 1,2"
+    },
+    {
       "path": "/api/cron/weekly-report",
       "schedule": "0 9 * * 5"
     }

@@ -56,7 +56,7 @@ export default function CalculatorPage() {
         </div>
       ))}
       <p className="text-xs mt-6" style={{ color: '#4A4D60' }}>
-        More free tools: <Link href="/golf-stats" style={{ textDecoration: 'underline' }}>golf stats benchmarks by handicap</Link> and <Link href="/compare" style={{ textDecoration: 'underline' }}>app comparisons</Link>.
+        More free tools: the <Link href="/quiz" style={{ textDecoration: 'underline' }}>where are you losing shots quiz</Link>, <Link href="/golf-stats" style={{ textDecoration: 'underline' }}>golf stats benchmarks by handicap</Link> and <Link href="/compare" style={{ textDecoration: 'underline' }}>app comparisons</Link>.
       </p>
     </main>
   )

@@ -107,15 +107,48 @@ Rules: Only change the opening 1-2 sentences. Keep everything else identical.\nD
   }
 }
 
+// Searches from someone ready to pick a tool or try one ("golf stats app for a
+// 10 handicap", "strokes gained calculator"), as opposed to someone after general
+// advice. These get a shorter, more direct post that ends on a free tool.
+const INTENT_PATTERN = /\b(apps?|trackers?|software|calculators?|tools?|spreadsheets?|templates?|track(ing)? (your |my )?(golf )?(stats|strokes gained))\b/i
+
+export function isIntentKeyword(keyword: string): boolean {
+  return INTENT_PATTERN.test(keyword)
+}
+
+// The only things an article may say about the product. Keep in step with the
+// pricing page and compare.ts.
+const PRODUCT_FACTS = `Facts about TM Stats (say nothing about the product beyond these):
+- A web app used on a phone. No sensors, tags, watch or other hardware needed.
+- Two ways to log a round. Quick mode: score, fairways, greens and putts per hole, about two minutes a round. Full Tracking: each shot's distance and lie, about a minute a hole, which gives Strokes Gained.
+- Strokes Gained compares every shot with golfers at your own handicap (bands from scratch to 29 and over, plus PGA Tour and US college divisions), split into off the tee, approach, around the green and putting.
+- AI coaching feedback that reads your own numbers and says what to practise.
+- Coaches can set up a team, see every player's stats and Strokes Gained, and run qualifying rounds.
+- Free for the first five rounds, including one round of Strokes Gained. Pro is £4.99 a month or £50 a year for unlimited rounds.
+- Free tools on the site that need no account: the "where are you losing shots" quiz at /quiz (five questions, one minute), the Strokes Gained calculator at /strokes-gained-calculator, and the golf stats benchmarks by handicap at /golf-stats.`
+
 export async function generateBlogPost(params: {
   keyword: string; newsContext?: string; angle?: string
 }): Promise<{ title: string; slug: string; content: string; excerpt: string; metaTitle: string; metaDesc: string }> {
+  const intent = isIntentKeyword(params.keyword)
+  const brief = intent
+    ? `This search comes from a golfer who is ready to pick a tool or try one, so do not write a general advice article.
+Requirements: 400-600 words, Rob's voice, keyword 2-4 times naturally, UK English.
+- Say what someone searching this actually needs, and what to look for, in plain terms.
+- Explain briefly why Rob is worth listening to on it (his background, and that he built TM Stats for this exact job), then how TM Stats does it, using only the facts below.
+- Do not name, describe or compare any other app, company or product.
+- Finish with one clear next step as an HTML link: the quiz (<a href="/quiz">), the calculator (<a href="/strokes-gained-calculator">) or starting free (<a href="/signup">). Pick whichever fits the search best. One link, not three.`
+    : `Requirements: 500-750 words, Rob's voice, keyword 2-4 times naturally, practical advice, UK English.
+- End by pointing the reader at one free next step as an HTML link: the one minute quiz (<a href="/quiz">where are you losing shots quiz</a>) or the <a href="/strokes-gained-calculator">Strokes Gained calculator</a>. Light touch, one sentence, never a hard sell.`
+
   const prompt = `Write a blog post for tmstatsgolf.com.
 Target SEO keyword: "${params.keyword}"
 ${params.newsContext ? `Golf news context: ${params.newsContext}` : ''}
 ${params.angle ? `Angle: ${params.angle}` : ''}
 
-Requirements: 500-750 words, Rob's voice, keyword 2-4 times naturally, practical advice, subtle TM Stats CTA at end, UK English.
+${brief}
+
+${PRODUCT_FACTS}
 
 Structure rules (search engines and AI search skip pages that bury the answer):
 - The first paragraph answers the question the keyword asks, directly, in two or three sentences, with a concrete number or rule of thumb where one exists. No story, scene-setting or warm-up before the answer.
@@ -123,10 +156,10 @@ Structure rules (search engines and AI search skip pages that bury the answer):
 - Do not invent personal stories, rounds, scores, courses or dates. Never write things like "I shot 74 at Bromborough last Saturday". Rob's real background (Cheshire county golfer, NCAA Division 2 at Newberry College, member at Bromborough) can be mentioned in passing, nothing more specific.
 - Use these phrases naturally where they genuinely fit, because the site links them to its guides: strokes gained, golf stats, greens in regulation, putts per round.
 
-Return ONLY the article body as HTML using p, h2, h3, ul and li tags. No title, no code fences, no commentary.`
+Return ONLY the article body as HTML using p, h2, h3, ul, li and a tags. No title, no code fences, no commentary.`
 
   const content = await callClaudeText(prompt)
-  if (content.replace(/<[^>]+>/g, ' ').split(/\s+/).length < 300) {
+  if (content.replace(/<[^>]+>/g, ' ').split(/\s+/).length < (intent ? 250 : 300)) {
     throw new Error('Generated article too short, not publishing')
   }
 

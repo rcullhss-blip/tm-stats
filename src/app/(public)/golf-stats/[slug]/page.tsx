@@ -126,6 +126,9 @@ export default async function GolfStatPage({ params }: Props) {
         >
           Track your stats free
         </Link>
+        <p className="text-sm mt-4" style={{ color: '#9A9DB0' }}>
+          Not sure where your shots go? Take the one minute <Link href="/quiz" style={{ color: '#F0F0F0', textDecoration: 'underline' }}>where are you losing shots quiz</Link>.
+        </p>
       </div>
 
       {/* Related pages */}
